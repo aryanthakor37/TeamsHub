@@ -312,11 +312,13 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
   let participantName = '';
   let participantEmail = '';
 
-  if (graphChat.chatType === 'group' && graphChat.topic) {
-    participantName = graphChat.topic;
+  // 1. Group Chat Topic
+  if (graphChat.chatType === 'group' && graphChat.topic && graphChat.topic.trim()) {
+    participantName = graphChat.topic.trim();
   }
 
-  if (!participantName && graphChat.members && graphChat.members.length > 0) {
+  // 2. Members Inspection
+  if (graphChat.members && graphChat.members.length > 0) {
     const otherMembers = graphChat.members.filter((m) => {
       const mEmail = (m.email || m.userPrincipalName || '').toLowerCase();
       const mName = (m.displayName || '').toLowerCase();
@@ -325,19 +327,22 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
       // Check if this member is the logged-in user
       if (currentUserId && mId && mId.toLowerCase() === currentUserId.toLowerCase()) return false;
       if (currentEmail && mEmail && (mEmail === currentEmail || mEmail.includes(currentEmail) || currentEmail.includes(mEmail))) return false;
-      if (currentDisplayName && mName && mName === currentDisplayName) return false;
+      if (currentDisplayName && mName && (mName === currentDisplayName || currentDisplayName.includes(mName) || mName.includes(currentDisplayName))) return false;
 
       return true;
     });
 
     if (otherMembers.length > 0) {
-      participantName = otherMembers.map(m => m.displayName || m.email || m.userPrincipalName || 'Teams User').join(', ');
+      if (!participantName) {
+        participantName = otherMembers.map(m => m.displayName || m.email || m.userPrincipalName || 'Teams User').join(', ');
+      }
       participantEmail = otherMembers[0].email || otherMembers[0].userPrincipalName || '';
     } else {
-      // If only self exists in the chat (e.g. Chat with self)
+      // If only self exists in the chat (e.g. Chat with self / Saved Messages)
       const selfMember = graphChat.members[0];
-      participantName = graphChat.chatType === 'oneOnOne' ? (selfMember.displayName ? `${selfMember.displayName} (You)` : 'You') : (graphChat.topic || 'Group Chat');
-      participantEmail = selfMember.email || selfMember.userPrincipalName || '';
+      const selfName = selfMember?.displayName || currentUser?.displayName || 'You';
+      participantName = `${selfName} (You)`;
+      participantEmail = selfMember?.email || selfMember?.userPrincipalName || currentEmail;
     }
   }
 
@@ -352,7 +357,7 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
   const lastMsgFromName = (graphChat.lastMessagePreview?.from?.user?.displayName || '').toLowerCase();
   const isFromMe = !!(
     (currentEmail && lastMsgFromEmail && currentEmail === lastMsgFromEmail.toLowerCase()) ||
-    (currentDisplayName && lastMsgFromName && currentDisplayName === lastMsgFromName)
+    (currentDisplayName && lastMsgFromName && (currentDisplayName === lastMsgFromName || lastMsgFromName.includes(currentDisplayName)))
   );
 
   if (!isFromMe && graphChat.viewpoint && graphChat.viewpoint.lastMessageReadDateTime) {
