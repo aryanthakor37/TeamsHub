@@ -195,18 +195,17 @@ export const disconnectAccountFromBackend = async (accountId) => {
  */
 export const acquireGraphToken = async (accountId) => {
   if (!isRealMsalConfigured()) return null;
-
   try {
     await msalInstance.initialize();
     const accounts = msalInstance.getAllAccounts();
-    const activeAccount = msalInstance.getActiveAccount() || accounts[0];
+    if (!accounts || accounts.length === 0) return null;
 
-    if (activeAccount) {
-      let targetAccount = activeAccount;
-      if (accountId) {
-        targetAccount = accounts.find(acc => acc.homeAccountId === accountId || acc.username === accountId) || activeAccount;
-      }
+    let targetAccount = msalInstance.getActiveAccount() || accounts[0];
+    if (accountId) {
+      targetAccount = accounts.find(acc => acc.homeAccountId === accountId || acc.username === accountId) || targetAccount;
+    }
 
+    if (targetAccount) {
       try {
         const result = await msalInstance.acquireTokenSilent({
           ...graphTokenRequest,
@@ -222,38 +221,6 @@ export const acquireGraphToken = async (accountId) => {
         }
       } catch (silentErr) {
         console.warn('[MSAL Silent Token Warning]', silentErr.message);
-      }
-    }
-
-    // Fallback: Check sessionStorage & localStorage for cached MSAL access token
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key && (key.includes('accesstoken') || key.includes('token'))) {
-        try {
-          const item = JSON.parse(sessionStorage.getItem(key));
-          if (item && item.secret) {
-            syncAccountToBackend({
-              email: 'aryankumar.kumrecha@estatic-infotech.com',
-              accessToken: item.secret
-            }).catch(() => { });
-            return item.secret;
-          }
-        } catch (e) { }
-      }
-    }
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.includes('accesstoken') || key.includes('token'))) {
-        try {
-          const item = JSON.parse(localStorage.getItem(key));
-          if (item && item.secret) {
-            syncAccountToBackend({
-              email: 'aryankumar.kumrecha@estatic-infotech.com',
-              accessToken: item.secret
-            }).catch(() => { });
-            return item.secret;
-          }
-        } catch (e) { }
       }
     }
 
