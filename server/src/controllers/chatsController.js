@@ -599,14 +599,15 @@ const getMessageImage = async (req, res) => {
     const { id, msgId, contentId } = req.params;
     let accessToken = req.microsoftAccessToken;
 
-    let microsoftChatId = id;
+    const rawId = decodeURIComponent(id);
+    let microsoftChatId = rawId;
     const dbAvailable = Chat.db && Chat.db.readyState === 1;
     if (dbAvailable) {
       let chat = null;
-      if (/^[0-9a-fA-F]{24}$/.test(id)) {
-        chat = await Chat.findById(id);
+      if (/^[0-9a-fA-F]{24}$/.test(rawId)) {
+        chat = await Chat.findById(rawId);
       } else {
-        chat = await Chat.findOne({ microsoftChatId: id });
+        chat = await Chat.findOne({ microsoftChatId: rawId });
       }
       if (chat) {
         if (chat.microsoftChatId) microsoftChatId = chat.microsoftChatId;

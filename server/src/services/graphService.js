@@ -433,10 +433,14 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     // Keep HTML content, but if we have images hosted by Graph, rewrite their URLs to our proxy.
     content = graphMessage.body.content || '';
     if (graphMessage.body.contentType === 'html') {
-      // Rewrite hosted image URLs. Graph sends src="../hostedContents/{id}/$value" or full URL with base64 ID
+      // Rewrite hosted image URLs extracting real Graph chatId and msgId
       content = content.replace(
-        /src=["']?(?:https?:\/\/[^"'\s]+?)?(?:hostedContents|messages\/[^"'\s]+\/hostedContents)\/([^"'\s]+?)(?:\/\$value)?["']?/gi,
-        (match, cid) => `src="/api/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(graphMessage.id)}/hostedContents/${encodeURIComponent(cid)}"`
+        /src=["']?(?:https?:\/\/[^"'\s]+?)?(?:\/chats\/([^"'\s\/]+))?\/messages\/([^"'\s\/]+)\/hostedContents\/([^"'\s\/]+)(?:\/\$value)?["']?/gi,
+        (match, rawChatId, rawMsgId, cid) => {
+          const finalChatId = (rawChatId && rawChatId.startsWith('19:')) ? rawChatId : chatId;
+          const finalMsgId = rawMsgId || graphMessage.id;
+          return `src="/api/chats/${encodeURIComponent(finalChatId)}/messages/${encodeURIComponent(finalMsgId)}/hostedContents/${encodeURIComponent(cid)}"`;
+        }
       );
       // Remove potentially malicious script tags
       content = content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
