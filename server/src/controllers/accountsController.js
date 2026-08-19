@@ -68,32 +68,45 @@ const getAccounts = async (req, res) => {
       return res.status(200).json({
         success: true,
         source: 'mock',
-        count: inMemoryAccounts.length,
-        activeAccountId: req.user.activeAccountId || activeAccountId,
-        defaultAccountId: req.user.defaultAccountId || defaultAccountId,
-        data: inMemoryAccounts
+        count: 0,
+        activeAccountId: null,
+        defaultAccountId: null,
+        data: []
       });
     }
 
     // ── Real Mode ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     if (!dbAvailable) {
-      return res.status(503).json({
-        success: false,
-        error: {
-          code: 'CONFIGURATION_REQUIRED',
-          message: 'Database is required for real account management.'
-        }
+      return res.status(200).json({
+        success: true,
+        source: 'database',
+        count: 0,
+        data: []
       });
     }
 
-    const accounts = await ConnectedAccount.find({ userId: req.user._id });
+    const { email } = req.query;
+    const reqEmail = email || req.headers['x-user-email'] || (req.user?.email && req.user.email !== 'user@teamshub.app' ? req.user.email : null);
+
+    if (!reqEmail) {
+      return res.status(200).json({
+        success: true,
+        source: 'database',
+        count: 0,
+        activeAccountId: null,
+        defaultAccountId: null,
+        data: []
+      });
+    }
+
+    const accounts = await ConnectedAccount.find({ email: reqEmail.toLowerCase() });
 
     res.status(200).json({
       success: true,
       source: 'database',
       count: accounts.length,
-      activeAccountId: req.user.activeAccountId || (accounts.find((a) => a.isDefault)?._id?.toString()),
+      activeAccountId: accounts.find((a) => a.isDefault)?._id?.toString() || (accounts[0]?._id?.toString() || null),
       defaultAccountId: accounts.find((a) => a.isDefault)?._id?.toString() || null,
       data: accounts
     });

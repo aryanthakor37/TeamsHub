@@ -101,7 +101,21 @@ export const syncAccountToBackend = async (accountPayload) => {
  */
 export const fetchConnectedAccountsFromBackend = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/accounts`);
+    const activeAccs = await getActiveMsalAccounts();
+    if (!activeAccs || activeAccs.length === 0) {
+      return {
+        success: true,
+        source: 'browser',
+        count: 0,
+        data: []
+      };
+    }
+    const userEmail = activeAccs[0].email;
+    const response = await fetch(`${API_BASE_URL}/accounts?email=${encodeURIComponent(userEmail)}`, {
+      headers: {
+        'x-user-email': userEmail
+      }
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

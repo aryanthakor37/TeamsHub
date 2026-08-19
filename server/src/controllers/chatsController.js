@@ -103,18 +103,20 @@ const getChats = async (req, res) => {
       ).catch(e => console.warn('[Token Persistence Warning]', e.message));
     }
 
-    if (!accessToken && dbAvailable) {
+    if (!accessToken && dbAvailable && connectedAccountId && connectedAccountId !== 'all') {
       let acc = null;
-      if (connectedAccountId && connectedAccountId !== 'all') {
-        acc = await ConnectedAccount.findOne({ _id: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt');
+      if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+        acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt');
       }
-      if (!acc || !acc.microsoftAccessToken) {
-        acc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).select('+microsoftAccessToken +tokenExpiresAt');
+      if (!acc) {
+        acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt');
       }
       if (acc && acc.microsoftAccessToken) {
-        accessToken = acc.microsoftAccessToken;
-        userEmail = acc.email || userEmail;
-        accountName = acc.displayName || accountName;
+        if (!acc.tokenExpiresAt || new Date(acc.tokenExpiresAt) >= new Date()) {
+          accessToken = acc.microsoftAccessToken;
+          userEmail = acc.email || userEmail;
+          accountName = acc.displayName || accountName;
+        }
       }
     }
 

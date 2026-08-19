@@ -185,12 +185,7 @@ router.get('/:fileId/content', async (req, res) => {
       }
     }
 
-    if (!accessToken) {
-      const anyAccount = await ConnectedAccount.findOne({ microsoftAccessToken: { $ne: '' } }).select('+microsoftAccessToken');
-      if (anyAccount && anyAccount.microsoftAccessToken) {
-        accessToken = anyAccount.microsoftAccessToken;
-      }
-    }
+
 
     const decodedFileId = decodeURIComponent(fileId);
     let fileBuffer = null;
