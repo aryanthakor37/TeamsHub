@@ -326,24 +326,36 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
 
       // Check if this member is the logged-in user
       if (currentUserId && mId && mId === currentUserId.toLowerCase()) return false;
-      if (currentEmail && mEmail && (mEmail === currentEmail || mEmail.includes(currentEmail) || currentEmail.includes(mEmail))) return false;
-      if (currentDisplayName && mName && (mName === currentDisplayName || currentDisplayName.includes(mName) || mName.includes(currentDisplayName))) return false;
+      if (currentEmail && mEmail && mEmail === currentEmail) return false;
+      if (currentDisplayName && mName && mName === currentDisplayName) return false;
 
       return true;
     });
 
     // Check if chat is self-chat (Saved Messages / Chat with You)
-    const isSelfChat = graphChat.chatType === 'oneOnOne' && (
-      otherMembers.length === 0 ||
-      graphChat.members.length === 1 ||
-      (otherMembers.length === 1 && (
-        (currentDisplayName && otherMembers[0].displayName?.toLowerCase().trim() === currentDisplayName) ||
-        (currentEmail && (otherMembers[0].email?.toLowerCase().trim() === currentEmail || otherMembers[0].userPrincipalName?.toLowerCase().trim() === currentEmail))
-      ))
-    );
+    let isSelfChat = false;
+    if (graphChat.chatType === 'oneOnOne') {
+      if (graphChat.members.length === 1) {
+        isSelfChat = true;
+      } else if (graphChat.members.length === 2) {
+        const m0Name = (graphChat.members[0].displayName || '').toLowerCase().trim();
+        const m1Name = (graphChat.members[1].displayName || '').toLowerCase().trim();
+        const m0Email = (graphChat.members[0].email || graphChat.members[0].userPrincipalName || '').toLowerCase().trim();
+        const m1Email = (graphChat.members[1].email || graphChat.members[1].userPrincipalName || '').toLowerCase().trim();
+        const m0Id = (graphChat.members[0].userId || graphChat.members[0].id || '').toLowerCase().trim();
+        const m1Id = (graphChat.members[1].userId || graphChat.members[1].id || '').toLowerCase().trim();
+
+        if ((m0Name && m0Name === m1Name) || (m0Email && m0Email === m1Email) || (m0Id && m0Id === m1Id)) {
+          isSelfChat = true;
+        }
+      }
+      if (otherMembers.length === 0) {
+        isSelfChat = true;
+      }
+    }
 
     if (isSelfChat) {
-      const selfName = currentUser?.displayName || graphChat.members[0]?.displayName || 'You';
+      const selfName = graphChat.members[0]?.displayName || currentUser?.displayName || 'You';
       participantName = `${selfName} (You)`;
       participantEmail = currentEmail || graphChat.members[0]?.email || '';
     } else if (otherMembers.length > 0) {
@@ -352,7 +364,7 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
       }
       participantEmail = otherMembers[0].email || otherMembers[0].userPrincipalName || '';
     } else {
-      const selfName = currentUser?.displayName || graphChat.members[0]?.displayName || 'You';
+      const selfName = graphChat.members[0]?.displayName || currentUser?.displayName || 'You';
       participantName = `${selfName} (You)`;
       participantEmail = currentEmail;
     }
