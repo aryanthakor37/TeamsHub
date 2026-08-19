@@ -204,9 +204,16 @@ export const acquireGraphToken = async (accountId) => {
     const accounts = msalInstance.getAllAccounts();
     if (!accounts || accounts.length === 0) return null;
 
-    let targetAccount = msalInstance.getActiveAccount() || accounts[0];
+    const activeEmail = localStorage.getItem('teamshub_active_email');
+    let targetAccount = msalInstance.getActiveAccount();
+    if (!targetAccount && activeEmail) {
+      targetAccount = accounts.find(acc => acc.username?.toLowerCase() === activeEmail.toLowerCase());
+    }
     if (accountId) {
       targetAccount = accounts.find(acc => acc.homeAccountId === accountId || acc.username === accountId) || targetAccount;
+    }
+    if (!targetAccount && accounts.length > 0) {
+      targetAccount = accounts[0];
     }
 
     if (targetAccount) {

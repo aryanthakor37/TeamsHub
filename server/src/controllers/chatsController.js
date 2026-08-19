@@ -127,14 +127,27 @@ const getChats = async (req, res) => {
         try {
           const profile = await fetchGraphUserProfile(accessToken);
           if (profile) {
-            currentUserInfo = {
-              email: profile.mail || profile.userPrincipalName || currentUserInfo.email,
-              displayName: profile.displayName || currentUserInfo.displayName,
-              id: profile.id || ''
-            };
+            const tokenEmail = (profile.mail || profile.userPrincipalName || '').toLowerCase().trim();
+            const expectedEmail = (req.user?.email || '').toLowerCase().trim();
+
+            // Strict email match guard: If token belongs to someone else (e.g. Hem Shah), reject token
+            if (expectedEmail && tokenEmail && tokenEmail !== expectedEmail) {
+              console.warn(`[TeamsHub Guard] Access token email (${tokenEmail}) does not match active logged-in user (${expectedEmail}). Rejecting token.`);
+              accessToken = null;
+            } else {
+              currentUserInfo = {
+                email: profile.mail || profile.userPrincipalName || currentUserInfo.email,
+                displayName: profile.displayName || currentUserInfo.displayName,
+                id: profile.id || ''
+              };
+            }
           }
         } catch (profileErr) {
           // Profile fallback on token expiry / demo token
+        }
+
+        if (!accessToken) {
+          throw new Error('Token email mismatch');
         }
 
         const graphResponse = await fetchGraphChatsFromAPI(accessToken);
