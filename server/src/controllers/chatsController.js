@@ -96,34 +96,23 @@ const getChats = async (req, res) => {
     let userEmail = req.user?.email || '';
     let accountName = 'Microsoft Teams';
 
-    if (accessToken && dbAvailable) {
-      ConnectedAccount.updateOne(
-        { email: { $exists: true } },
-        { microsoftAccessToken: accessToken, tokenExpiresAt: new Date(Date.now() + 3600 * 1000) }
-      ).catch(e => console.warn('[Token Persistence Warning]', e.message));
-    }
-
-    if (!accessToken && dbAvailable && connectedAccountId && connectedAccountId !== 'all') {
+    // Strictly match token by current user's email or selected connectedAccountId
+    if (!accessToken && dbAvailable) {
       let acc = null;
-      if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
-        acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt');
+      if (connectedAccountId && connectedAccountId !== 'all') {
+        if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt');
+        } else {
+          acc = await ConnectedAccount.findOne({ accountId: connectedAccountId, userId: req.user._id }).select('+microsoftAccessToken +tokenExpiresAt');
+        }
       }
-      if (!acc) {
-        acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt');
+      if (!acc && req.user?.email) {
+        acc = await ConnectedAccount.findOne({ email: req.user.email.toLowerCase(), userId: req.user._id }).select('+microsoftAccessToken +tokenExpiresAt');
       }
       if (acc && acc.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
         userEmail = acc.email || userEmail;
         accountName = acc.displayName || accountName;
-      }
-    }
-
-    if (!accessToken && dbAvailable) {
-      const anyAcc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).select('+microsoftAccessToken email displayName');
-      if (anyAcc && anyAcc.microsoftAccessToken) {
-        accessToken = anyAcc.microsoftAccessToken;
-        userEmail = anyAcc.email || userEmail;
-        accountName = anyAcc.displayName || accountName;
       }
     }
 
@@ -557,15 +546,13 @@ const getMessageImage = async (req, res) => {
       accessToken = req.query.token;
     }
 
-    if (!accessToken && dbAvailable) {
-      const anyAccount = await ConnectedAccount.findOne({
-        $or: [
-          { microsoftAccessToken: { $exists: true, $ne: '' } },
-          { graphAccessToken: { $exists: true, $ne: '' } }
-        ]
-      }).select('+microsoftAccessToken +graphAccessToken');
-      if (anyAccount) {
-        accessToken = anyAccount.microsoftAccessToken || anyAccount.graphAccessToken;
+    if (!accessToken && dbAvailable && req.user?._id) {
+      const userAccount = await ConnectedAccount.findOne({
+        userId: req.user._id,
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken');
+      if (userAccount && userAccount.microsoftAccessToken) {
+        accessToken = userAccount.microsoftAccessToken;
       }
     }
 
