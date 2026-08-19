@@ -304,8 +304,8 @@ const fetchGraphRecentFiles = async (accessToken) => {
  * Normalize Graph chat response into TeamsHub Chat schema
  */
 const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser = {}) => {
-  const currentEmail = (typeof currentUser === 'string' ? currentUser : (currentUser?.email || currentUser?.userPrincipalName || '')).toLowerCase();
-  const currentDisplayName = (typeof currentUser === 'object' ? (currentUser?.displayName || '') : '').toLowerCase();
+  const currentEmail = (typeof currentUser === 'string' ? currentUser : (currentUser?.email || currentUser?.userPrincipalName || '')).toLowerCase().trim();
+  const currentDisplayName = (typeof currentUser === 'object' ? (currentUser?.displayName || '') : '').toLowerCase().trim();
   const currentUserId = typeof currentUser === 'object' ? (currentUser?.id || currentUser?.userId || '') : '';
 
   // Extract participant name from members (exclude self)
@@ -320,29 +320,41 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
   // 2. Members Inspection
   if (graphChat.members && graphChat.members.length > 0) {
     const otherMembers = graphChat.members.filter((m) => {
-      const mEmail = (m.email || m.userPrincipalName || '').toLowerCase();
-      const mName = (m.displayName || '').toLowerCase();
-      const mId = m.userId || m.id || '';
+      const mEmail = (m.email || m.userPrincipalName || m.emailAddress?.address || '').toLowerCase().trim();
+      const mName = (m.displayName || '').toLowerCase().trim();
+      const mId = (m.userId || m.id || '').toLowerCase().trim();
 
       // Check if this member is the logged-in user
-      if (currentUserId && mId && mId.toLowerCase() === currentUserId.toLowerCase()) return false;
+      if (currentUserId && mId && mId === currentUserId.toLowerCase()) return false;
       if (currentEmail && mEmail && (mEmail === currentEmail || mEmail.includes(currentEmail) || currentEmail.includes(mEmail))) return false;
       if (currentDisplayName && mName && (mName === currentDisplayName || currentDisplayName.includes(mName) || mName.includes(currentDisplayName))) return false;
 
       return true;
     });
 
-    if (otherMembers.length > 0) {
+    // Check if chat is self-chat (Saved Messages / Chat with You)
+    const isSelfChat = graphChat.chatType === 'oneOnOne' && (
+      otherMembers.length === 0 ||
+      graphChat.members.length === 1 ||
+      (otherMembers.length === 1 && (
+        (currentDisplayName && otherMembers[0].displayName?.toLowerCase().trim() === currentDisplayName) ||
+        (currentEmail && (otherMembers[0].email?.toLowerCase().trim() === currentEmail || otherMembers[0].userPrincipalName?.toLowerCase().trim() === currentEmail))
+      ))
+    );
+
+    if (isSelfChat) {
+      const selfName = currentUser?.displayName || graphChat.members[0]?.displayName || 'You';
+      participantName = `${selfName} (You)`;
+      participantEmail = currentEmail || graphChat.members[0]?.email || '';
+    } else if (otherMembers.length > 0) {
       if (!participantName) {
         participantName = otherMembers.map(m => m.displayName || m.email || m.userPrincipalName || 'Teams User').join(', ');
       }
       participantEmail = otherMembers[0].email || otherMembers[0].userPrincipalName || '';
     } else {
-      // If only self exists in the chat (e.g. Chat with self / Saved Messages)
-      const selfMember = graphChat.members[0];
-      const selfName = selfMember?.displayName || currentUser?.displayName || 'You';
+      const selfName = currentUser?.displayName || graphChat.members[0]?.displayName || 'You';
       participantName = `${selfName} (You)`;
-      participantEmail = selfMember?.email || selfMember?.userPrincipalName || currentEmail;
+      participantEmail = currentEmail;
     }
   }
 
