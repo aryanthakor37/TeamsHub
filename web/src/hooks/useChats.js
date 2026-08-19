@@ -27,9 +27,32 @@ const saveStoredReadChat = (chatId) => {
   } catch (e) {}
 };
 
+const getStoredLocalChats = () => {
+  try {
+    const raw = localStorage.getItem('teamshub_cached_chats');
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter(c => c && c.company !== 'Hem Shah') : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveStoredLocalChats = (items) => {
+  try {
+    const filtered = (items || []).filter(c => c && c.company !== 'Hem Shah');
+    localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
+  } catch (e) {}
+};
+
 export const useChats = (selectedAccountId = 'all') => {
-  const [chats, setChats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [chats, setChats] = useState(() => {
+    const cached = getStoredLocalChats();
+    return cached.length > 0 ? sortChatsByDate(cached) : [];
+  });
+  const [loading, setLoading] = useState(() => {
+    const cached = getStoredLocalChats();
+    return cached.length === 0;
+  });
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   
@@ -79,21 +102,26 @@ export const useChats = (selectedAccountId = 'all') => {
   };
 
   const loadChats = useCallback(async () => {
-    setLoading(true);
+    if (chats.length === 0) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const data = await fetchChatsFromBackend(selectedAccountId);
       const rawItems = data.items || [];
-      const withRead = applyReadStatus(rawItems);
-      const sorted = sortChatsByDate(withRead);
-      setChats(sorted);
+      if (rawItems.length > 0) {
+        const withRead = applyReadStatus(rawItems);
+        const sorted = sortChatsByDate(withRead);
+        setChats(sorted);
+        saveStoredLocalChats(sorted);
 
-      // Record initial timestamps
-      rawItems.forEach(c => {
-        const id = c._id || c.id || c.microsoftChatId;
-        const ts = new Date(c.lastMessageTimestamp || 0).getTime();
-        prevChatTimestamps.current.set(id, ts);
-      });
+        // Record initial timestamps
+        rawItems.forEach(c => {
+          const id = c._id || c.id || c.microsoftChatId;
+          const ts = new Date(c.lastMessageTimestamp || 0).getTime();
+          prevChatTimestamps.current.set(id, ts);
+        });
+      }
       isInitialLoad.current = false;
     } catch (err) {
       setError(err.message || 'Failed to load Microsoft Graph chats.');
