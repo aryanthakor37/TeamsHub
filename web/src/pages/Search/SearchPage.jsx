@@ -94,7 +94,10 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const apiBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
+          ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
+          : '/api';
+        const res = await fetch(`${apiBase}/search?q=${encodeURIComponent(query)}`);
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data) {

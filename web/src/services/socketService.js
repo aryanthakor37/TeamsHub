@@ -4,8 +4,11 @@ let socket = null;
 
 export const getSocket = () => {
   if (!socket) {
-    // Connect to server port 5000 (or current origin if proxied)
-    const serverUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin;
+    const envUrl = import.meta.env.VITE_API_BASE_URL;
+    const serverUrl = (envUrl && envUrl.trim())
+      ? envUrl.trim().replace(/\/$/, '')
+      : (window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin);
+    
     socket = io(serverUrl, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,
