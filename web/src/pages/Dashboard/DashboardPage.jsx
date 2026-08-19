@@ -140,7 +140,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {isConnected && chats && chats.length > 0 ? (
+            {chats && chats.length > 0 ? (
               chats.slice(0, 4).map((chat) => (
                 <div
                   key={chat._id || chat.id}
