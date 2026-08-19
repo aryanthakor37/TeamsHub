@@ -335,21 +335,11 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     // Check if chat is self-chat (Saved Messages / Chat with You)
     let isSelfChat = false;
     if (graphChat.chatType === 'oneOnOne') {
-      if (graphChat.members.length === 1) {
-        isSelfChat = true;
-      } else if (graphChat.members.length === 2) {
-        const m0Name = (graphChat.members[0].displayName || '').toLowerCase().trim();
-        const m1Name = (graphChat.members[1].displayName || '').toLowerCase().trim();
-        const m0Email = (graphChat.members[0].email || graphChat.members[0].userPrincipalName || '').toLowerCase().trim();
-        const m1Email = (graphChat.members[1].email || graphChat.members[1].userPrincipalName || '').toLowerCase().trim();
-        const m0Id = (graphChat.members[0].userId || graphChat.members[0].id || '').toLowerCase().trim();
-        const m1Id = (graphChat.members[1].userId || graphChat.members[1].id || '').toLowerCase().trim();
+      const names = new Set(graphChat.members.map(m => (m.displayName || '').toLowerCase().trim()).filter(Boolean));
+      const emails = new Set(graphChat.members.map(m => (m.email || m.userPrincipalName || m.emailAddress?.address || '').toLowerCase().trim()).filter(Boolean));
+      const ids = new Set(graphChat.members.map(m => (m.userId || m.id || '').toLowerCase().trim()).filter(Boolean));
 
-        if ((m0Name && m0Name === m1Name) || (m0Email && m0Email === m1Email) || (m0Id && m0Id === m1Id)) {
-          isSelfChat = true;
-        }
-      }
-      if (otherMembers.length === 0) {
+      if (graphChat.members.length === 1 || names.size === 1 || emails.size === 1 || ids.size === 1 || otherMembers.length === 0) {
         isSelfChat = true;
       }
     }
