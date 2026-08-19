@@ -112,11 +112,18 @@ const getChats = async (req, res) => {
         acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt');
       }
       if (acc && acc.microsoftAccessToken) {
-        if (!acc.tokenExpiresAt || new Date(acc.tokenExpiresAt) >= new Date()) {
-          accessToken = acc.microsoftAccessToken;
-          userEmail = acc.email || userEmail;
-          accountName = acc.displayName || accountName;
-        }
+        accessToken = acc.microsoftAccessToken;
+        userEmail = acc.email || userEmail;
+        accountName = acc.displayName || accountName;
+      }
+    }
+
+    if (!accessToken && dbAvailable) {
+      const anyAcc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).select('+microsoftAccessToken email displayName');
+      if (anyAcc && anyAcc.microsoftAccessToken) {
+        accessToken = anyAcc.microsoftAccessToken;
+        userEmail = anyAcc.email || userEmail;
+        accountName = anyAcc.displayName || accountName;
       }
     }
 
@@ -204,7 +211,23 @@ const getChats = async (req, res) => {
           }
         });
       } catch (graphErr) {
-        // Fallback to cache/demo chats without losing account status
+        console.error('[TeamsHub getChats Graph Error]:', graphErr.message);
+        if (dbAvailable && req.user?._id) {
+          const cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
+          if (cachedChats.length > 0) {
+            return res.status(200).json({
+              success: true,
+              source: 'cache',
+              data: {
+                items: cachedChats,
+                page: 1,
+                limit: cachedChats.length,
+                total: cachedChats.length,
+                hasMore: false
+              }
+            });
+          }
+        }
       }
     }
 
