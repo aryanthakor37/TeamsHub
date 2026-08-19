@@ -134,17 +134,20 @@ const getChats = async (req, res) => {
         try {
           const profile = await fetchGraphUserProfile(accessToken);
           if (profile) {
-            const tokenEmail = (profile.mail || profile.userPrincipalName || '').toLowerCase().trim();
-            const expectedEmail = (req.user?.email || '').toLowerCase().trim();
-            const isFallbackEmail = !expectedEmail || expectedEmail.includes('teamshub.app') || expectedEmail.includes('companya.com');
+            const rawTokenEmail = (profile.mail || profile.userPrincipalName || '').toLowerCase().trim();
+            const rawExpectedEmail = (req.user?.email || '').toLowerCase().trim();
+            const isFallbackEmail = !rawExpectedEmail || rawExpectedEmail.includes('teamshub.app') || rawExpectedEmail.includes('companya.com');
 
-            // Strict email match guard: Only reject if expectedEmail is a real corporate email and differs from tokenEmail
-            if (!isFallbackEmail && tokenEmail && tokenEmail !== expectedEmail) {
-              console.warn(`[TeamsHub Guard] Access token email (${tokenEmail}) does not match active logged-in user (${expectedEmail}). Rejecting token.`);
+            const tokenPrefix = rawTokenEmail.split('@')[0].split('_')[0].split('#')[0];
+            const expectedPrefix = rawExpectedEmail.split('@')[0].split('_')[0].split('#')[0];
+
+            // Strict email match guard: Reject only if both are real emails with completely different prefixes (e.g. hem.shah vs aryankumar.kumrecha)
+            if (!isFallbackEmail && tokenPrefix && expectedPrefix && tokenPrefix !== expectedPrefix) {
+              console.warn(`[TeamsHub Guard] Access token email prefix (${tokenPrefix}) does not match active logged-in user (${expectedPrefix}). Rejecting token.`);
               accessToken = null;
             } else {
               currentUserInfo = {
-                email: tokenEmail || currentUserInfo.email,
+                email: profile.mail || profile.userPrincipalName || currentUserInfo.email,
                 displayName: profile.displayName || currentUserInfo.displayName,
                 id: profile.id || ''
               };
