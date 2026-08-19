@@ -416,7 +416,7 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
 
   if (currentUserId && sId && sId === currentUserId) {
     isOutgoing = true;
-  } else if (currentEmail && sEmail && (sEmail === currentEmail || sEmail.includes(currentEmail) || currentEmail.includes(sEmail))) {
+  } else if (currentEmail && sEmail && sEmail === currentEmail) {
     isOutgoing = true;
   }
 
