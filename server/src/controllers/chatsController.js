@@ -188,11 +188,10 @@ const getChats = async (req, res) => {
           return timeB - timeA;
         });
 
-        // Background update DB cache without blocking (purging stale cross-account chats)
+        // Background update DB cache without blocking (wiping all old stale chats for this user)
         if (dbAvailable) {
-          if (accountName && accountName !== 'Microsoft Teams') {
-            await Chat.deleteMany({ userId: req.user._id, company: { $ne: accountName } }).catch(() => {});
-          }
+          await Chat.deleteMany({ userId: req.user._id }).catch(() => {});
+
           Promise.all(normalizedList.map(c => {
             const copy = { ...c, userId: req.user._id };
             delete copy._id;
