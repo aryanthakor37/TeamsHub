@@ -196,6 +196,32 @@ router.get('/:fileId/content', async (req, res) => {
     let fileBuffer = null;
     let contentType = 'application/octet-stream';
 
+    // Demo / Mock files image fallback handler
+    const demoImageMap = {
+      'file-photo-aryan-1': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
+      'file-photo-pratham-1': 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80',
+      'file-image-jpg-1': 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80',
+      'file-2': 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&q=80',
+      'file-photo-aryan-2': 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80',
+      'file-photo-aryan-3': 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
+      'file-photo-aryan-4': 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=600&q=80'
+    };
+
+    if (demoImageMap[decodedFileId] || (downloadUrl && downloadUrl.includes('unsplash.com'))) {
+      const targetImgUrl = demoImageMap[decodedFileId] || downloadUrl;
+      try {
+        const imgRes = await fetch(targetImgUrl);
+        if (imgRes.ok) {
+          const ab = await imgRes.arrayBuffer();
+          res.set('Content-Type', imgRes.headers.get('content-type') || 'image/jpeg');
+          res.set('Cache-Control', 'public, max-age=86400');
+          return res.send(Buffer.from(ab));
+        }
+      } catch (e) {
+        console.warn('[FileRoutes] Demo image fetch error:', e.message);
+      }
+    }
+
     // Helper: fetch binary from URL, sending Bearer token ONLY to Microsoft Graph endpoints, and omitting for pre-authenticated CDN/SharePoint URLs
     const downloadFromGraph = async (url, withAuth = false) => {
       const isGraphApi = url.includes('graph.microsoft.com');
