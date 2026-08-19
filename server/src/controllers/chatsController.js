@@ -129,14 +129,15 @@ const getChats = async (req, res) => {
           if (profile) {
             const tokenEmail = (profile.mail || profile.userPrincipalName || '').toLowerCase().trim();
             const expectedEmail = (req.user?.email || '').toLowerCase().trim();
+            const isFallbackEmail = !expectedEmail || expectedEmail.includes('teamshub.app') || expectedEmail.includes('companya.com');
 
-            // Strict email match guard: If token belongs to someone else (e.g. Hem Shah), reject token
-            if (expectedEmail && tokenEmail && tokenEmail !== expectedEmail) {
+            // Strict email match guard: Only reject if expectedEmail is a real corporate email and differs from tokenEmail
+            if (!isFallbackEmail && tokenEmail && tokenEmail !== expectedEmail) {
               console.warn(`[TeamsHub Guard] Access token email (${tokenEmail}) does not match active logged-in user (${expectedEmail}). Rejecting token.`);
               accessToken = null;
             } else {
               currentUserInfo = {
-                email: profile.mail || profile.userPrincipalName || currentUserInfo.email,
+                email: tokenEmail || currentUserInfo.email,
                 displayName: profile.displayName || currentUserInfo.displayName,
                 id: profile.id || ''
               };
@@ -147,7 +148,7 @@ const getChats = async (req, res) => {
         }
 
         if (!accessToken) {
-          throw new Error('Token email mismatch');
+          throw new Error('No valid access token available');
         }
 
         const graphResponse = await fetchGraphChatsFromAPI(accessToken);
