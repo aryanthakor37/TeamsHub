@@ -147,8 +147,33 @@ const getChats = async (req, res) => {
           normalizeGraphChat(gc, connectedAccountId || 'default', accountName, currentUserInfo)
         );
 
-        // Sort latest first
+        // Ensure Self Chat (You) is ALWAYS present for the authenticated user
+        const selfName = currentUserInfo.displayName || req.user?.name || 'You';
+        const hasSelfChat = normalizedList.some(c => c.participant && (c.participant.includes('(You)') || c.participant.toLowerCase().includes('you')));
+
+        if (!hasSelfChat && selfName) {
+          const selfChatObj = {
+            _id: `self-chat-${currentUserInfo.id || 'me'}`,
+            connectedAccountId: connectedAccountId || 'default',
+            microsoftChatId: `self-chat-${currentUserInfo.id || 'me'}`,
+            participant: `${selfName} (You)`,
+            role: 'Direct Message',
+            company: accountName,
+            accountBadge: accountName,
+            chatType: 'oneOnOne',
+            lastMessagePreview: 'Personal workspace & saved notes',
+            lastMessageTimestamp: new Date().toISOString(),
+            unreadCount: 0,
+            onlineStatus: 'online',
+            isSelfChat: true
+          };
+          normalizedList.unshift(selfChatObj);
+        }
+
+        // Sort latest first (keeping Self Chat at top if timestamps match)
         normalizedList.sort((a, b) => {
+          if (a.isSelfChat) return -1;
+          if (b.isSelfChat) return 1;
           const timeA = new Date(a.lastMessageTimestamp || 0).getTime();
           const timeB = new Date(b.lastMessageTimestamp || 0).getTime();
           return timeB - timeA;
