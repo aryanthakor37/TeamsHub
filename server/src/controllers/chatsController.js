@@ -608,11 +608,19 @@ const getMessageImage = async (req, res) => {
       accessToken = req.query.token;
     }
 
-    if (!accessToken && dbAvailable && req.user?._id) {
-      const userAccount = await ConnectedAccount.findOne({
-        userId: req.user._id,
-        microsoftAccessToken: { $exists: true, $ne: '' }
-      }).select('+microsoftAccessToken');
+    if (!accessToken && dbAvailable) {
+      let userAccount = null;
+      if (req.user?._id) {
+        userAccount = await ConnectedAccount.findOne({
+          userId: req.user._id,
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken');
+      }
+      if (!userAccount) {
+        userAccount = await ConnectedAccount.findOne({
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken');
+      }
       if (userAccount && userAccount.microsoftAccessToken) {
         accessToken = userAccount.microsoftAccessToken;
       }
