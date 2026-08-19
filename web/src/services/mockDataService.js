@@ -188,7 +188,9 @@ export const mockFiles = [
     account: 'Teams Chat',
     sender: 'Aryan Kumrecha',
     date: 'Today',
-    iconType: 'image'
+    iconType: 'image',
+    previewUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
+    webUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'file-photo-pratham-1',
@@ -198,7 +200,9 @@ export const mockFiles = [
     account: 'Teams Chat',
     sender: 'Pratham Rao',
     date: 'Yesterday',
-    iconType: 'image'
+    iconType: 'image',
+    previewUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80',
+    webUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'file-image-jpg-1',
@@ -208,7 +212,9 @@ export const mockFiles = [
     account: 'OneDrive / Teams',
     sender: 'Meet Soneji',
     date: '12 Aug',
-    iconType: 'image'
+    iconType: 'image',
+    previewUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80',
+    webUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'file-project-plan',
@@ -268,7 +274,9 @@ export const mockFiles = [
     account: 'Company B',
     sender: 'Apoorva Sharma',
     date: '12 Aug',
-    iconType: 'image'
+    iconType: 'image',
+    previewUrl: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&q=80',
+    webUrl: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'file-3',

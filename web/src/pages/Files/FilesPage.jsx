@@ -24,7 +24,7 @@ import { renderAsync } from 'docx-preview';
 
 // Secure Image Thumbnail for Grid Gallery
 function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
-  const [blobUrl, setBlobUrl] = useState(null);
+  const [imgSrc, setImgSrc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -32,35 +32,44 @@ function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
     let active = true;
     let createdUrl = null;
 
-    const loadThumb = async () => {
-      const url = file.thumbnailUrl || file.previewUrl || file.downloadUrl;
-      if (!url || url === '#') {
-        if (active) {
-          setLoading(false);
-          setError(true);
-        }
-        return;
-      }
-
-      const resUrl = await fetchFileBlob(url, accountId);
+    const targetUrl = file.thumbnailUrl || file.previewUrl || file.contentUrl || file.downloadUrl || file.webUrl;
+    if (!targetUrl || targetUrl === '#') {
       if (active) {
-        if (resUrl) {
-          createdUrl = resUrl;
-          setBlobUrl(resUrl);
-        } else {
-          setBlobUrl(url);
-        }
+        setLoading(false);
+        setError(true);
+      }
+      return;
+    }
+
+    if (targetUrl.startsWith('data:') || targetUrl.startsWith('blob:')) {
+      if (active) {
+        setImgSrc(targetUrl);
         setLoading(false);
       }
-    };
-
-    loadThumb();
+    } else {
+      fetchFileBlob(targetUrl, accountId).then((blob) => {
+        if (active) {
+          if (blob) {
+            createdUrl = blob;
+            setImgSrc(blob);
+          } else {
+            setImgSrc(targetUrl);
+          }
+          setLoading(false);
+        }
+      }).catch(() => {
+        if (active) {
+          setImgSrc(targetUrl);
+          setLoading(false);
+        }
+      });
+    }
 
     return () => {
       active = false;
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
-  }, [file.id, file.thumbnailUrl, file.previewUrl, accountId]);
+  }, [file.id, file.previewUrl, file.thumbnailUrl, accountId]);
 
   if (loading) {
     return (
@@ -70,7 +79,7 @@ function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
     );
   }
 
-  if (error || !blobUrl) {
+  if (error || !imgSrc) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: fallbackColor }}>
         <ImageIcon size={36} />
@@ -80,7 +89,7 @@ function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
 
   return (
     <img 
-      src={blobUrl} 
+      src={imgSrc} 
       alt={alt}
       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       onError={() => setError(true)}
@@ -748,7 +757,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
               {filteredFiles.map((file) => {
                 const meta = getCategoryMeta(file.category);
                 const Icon = meta.icon;
-                const isImage = file.category === 'Images';
+                const isImage = file.category === 'Images' || (file.name && file.name.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i)) || Boolean(file.previewUrl) || Boolean(file.thumbnailUrl);
                 const fileExt = file.name.includes('.') ? file.name.split('.').pop().toUpperCase() : file.category.toUpperCase();
 
                 return (
