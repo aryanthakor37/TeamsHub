@@ -398,13 +398,10 @@ const getChatMessages = async (req, res) => {
       }
 
       try {
-        const userProfile = await fetchGraphUserProfile(accessToken);
-        const msEmail = userProfile.mail || userProfile.userPrincipalName || req.user.email || '';
-        const msId = userProfile.id;
-
+        const msEmail = (req.user?.email || '').toLowerCase().trim();
         const graphResponse = await fetchGraphChatMessages(accessToken, microsoftChatId);
         const messages = (graphResponse.value || [])
-          .map((gm) => normalizeGraphMessage(gm, id, '', msEmail, msId))
+          .map((gm) => normalizeGraphMessage(gm, id, '', msEmail, ''))
           .filter(Boolean)
           .reverse(); // Reverse to chronological order (oldest top, newest bottom)
 
