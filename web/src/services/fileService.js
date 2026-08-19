@@ -69,11 +69,19 @@ export const fetchFilesFromBackend = async (accountOrId) => {
 export const fetchFileBlob = async (url, accountId) => {
   if (!url || url === '#') return null;
 
+  if (url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+
   try {
-    const token = await acquireGraphToken(accountId);
+    const isGraphOrApi = url.includes('graph.microsoft.com') || url.includes('/api/') || url.includes('onrender.com');
     const headers = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    
+    if (isGraphOrApi && accountId) {
+      const token = await acquireGraphToken(accountId);
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     const res = await fetch(url, { headers });
@@ -95,10 +103,14 @@ export const fetchFileArrayBuffer = async (url, accountId) => {
   if (!url || url === '#') return null;
 
   try {
-    const token = await acquireGraphToken(accountId);
+    const isGraphOrApi = url.includes('graph.microsoft.com') || url.includes('/api/') || url.includes('onrender.com');
     const headers = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    
+    if (isGraphOrApi && accountId) {
+      const token = await acquireGraphToken(accountId);
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     const res = await fetch(url, { headers });
