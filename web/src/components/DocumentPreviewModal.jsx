@@ -377,7 +377,7 @@ export default function DocumentPreviewModal({ file, accountId, onClose }) {
               createdUrl = objUrl;
               setBlobUrl(objUrl);
             } else {
-              setBlobUrl(targetUrl);
+              setBlobUrl(null);
             }
             setLoading(false);
           }
@@ -551,9 +551,9 @@ export default function DocumentPreviewModal({ file, accountId, onClose }) {
                 <Loader2 size={44} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
                 <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Loading image preview...</span>
               </div>
-            ) : (
+            ) : blobUrl ? (
               <img
-                src={blobUrl || targetUrl}
+                src={blobUrl}
                 alt={fileName}
                 style={{
                   maxWidth: '100%',
@@ -562,7 +562,37 @@ export default function DocumentPreviewModal({ file, accountId, onClose }) {
                   borderRadius: '8px',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.6)'
                 }}
+                onError={() => setBlobUrl(null)}
               />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' }}>
+                <ImageIcon size={64} color="#8b5cf6" style={{ marginBottom: '18px', opacity: 0.8 }} />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>{fileName}</h3>
+                <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginBottom: '24px', fontSize: '0.9rem' }}>
+                  This image is protected or requires direct SharePoint access to view in browser.
+                </p>
+                {webUrl && (
+                  <a
+                    href={webUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      background: 'var(--accent-primary)',
+                      borderRadius: '8px',
+                      padding: '10px 24px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#fff',
+                      textDecoration: 'none',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <ExternalLink size={18} />
+                    <span>Open Image in Browser</span>
+                  </a>
+                )}
+              </div>
             )}
           </div>
         ) : meta.category === 'PDF' ? (
