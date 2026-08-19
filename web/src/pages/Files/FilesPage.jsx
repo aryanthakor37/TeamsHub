@@ -1,0 +1,1362 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  FileText, 
+  Image as ImageIcon, 
+  Video, 
+  Archive, 
+  FileSpreadsheet, 
+  Search, 
+  Grid, 
+  List, 
+  Download, 
+  ExternalLink,
+  Eye,
+  Loader2, 
+  AlertCircle,
+  X,
+  Maximize2
+} from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { fetchFilesFromBackend, fetchFileBlob, fetchFileArrayBuffer } from '../../services/fileService';
+import * as XLSX from 'xlsx';
+import mammoth from 'mammoth';
+import { renderAsync } from 'docx-preview';
+
+// Secure Image Thumbnail for Grid Gallery
+function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let createdUrl = null;
+
+    const loadThumb = async () => {
+      const url = file.thumbnailUrl || file.previewUrl || file.downloadUrl;
+      if (!url || url === '#') {
+        if (active) {
+          setLoading(false);
+          setError(true);
+        }
+        return;
+      }
+
+      const resUrl = await fetchFileBlob(url, accountId);
+      if (active) {
+        if (resUrl) {
+          createdUrl = resUrl;
+          setBlobUrl(resUrl);
+        } else {
+          setBlobUrl(url);
+        }
+        setLoading(false);
+      }
+    };
+
+    loadThumb();
+
+    return () => {
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [file.id, file.thumbnailUrl, file.previewUrl, accountId]);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+        <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
+      </div>
+    );
+  }
+
+  if (error || !blobUrl) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: fallbackColor }}>
+        <ImageIcon size={36} />
+      </div>
+    );
+  }
+
+  return (
+    <img 
+      src={blobUrl} 
+      alt={alt}
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      onError={() => setError(true)}
+    />
+  );
+}
+
+// In-App Excel Spreadsheet Viewer
+function ExcelSpreadsheetViewer({ arrayBuffer, fileName }) {
+  const [sheetNames, setSheetNames] = useState([]);
+  const [activeSheet, setActiveSheet] = useState('');
+  const [sheetData, setSheetData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [parseError, setParseError] = useState(null);
+
+  useEffect(() => {
+    try {
+      if (!arrayBuffer) return;
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      if (workbook.SheetNames && workbook.SheetNames.length > 0) {
+        setSheetNames(workbook.SheetNames);
+        setActiveSheet(workbook.SheetNames[0]);
+      } else {
+        setParseError('No sheets found in spreadsheet');
+      }
+    } catch (err) {
+      console.warn('[ExcelViewer] Parse error:', err);
+      setParseError('Unable to parse spreadsheet file.');
+    }
+  }, [arrayBuffer]);
+
+  useEffect(() => {
+    try {
+      if (!arrayBuffer || !activeSheet) return;
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const worksheet = workbook.Sheets[activeSheet];
+      if (worksheet) {
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+        setSheetData(jsonData);
+      }
+    } catch (e) {
+      console.warn('[ExcelViewer] Sheet load error:', e);
+    }
+  }, [arrayBuffer, activeSheet]);
+
+  if (parseError) {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+        <FileSpreadsheet size={54} color="#10b981" style={{ marginBottom: '16px', opacity: 0.8 }} />
+        <p style={{ fontWeight: '600', marginBottom: '6px' }}>{parseError}</p>
+        <p style={{ fontSize: '0.85rem' }}>You can still download the file or open it in Microsoft 365.</p>
+      </div>
+    );
+  }
+
+  const filteredData = sheetData.filter((row, idx) => {
+    if (idx === 0) return true; // Keep header
+    if (!searchTerm.trim()) return true;
+    return row.some(cell => String(cell).toLowerCase().includes(searchTerm.toLowerCase()));
+  });
+
+  const headerRow = filteredData[0] || [];
+  const rows = filteredData.slice(1);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: 'var(--bg-secondary)', overflow: 'hidden' }}>
+      {/* Top Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <FileSpreadsheet size={20} color="#10b981" />
+          <span style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)' }}>{fileName}</span>
+          <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: '600' }}>
+            {rows.length} rows • {headerRow.length} cols
+          </span>
+        </div>
+        <div style={{ position: 'relative', width: '220px' }}>
+          <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            placeholder="Search spreadsheet..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '6px 10px 6px 30px',
+              borderRadius: '6px',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              fontSize: '0.82rem',
+              outline: 'none'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Spreadsheet Table Grid */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 2, backgroundColor: 'var(--bg-primary)', borderBottom: '2px solid var(--border-color)' }}>
+            <tr>
+              <th style={{ padding: '8px 12px', borderRight: '1px solid var(--border-color)', width: '50px', color: 'var(--text-muted)', textAlign: 'center', backgroundColor: 'var(--bg-tertiary)' }}>
+                #
+              </th>
+              {headerRow.map((col, cIdx) => (
+                <th key={cIdx} style={{ padding: '8px 14px', borderRight: '1px solid var(--border-color)', fontWeight: '600', textAlign: 'left', color: 'var(--text-primary)' }}>
+                  {String(col || `Col ${cIdx + 1}`)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rIdx) => (
+              <tr key={rIdx} style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: rIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                <td style={{ padding: '6px 12px', borderRight: '1px solid var(--border-color)', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', backgroundColor: 'var(--bg-tertiary)', userSelect: 'none' }}>
+                  {rIdx + 1}
+                </td>
+                {headerRow.map((_, cIdx) => (
+                  <td key={cIdx} style={{ padding: '6px 14px', borderRight: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                    {String(row[cIdx] ?? '')}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={Math.max(headerRow.length + 1, 1)} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  {searchTerm ? 'No matching rows found' : 'Empty sheet'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Sheet Tabs Bar */}
+      {sheetNames.length > 1 && (
+        <div style={{ display: 'flex', gap: '4px', padding: '6px 12px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)', overflowX: 'auto' }}>
+          {sheetNames.map((sheet) => (
+            <button
+              key={sheet}
+              onClick={() => setActiveSheet(sheet)}
+              style={{
+                padding: '5px 14px',
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: activeSheet === sheet ? 'var(--accent-primary)' : 'transparent',
+                color: activeSheet === sheet ? '#fff' : 'var(--text-secondary)',
+                fontSize: '0.8rem',
+                fontWeight: activeSheet === sheet ? '600' : '500',
+                cursor: 'pointer'
+              }}
+            >
+              {sheet}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// In-App Word Document (.docx) Viewer with Full Typography & Page Rendering
+function WordDocumentViewer({ arrayBuffer, fileName, webUrl }) {
+  const containerRef = React.useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const renderDocx = async () => {
+      if (!arrayBuffer || !containerRef.current) return;
+      try {
+        setLoading(true);
+        setError(false);
+        containerRef.current.innerHTML = '';
+
+        await renderAsync(arrayBuffer, containerRef.current, null, {
+          className: 'docx-rendered-page',
+          inWrapper: true,
+          ignoreWidth: false,
+          ignoreHeight: false,
+          breakPages: true,
+          renderHeaders: true,
+          renderFooters: true,
+          renderFootnotes: true
+        });
+
+        if (active) setLoading(false);
+      } catch (err) {
+        console.warn('[WordViewer] docx-preview render failed, trying mammoth fallback:', err);
+        try {
+          const result = await mammoth.convertToHtml({ arrayBuffer });
+          if (active && containerRef.current) {
+            containerRef.current.innerHTML = `
+              <div style="background:#ffffff; color:#1e293b; padding:48px 56px; border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,0.12); max-width:850px; margin:0 auto; line-height:1.7; font-size:1rem;">
+                ${result.value || '<p style="color:#64748b; font-style:italic;">[Blank Word Document]</p>'}
+              </div>
+            `;
+            setLoading(false);
+          }
+        } catch (mammothErr) {
+          console.warn('[WordViewer] Mammoth also failed:', mammothErr);
+          if (active) {
+            setError(true);
+            setLoading(false);
+          }
+        }
+      }
+    };
+
+    renderDocx();
+
+    return () => {
+      active = false;
+    };
+  }, [arrayBuffer]);
+
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#e2e8f0', position: 'relative', overflow: 'hidden' }}>
+      {/* Top Document Header Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <FileText size={20} color="#3b82f6" />
+          <span style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)' }}>{fileName}</span>
+          <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', fontWeight: '600' }}>
+            Word Document
+          </span>
+        </div>
+        {webUrl && webUrl !== '#' && (
+          <a
+            href={webUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: 'var(--accent-primary)',
+              fontSize: '0.82rem',
+              fontWeight: '600',
+              textDecoration: 'none'
+            }}
+          >
+            <ExternalLink size={14} />
+            <span>Open in Word Online</span>
+          </a>
+        )}
+      </div>
+
+      {/* Document Content Scroll Container */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {loading && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '60px', color: 'var(--text-muted)' }}>
+            <Loader2 size={42} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
+            <span style={{ fontSize: '0.92rem', fontWeight: '500' }}>Rendering Word document...</span>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <FileText size={64} color="#3b82f6" style={{ marginBottom: '18px', opacity: 0.8 }} />
+            <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>{fileName}</h3>
+            <p style={{ maxWidth: '420px', marginBottom: '24px', fontSize: '0.9rem' }}>
+              This Word document can be opened in Microsoft 365 or downloaded directly.
+            </p>
+            {webUrl && webUrl !== '#' && (
+              <a
+                href={webUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  background: 'var(--accent-primary)',
+                  borderRadius: '8px',
+                  padding: '10px 24px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  fontWeight: '600'
+                }}
+              >
+                <ExternalLink size={18} />
+                <span>Open in Microsoft Word</span>
+              </a>
+            )}
+          </div>
+        )}
+
+        <div 
+          ref={containerRef} 
+          style={{ width: '100%', display: loading || error ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center' }} 
+        />
+      </div>
+    </div>
+  );
+}
+
+export default function FilesPage({ initialFile, onClearInitialFile }) {
+  const { activeAccount } = useAuth();
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('grid'); // grid | list
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [previewFile, setPreviewFile] = useState(initialFile || null);
+  const [targetFile, setTargetFile] = useState(initialFile || null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
+  const [previewArrayBuffer, setPreviewArrayBuffer] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewLoadError, setPreviewLoadError] = useState(false);
+
+  useEffect(() => {
+    if (initialFile) {
+      setTargetFile(initialFile);
+      setPreviewFile(initialFile);
+      setSearchQuery(''); // Do not filter out other files; show all files and highlight the target file
+    }
+  }, [initialFile]);
+
+  // Smooth scroll & Bright Yellow highlight searched file card
+  useEffect(() => {
+    if (targetFile && !loading && files.length > 0) {
+      const timer = setTimeout(() => {
+        const tfId = targetFile.id || targetFile._id || targetFile.name;
+        let el = document.getElementById(`file-card-${tfId}`);
+
+        let matched = null;
+        if (!el && targetFile.name) {
+          const tfName = targetFile.name.toLowerCase();
+          matched = files.find(f => f.name?.toLowerCase() === tfName);
+          if (!matched) {
+            const cleanName = tfName.replace(/_/g, ' ');
+            matched = files.find(f =>
+              f.name?.toLowerCase().includes(cleanName) ||
+              cleanName.includes(f.name?.toLowerCase()) ||
+              cleanName.split(' ').some(w => w.length > 2 && f.name?.toLowerCase().includes(w))
+            );
+          }
+          if (matched) {
+            el = document.getElementById(`file-card-${matched.id || matched.name}`);
+            setPreviewFile(matched);
+          }
+        }
+
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const origBg = el.style.backgroundColor;
+          const origBorder = el.style.border;
+          const origShadow = el.style.boxShadow;
+          const origTransform = el.style.transform;
+
+          el.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+          el.style.backgroundColor = '#fef08a'; // Bright Yellow highlight!
+          el.style.border = '2px solid #eab308';
+          el.style.boxShadow = '0 0 24px rgba(234, 179, 8, 0.9)';
+          el.style.transform = 'scale(1.04)';
+
+          setTimeout(() => {
+            el.style.backgroundColor = origBg;
+            el.style.border = origBorder;
+            el.style.boxShadow = origShadow;
+            el.style.transform = origTransform;
+            setTargetFile(null);
+            if (onClearInitialFile) {
+              onClearInitialFile();
+            }
+          }, 3500);
+        }
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [targetFile, loading, files, onClearInitialFile]);
+
+  const categories = [
+    { name: 'All', icon: FileText, color: 'var(--accent-primary)' },
+    { name: 'PDF', icon: FileText, color: '#ef4444' },
+    { name: 'Images', icon: ImageIcon, color: '#8b5cf6' },
+    { name: 'Videos', icon: Video, color: '#6366f1' },
+    { name: 'Documents', icon: FileText, color: '#3b82f6' },
+    { name: 'ZIP', icon: Archive, color: '#f59e0b' },
+    { name: 'Excel', icon: FileSpreadsheet, color: '#10b981' }
+  ];
+
+  const currentAccountId = activeAccount ? (activeAccount._id || activeAccount.accountId || activeAccount.id) : null;
+
+  useEffect(() => {
+    const loadFiles = async () => {
+      if (!currentAccountId || currentAccountId === 'all') {
+        setFiles([]);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchFilesFromBackend(currentAccountId);
+        setFiles(data || []);
+      } catch (err) {
+        setError(err.message || 'Failed to load files from Microsoft Graph. Make sure permissions are granted.');
+        setFiles([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFiles();
+  }, [currentAccountId]);
+
+  // Securely load blob / arrayBuffer preview when modal opens
+  useEffect(() => {
+    let active = true;
+    let createdUrl = null;
+
+    const loadPreviewContent = async () => {
+      if (!previewFile) {
+        setPreviewBlobUrl(null);
+        setPreviewArrayBuffer(null);
+        setPreviewLoading(false);
+        setPreviewLoadError(false);
+        return;
+      }
+
+      setPreviewLoading(true);
+      setPreviewLoadError(false);
+      setPreviewBlobUrl(null);
+      setPreviewArrayBuffer(null);
+
+      const targetUrl = previewFile.previewUrl || previewFile.thumbnailUrl || previewFile.downloadUrl;
+      if (!targetUrl || targetUrl === '#') {
+        if (active) {
+          setPreviewLoading(false);
+          setPreviewLoadError(true);
+        }
+        return;
+      }
+
+      const fileNameLower = (previewFile.name || '').toLowerCase();
+      const isExcel = previewFile.category === 'Excel' || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.csv');
+      const isWord = fileNameLower.endsWith('.docx') || fileNameLower.endsWith('.doc');
+
+      try {
+        if (isExcel || isWord) {
+          const ab = await fetchFileArrayBuffer(targetUrl, currentAccountId);
+          if (active) {
+            if (ab) {
+              setPreviewArrayBuffer(ab);
+            } else {
+              setPreviewLoadError(true);
+            }
+            setPreviewLoading(false);
+          }
+        } else {
+          // Images, PDF, Videos
+          const objUrl = await fetchFileBlob(targetUrl, currentAccountId);
+          if (active) {
+            if (objUrl) {
+              createdUrl = objUrl;
+              setPreviewBlobUrl(objUrl);
+            } else {
+              setPreviewBlobUrl(targetUrl);
+            }
+            setPreviewLoading(false);
+          }
+        }
+      } catch (err) {
+        console.warn('[FilesPage] Preview load error:', err);
+        if (active) {
+          setPreviewBlobUrl(targetUrl);
+          setPreviewLoading(false);
+        }
+      }
+    };
+
+    loadPreviewContent();
+
+    return () => {
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [previewFile, currentAccountId]);
+
+  const filteredFiles = files.filter((file) => {
+    const matchesCategory = selectedCategory === 'All' || file.category.toLowerCase() === selectedCategory.toLowerCase();
+    const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          file.sender.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          file.account.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const getCategoryMeta = (category) => {
+    switch (category) {
+      case 'PDF':
+        return { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)', label: 'PDF', icon: FileText };
+      case 'Images':
+        return { color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)', label: 'Image', icon: ImageIcon };
+      case 'Videos':
+        return { color: '#6366f1', bg: 'rgba(99, 102, 241, 0.12)', label: 'Video', icon: Video };
+      case 'Excel':
+        return { color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', label: 'Excel', icon: FileSpreadsheet };
+      case 'ZIP':
+        return { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', label: 'Archive', icon: Archive };
+      default:
+        return { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', label: 'Document', icon: FileText };
+    }
+  };
+
+  return (
+    <div style={{ flex: 1, display: 'flex', height: '100%', overflow: 'hidden' }}>
+      {/* Category Sidebar */}
+      <div style={{
+        width: '240px',
+        backgroundColor: 'var(--bg-secondary)',
+        borderRight: '1px solid var(--border-color)',
+        padding: '20px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px'
+      }}>
+        <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.05em' }}>
+          File Categories
+        </h3>
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          const isActive = selectedCategory === cat.name;
+          const count = cat.name === 'All' ? files.length : files.filter(f => f.category.toLowerCase() === cat.name.toLowerCase()).length;
+
+          return (
+            <button
+              key={cat.name}
+              onClick={() => setSelectedCategory(cat.name)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                backgroundColor: isActive ? 'var(--accent-light)' : 'transparent',
+                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                fontWeight: isActive ? '600' : '500',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Icon size={18} style={{ color: isActive ? 'var(--accent-primary)' : cat.color }} />
+                <span>{cat.name}</span>
+              </div>
+              {count > 0 && (
+                <span style={{
+                  fontSize: '0.75rem',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  backgroundColor: isActive ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                  color: isActive ? '#fff' : 'var(--text-muted)'
+                }}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main Files Area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '24px' }}>
+        {/* Toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}>
+          {/* Search Field */}
+          <div style={{
+            flex: 1,
+            maxWidth: '420px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '10px 14px',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-sm)'
+          }}>
+            <Search size={18} color="var(--text-muted)" />
+            <input
+              type="text"
+              placeholder="Filter files by name, sender or account..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', width: '100%' }}
+            />
+          </div>
+
+          {/* View Mode Switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setViewMode('grid')}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-color)',
+                backgroundColor: viewMode === 'grid' ? 'var(--accent-light)' : 'var(--bg-secondary)',
+                color: viewMode === 'grid' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.85rem'
+              }}
+            >
+              <Grid size={16} />
+              <span>Gallery</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode('list')}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-color)',
+                backgroundColor: viewMode === 'list' ? 'var(--accent-light)' : 'var(--bg-secondary)',
+                color: viewMode === 'list' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.85rem'
+              }}
+            >
+              <List size={16} />
+              <span>List</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Files Content */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+              <Loader2 className="spinner" size={32} style={{ marginBottom: '16px' }} />
+              <p>Fetching files from Microsoft Graph & Teams...</p>
+            </div>
+          ) : error ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--error)' }}>
+              <AlertCircle size={48} style={{ marginBottom: '16px', opacity: 0.8 }} />
+              <p style={{ fontWeight: '600' }}>Error</p>
+              <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>{error}</p>
+            </div>
+          ) : filteredFiles.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+              <FileText size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+              <p style={{ fontWeight: '600' }}>No files found.</p>
+              {!activeAccount || activeAccount === 'all' ? (
+                <p style={{ fontSize: '0.85rem', marginTop: '8px' }}>Please select a specific account in the sidebar to view files.</p>
+              ) : null}
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gap: '20px'
+            }}>
+              {filteredFiles.map((file) => {
+                const meta = getCategoryMeta(file.category);
+                const Icon = meta.icon;
+                const isImage = file.category === 'Images';
+                const fileExt = file.name.includes('.') ? file.name.split('.').pop().toUpperCase() : file.category.toUpperCase();
+
+                return (
+                  <div 
+                    key={file.id}
+                    id={`file-card-${file.id || file.name}`}
+                    className="glass-card" 
+                    style={{ 
+                      borderRadius: 'var(--radius-md)', 
+                      overflow: 'hidden', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      border: '1px solid var(--border-color)'
+                    }}
+                    onClick={() => setPreviewFile(file)}
+                  >
+                    {/* Visual Thumbnail Header for Gallery Style */}
+                    {isImage ? (
+                      <div style={{
+                        height: '140px',
+                        width: '100%',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <SecureThumbnail 
+                          file={file}
+                          accountId={currentAccountId}
+                          alt={file.name}
+                          fallbackColor={meta.color}
+                        />
+                        <span style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          color: '#fff',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          backdropFilter: 'blur(4px)'
+                        }}>
+                          {meta.label}
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{
+                        height: '115px',
+                        width: '100%',
+                        backgroundColor: meta.bg,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        borderBottom: `2px solid ${meta.color}25`
+                      }}>
+                        <Icon size={44} style={{ color: meta.color, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' }} />
+                        <span style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          backgroundColor: meta.color,
+                          color: '#fff',
+                          fontSize: '0.68rem',
+                          fontWeight: '700',
+                          letterSpacing: '0.04em',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                        }}>
+                          {meta.label}
+                        </span>
+                        <span style={{
+                          position: 'absolute',
+                          bottom: '8px',
+                          left: '12px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          color: meta.color,
+                          opacity: 0.85
+                        }}>
+                          .{fileExt}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Card Content */}
+                    <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <h4 style={{ 
+                          fontSize: '0.92rem', 
+                          fontWeight: '600', 
+                          marginBottom: '6px', 
+                          wordBreak: 'break-word',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }} title={file.name}>
+                          {file.name}
+                        </h4>
+
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                          {file.category} • {file.size}
+                        </p>
+                      </div>
+
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <span className="badge" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                            {file.account}
+                          </span>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            By {file.sender}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewFile(file);
+                            }}
+                            title="Preview File"
+                            style={{ 
+                              background: 'var(--bg-tertiary)', 
+                              border: 'none', 
+                              borderRadius: '6px',
+                              padding: '6px',
+                              cursor: 'pointer', 
+                              color: 'var(--accent-primary)' 
+                            }}
+                          >
+                            <Eye size={16} />
+                          </button>
+
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (file.webUrl) window.open(file.webUrl, '_blank');
+                            }}
+                            title="Open in Microsoft 365"
+                            style={{ 
+                              background: 'none', 
+                              border: 'none', 
+                              cursor: file.webUrl ? 'pointer' : 'not-allowed', 
+                              color: file.webUrl ? 'var(--text-secondary)' : 'var(--text-disabled)',
+                              padding: '6px'
+                            }}
+                          >
+                            <ExternalLink size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="glass-card" style={{ overflow: 'hidden', borderRadius: 'var(--radius-md)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '14px 20px' }}>Name</th>
+                    <th style={{ padding: '14px 20px' }}>Category</th>
+                    <th style={{ padding: '14px 20px' }}>Size</th>
+                    <th style={{ padding: '14px 20px' }}>Account</th>
+                    <th style={{ padding: '14px 20px' }}>Sender</th>
+                    <th style={{ padding: '14px 20px' }}>Date</th>
+                    <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFiles.map((file) => {
+                    const meta = getCategoryMeta(file.category);
+                    const Icon = meta.icon;
+
+                    return (
+                      <tr 
+                        key={file.id} 
+                        style={{ borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer' }}
+                        onClick={() => setPreviewFile(file)}
+                      >
+                        <td style={{ padding: '14px 20px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ 
+                            padding: '6px', 
+                            borderRadius: '6px', 
+                            backgroundColor: meta.bg, 
+                            color: meta.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <Icon size={18} />
+                          </div>
+                          <span>{file.name}</span>
+                        </td>
+                        <td style={{ padding: '14px 20px' }}>
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            padding: '2px 8px', 
+                            borderRadius: '4px', 
+                            backgroundColor: meta.bg, 
+                            color: meta.color,
+                            fontWeight: '600'
+                          }}>
+                            {file.category}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 20px', color: 'var(--text-muted)' }}>{file.size}</td>
+                        <td style={{ padding: '14px 20px' }}>
+                          <span className="badge" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+                            {file.account}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 20px', color: 'var(--text-secondary)' }}>{file.sender}</td>
+                        <td style={{ padding: '14px 20px', color: 'var(--text-muted)' }}>{file.date}</td>
+                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: '8px' }}>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewFile(file);
+                              }}
+                              title="Preview"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)' }}
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (file.webUrl) window.open(file.webUrl, '_blank');
+                              }}
+                              title="Open in Microsoft 365"
+                              style={{ background: 'none', border: 'none', cursor: file.webUrl ? 'pointer' : 'not-allowed', color: file.webUrl ? 'var(--text-secondary)' : 'var(--text-disabled)' }}
+                            >
+                              <ExternalLink size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* In-App Direct File Preview Modal */}
+      {previewFile && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.88)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(8px)'
+        }}>
+          {/* Header Bar */}
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0,
+            height: '70px',
+            backgroundColor: 'rgba(20, 20, 30, 0.9)',
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 24px',
+            color: '#fff',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+              {React.createElement(getCategoryMeta(previewFile.category).icon, { size: 22, color: getCategoryMeta(previewFile.category).color })}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: '600', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '450px' }}>
+                  {previewFile.name}
+                </div>
+                <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                  {previewFile.category} • {previewFile.size} • Shared by {previewFile.sender} ({previewFile.account})
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {(previewBlobUrl || previewFile.previewUrl) && (
+                <a
+                  href={previewBlobUrl || previewFile.previewUrl}
+                  download={previewFile.name}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#fff',
+                    textDecoration: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Download size={16} />
+                  <span>Download</span>
+                </a>
+              )}
+
+              {previewFile.webUrl && previewFile.webUrl !== '#' && (
+                <a
+                  href={previewFile.webUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    background: 'var(--accent-primary)',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#fff',
+                    textDecoration: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <ExternalLink size={16} />
+                  <span>Open in Microsoft 365</span>
+                </a>
+              )}
+
+              <button
+                onClick={() => setPreviewFile(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '38px',
+                  height: '38px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Preview Body */}
+          <div style={{
+            width: '85vw',
+            height: '75vh',
+            marginTop: '50px',
+            backgroundColor: previewFile.category === 'Images' ? 'rgba(15, 15, 25, 0.95)' : 'var(--bg-secondary)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            position: 'relative'
+          }}>
+            {previewFile.category === 'Images' ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative' }}>
+                {previewLoading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', color: 'var(--text-muted)' }}>
+                    <Loader2 size={44} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
+                    <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Loading image preview...</span>
+                  </div>
+                ) : (
+                  <>
+                    <img 
+                      src={previewBlobUrl || previewFile.previewUrl || previewFile.thumbnailUrl || previewFile.webUrl} 
+                      alt={previewFile.name}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '8px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.6)'
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                      <ImageIcon size={64} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                      <p style={{ fontWeight: '600', marginBottom: '8px' }}>Unable to load preview directly</p>
+                      <p style={{ fontSize: '0.85rem', marginBottom: '16px' }}>This image is protected or requires direct SharePoint access.</p>
+                      {previewFile.webUrl && previewFile.webUrl !== '#' && (
+                        <a
+                          href={previewFile.webUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            background: 'var(--accent-primary)',
+                            color: '#fff',
+                            padding: '8px 18px',
+                            borderRadius: '6px',
+                            textDecoration: 'none',
+                            fontSize: '0.85rem',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Open in Browser
+                        </a>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : previewFile.category === 'Videos' ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                {previewLoading ? (
+                  <Loader2 size={44} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
+                ) : (
+                  <video 
+                    src={previewBlobUrl || previewFile.previewUrl || previewFile.webUrl} 
+                    controls 
+                    autoPlay 
+                    style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px' }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                )}
+              </div>
+            ) : previewFile.category === 'PDF' ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {previewLoading ? (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', color: 'var(--text-muted)' }}>
+                    <Loader2 size={44} className="animate-spin" style={{ color: '#ef4444' }} />
+                    <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Loading PDF document...</span>
+                  </div>
+                ) : previewBlobUrl ? (
+                  <iframe 
+                    src={previewBlobUrl}
+                    title={previewFile.name}
+                    style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#fff' }}
+                  />
+                ) : (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' }}>
+                    <FileText size={64} color="#ef4444" style={{ marginBottom: '18px', opacity: 0.8 }} />
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>{previewFile.name}</h3>
+                    <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginBottom: '24px', fontSize: '0.9rem' }}>
+                      PDF document from {previewFile.account}.
+                    </p>
+                    {previewFile.webUrl && previewFile.webUrl !== '#' && (
+                      <a
+                        href={previewFile.webUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          background: 'var(--accent-primary)',
+                          borderRadius: '8px',
+                          padding: '10px 24px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          color: '#fff',
+                          textDecoration: 'none',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <ExternalLink size={18} />
+                        <span>Open in Microsoft 365</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (previewFile.category === 'Excel' || (previewFile.name || '').toLowerCase().match(/\.(xlsx|xls|csv)$/)) ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {previewLoading ? (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', color: 'var(--text-muted)' }}>
+                    <Loader2 size={44} className="animate-spin" style={{ color: '#10b981' }} />
+                    <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Reading spreadsheet data...</span>
+                  </div>
+                ) : previewArrayBuffer ? (
+                  <ExcelSpreadsheetViewer arrayBuffer={previewArrayBuffer} fileName={previewFile.name} />
+                ) : (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' }}>
+                    <FileSpreadsheet size={64} color="#10b981" style={{ marginBottom: '18px', opacity: 0.8 }} />
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>{previewFile.name}</h3>
+                    <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginBottom: '24px', fontSize: '0.9rem' }}>
+                      Excel Spreadsheet from {previewFile.account}.
+                    </p>
+                    {previewFile.webUrl && previewFile.webUrl !== '#' && (
+                      <a
+                        href={previewFile.webUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          background: 'var(--accent-primary)',
+                          borderRadius: '8px',
+                          padding: '10px 24px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          color: '#fff',
+                          textDecoration: 'none',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <ExternalLink size={18} />
+                        <span>Open in Microsoft Excel</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (previewFile.name || '').toLowerCase().endsWith('.docx') ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {previewLoading ? (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', color: 'var(--text-muted)' }}>
+                    <Loader2 size={44} className="animate-spin" style={{ color: '#3b82f6' }} />
+                    <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Loading document preview...</span>
+                  </div>
+                ) : previewArrayBuffer ? (
+                  <WordDocumentViewer arrayBuffer={previewArrayBuffer} fileName={previewFile.name} webUrl={previewFile.webUrl} />
+                ) : (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' }}>
+                    <FileText size={64} color="#3b82f6" style={{ marginBottom: '18px', opacity: 0.8 }} />
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>{previewFile.name}</h3>
+                    <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginBottom: '24px', fontSize: '0.9rem' }}>
+                      Word document from {previewFile.account}.
+                    </p>
+                    {previewFile.webUrl && previewFile.webUrl !== '#' && (
+                      <a
+                        href={previewFile.webUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          background: 'var(--accent-primary)',
+                          borderRadius: '8px',
+                          padding: '10px 24px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          color: '#fff',
+                          textDecoration: 'none',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <ExternalLink size={18} />
+                        <span>Open in Microsoft Word</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' }}>
+                  <FileText size={64} color={getCategoryMeta(previewFile.category).color} style={{ marginBottom: '18px', opacity: 0.8 }} />
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>{previewFile.name}</h3>
+                  <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginBottom: '24px', fontSize: '0.9rem' }}>
+                    {previewFile.category} document from {previewFile.account}.
+                  </p>
+                  {previewFile.webUrl && previewFile.webUrl !== '#' && (
+                    <a
+                      href={previewFile.webUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        background: 'var(--accent-primary)',
+                        borderRadius: '8px',
+                        padding: '10px 24px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#fff',
+                        textDecoration: 'none',
+                        fontWeight: '600'
+                      }}
+                    >
+                      <ExternalLink size={18} />
+                      <span>Open in Microsoft 365</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

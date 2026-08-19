@@ -1,0 +1,1381 @@
+You are continuing development of the existing TeamsHub project.
+
+PROJECT:
+TeamsHub
+
+PRODUCT:
+A third-party productivity companion for Microsoft Teams.
+
+TAGLINE:
+"All your Microsoft Teams accounts, chats and files in one workspace."
+
+==================================================
+CURRENT STATUS
+==================================================
+
+Phase 1:
+Foundation + Android/Web UI + MERN backend
+COMPLETED
+
+Phase 2:
+Microsoft authentication
+COMPLETED
+
+Phase 3:
+Multiple Microsoft accounts + account management
+COMPLETED
+
+NOW IMPLEMENT:
+
+PHASE 4 — REAL MICROSOFT TEAMS CHAT INTEGRATION
+
+==================================================
+PHASE 4 GOAL
+==================================================
+
+Connect TeamsHub to Microsoft Graph and retrieve REAL Microsoft Teams chat data.
+
+The user should be able to:
+
+1. Connect Microsoft accounts
+2. Select an account
+3. Load real Teams chats
+4. View real chat list
+5. Open a real conversation
+6. View real messages
+7. See sender information
+8. See timestamps
+9. Handle pagination
+10. Refresh chat data
+11. Keep every chat associated with the correct Microsoft account
+
+This is the FIRST major real-data integration phase.
+
+==================================================
+IMPORTANT
+==================================================
+
+Use ONLY official Microsoft-supported APIs.
+
+Use Microsoft Graph.
+
+DO NOT:
+
+❌ Scrape Microsoft Teams
+❌ Use unofficial Teams APIs
+❌ Automate the Teams website
+❌ Store Microsoft passwords
+❌ Ask users for Microsoft passwords
+❌ Hardcode access tokens
+❌ Log access tokens
+❌ Expose client secrets
+❌ Pretend mock data is real
+
+==================================================
+PHASE 4 SCOPE
+==================================================
+
+IMPLEMENT:
+
+✅ Real Teams chat list
+✅ Real chat details
+✅ Real messages
+✅ Sender information
+✅ Message timestamps
+✅ Basic message content
+✅ Pagination
+✅ Refresh
+✅ Account-specific chat context
+✅ Loading states
+✅ Error states
+✅ Empty states
+✅ Basic local caching if appropriate
+
+DO NOT IMPLEMENT YET:
+
+❌ Sending messages
+❌ File upload
+❌ File download
+❌ Images/videos synchronization
+❌ Global search
+❌ AI
+❌ Push notifications
+❌ Background synchronization
+❌ Meeting integration
+❌ Calendar
+❌ Reactions
+❌ Advanced message editing
+
+Those will be implemented in later phases.
+
+==================================================
+ARCHITECTURE
+==================================================
+
+Final architecture:
+
+Android
+   ↓
+TeamsHub Backend
+   ↓
+Microsoft Graph
+   ↓
+Microsoft Teams
+
+Web
+   ↓
+TeamsHub Backend
+   ↓
+Microsoft Graph
+   ↓
+Microsoft Teams
+
+IMPORTANT:
+
+Do not unnecessarily expose Microsoft Graph access tokens to the frontend.
+
+Prefer server-side Graph access architecture where appropriate.
+
+The backend must understand:
+
+TeamsHub User
++
+Connected Microsoft Account
++
+Microsoft Graph identity
+
+==================================================
+PHASE 4.1 — REVIEW EXISTING PROJECT
+==================================================
+
+Before implementation inspect:
+
+Android:
+- AuthManager
+- AuthRepository
+- AccountManager
+- AccountContext
+- Chat UI
+- Navigation
+
+Web:
+- AuthContext
+- AccountContext
+- Chat UI
+- API services
+
+Backend:
+- Auth middleware
+- User model
+- ConnectedAccount model
+- Account routes
+- Authentication architecture
+
+Do not rewrite existing working features.
+
+Reuse Phase 1–3 architecture.
+
+==================================================
+PHASE 4.2 — MICROSOFT GRAPH CONFIGURATION
+==================================================
+
+Prepare Microsoft Graph integration.
+
+Create:
+
+server/src/services/microsoft/
+    graphClient.js
+    graphAuthService.js
+    teamsChatService.js
+
+or equivalent TypeScript structure if the existing backend uses TypeScript.
+
+Create a clean abstraction:
+
+MicrosoftGraphService
+
+Responsibilities:
+
+- Obtain appropriate Graph authorization
+- Create authenticated Graph client/context
+- Request chat data
+- Request messages
+- Handle Graph errors
+- Handle pagination
+- Handle throttling
+- Never expose secrets
+
+==================================================
+PHASE 4.3 — GRAPH PERMISSIONS
+==================================================
+
+Review the required Microsoft Graph permissions for:
+
+- Reading user's Teams chats
+- Reading chat messages
+
+Do NOT blindly add every Microsoft Graph permission.
+
+Request the minimum permissions required for Phase 4.
+
+Document:
+
+Permission
+Purpose
+Type
+Admin consent required or not
+
+The implementation must use the least-privilege approach.
+
+If a permission requires administrator consent:
+
+Show a clear setup note in README.
+
+DO NOT bypass administrator consent.
+
+==================================================
+PHASE 4.4 — ACCOUNT-SPECIFIC GRAPH CONTEXT
+==================================================
+
+Every Graph operation must identify the correct connected Microsoft account.
+
+Example:
+
+User:
+Aryan
+
+Active account:
+
+Company B
+
+Then:
+
+GET chats
+
+must use:
+
+Company B's Microsoft identity/context.
+
+NOT:
+
+Company A
+NOT:
+Company C
+
+Conceptually:
+
+TeamsHub User
+      ↓
+activeAccountId
+      ↓
+ConnectedAccount
+      ↓
+Microsoft identity
+      ↓
+Graph
+      ↓
+Company B Teams data
+
+==================================================
+PHASE 4.5 — CHAT DATA MODEL
+==================================================
+
+Create a future-ready Chat model.
+
+Suggested:
+
+Chat:
+
+{
+    _id,
+    userId,
+    connectedAccountId,
+
+    microsoftChatId,
+
+    chatType,
+
+    topic,
+
+    createdDateTime,
+    lastUpdatedDateTime,
+
+    lastMessagePreview,
+
+    lastMessageDateTime,
+
+    membersPreview,
+
+    syncStatus,
+
+    createdAt,
+    updatedAt
+}
+
+IMPORTANT:
+
+Do not use microsoftChatId alone as the unique identifier.
+
+The same TeamsHub user can have multiple Microsoft accounts.
+
+Use account context.
+
+Recommended conceptual uniqueness:
+
+userId
++
+connectedAccountId
++
+microsoftChatId
+
+==================================================
+PHASE 4.6 — MESSAGE DATA MODEL
+==================================================
+
+Create:
+
+Message:
+
+{
+    _id,
+
+    userId,
+    connectedAccountId,
+    chatId,
+
+    microsoftMessageId,
+
+    sender,
+    bodyPreview,
+
+    messageType,
+
+    createdDateTime,
+
+    lastModifiedDateTime,
+
+    importance,
+
+    syncStatus,
+
+    createdAt,
+    updatedAt
+}
+
+Do not store unnecessary sensitive information.
+
+Do not store complete raw Graph API responses unless explicitly required.
+
+Normalize only the fields needed by TeamsHub.
+
+==================================================
+PHASE 4.7 — CHAT LIST API
+==================================================
+
+Create backend endpoint:
+
+GET
+
+/api/chats
+
+Required query:
+
+accountId
+
+Example:
+
+/api/chats?accountId=ACCOUNT_ID
+
+Backend must:
+
+1. Authenticate TeamsHub user
+2. Validate account ownership
+3. Get connected Microsoft account
+4. Obtain valid Graph authorization
+5. Call Microsoft Graph
+6. Retrieve chats
+7. Normalize response
+8. Return TeamsHub chat objects
+
+NEVER trust accountId without ownership validation.
+
+==================================================
+PHASE 4.8 — CHAT DETAILS API
+==================================================
+
+Create:
+
+GET
+
+/api/chats/:chatId
+
+Query/context:
+
+accountId
+
+Backend must verify:
+
+- Chat belongs to authenticated TeamsHub user
+- Chat belongs to selected connected Microsoft account
+
+Then retrieve appropriate chat information.
+
+==================================================
+PHASE 4.9 — CHAT MESSAGES API
+==================================================
+
+Create:
+
+GET
+
+/api/chats/:chatId/messages
+
+Required:
+
+accountId
+
+Support:
+
+limit
+pagination
+
+Example:
+
+/api/chats/CHAT_ID/messages?accountId=ACCOUNT_ID&limit=50
+
+Return normalized messages.
+
+==================================================
+PHASE 4.10 — PAGINATION
+==================================================
+
+Microsoft Graph can return paginated results.
+
+Implement proper pagination handling.
+
+Do NOT assume all messages arrive in one response.
+
+Backend should handle Graph pagination safely.
+
+Frontend should support:
+
+Load more
+
+or
+
+Infinite scroll
+
+For Phase 4:
+
+Implement simple "Load older messages" behavior first.
+
+==================================================
+PHASE 4.11 — CHAT LIST UI
+==================================================
+
+Replace Phase 1 mock chat list with REAL Teams chat data.
+
+Android:
+
+Chat screen:
+
+Top:
+
+TeamsHub
+[ Active Account ▼ ]
+
+Search placeholder
+
+Chat list:
+
+Avatar
+Name
+Chat type/topic
+Last message preview
+Timestamp
+
+Example:
+
+Rahul Patel
+"Can you check the API?"
+10:42 AM
+
+Project Team
+"Meeting at 4 PM"
+9:35 AM
+
+==================================================
+PHASE 4.12 — ACCOUNT BADGE
+==================================================
+
+Because multiple accounts exist, each chat must be traceable to its Microsoft account.
+
+Example:
+
+Rahul Patel
+Company A
+"Can you check the API?"
+10:42 AM
+
+Client Team
+Client Company
+"Please review the proposal."
+9:20 AM
+
+Use a small account/workspace badge.
+
+Do not overwhelm the UI.
+
+==================================================
+PHASE 4.13 — CHAT DETAIL UI
+==================================================
+
+Create real conversation screen.
+
+Header:
+
+Person / Group name
+
+Account badge:
+
+Company A
+
+Messages:
+
+Incoming message
+
+Outgoing message
+
+Timestamp
+
+Sender name when appropriate.
+
+Message body should support basic text rendering.
+
+For Phase 4:
+
+Support:
+
+- Plain text
+- Basic HTML-to-safe-text conversion if Graph returns formatted content
+
+Do NOT render arbitrary unsafe HTML.
+
+==================================================
+PHASE 4.14 — MESSAGE CONTENT SECURITY
+==================================================
+
+Microsoft Graph may return message bodies in HTML format.
+
+DO NOT directly inject raw HTML into WebView/Compose.
+
+Sanitize content.
+
+Convert supported content to safe display text/rich text.
+
+Prevent:
+
+XSS
+script execution
+unsafe links
+
+==================================================
+PHASE 4.15 — WEB CHAT UI
+==================================================
+
+Replace mock chat data with real data.
+
+Layout:
+
+Left:
+Chat list
+
+Center:
+Conversation
+
+Right:
+Chat details
+
+Top:
+
+[ Active Microsoft Account ▼ ]
+
+Chat list:
+
+Real Teams chats.
+
+Conversation:
+
+Real Teams messages.
+
+Right panel:
+
+Chat information.
+
+For Phase 4:
+
+Keep right panel simple.
+
+==================================================
+PHASE 4.16 — ACTIVE ACCOUNT FILTER
+==================================================
+
+Chat page must support:
+
+All Accounts
+
+Company A
+
+Company B
+
+Company C
+
+Behavior:
+
+If:
+
+All Accounts
+
+is selected:
+
+Return chats from all connected accounts.
+
+If:
+
+Company B
+
+is selected:
+
+Return only Company B chats.
+
+IMPORTANT:
+
+Do not mix messages without account context.
+
+Every chat object returned to frontend must include:
+
+connectedAccountId
+
+account display information where appropriate.
+
+==================================================
+PHASE 4.17 — ALL ACCOUNTS CHAT MODE
+==================================================
+
+Implement first version of:
+
+Universal Chat Inbox
+
+Example:
+
+ALL ACCOUNTS
+
+Company A
+Rahul
+"API is ready"
+10:42
+
+Company B
+Client Team
+"Please check proposal"
+10:30
+
+Company C
+Project Group
+"Meeting starts soon"
+9:50
+
+Sort aggregated chats by:
+
+lastMessageDateTime
+
+descending.
+
+Do NOT pretend this is a single Microsoft account.
+
+Each item must preserve account identity.
+
+==================================================
+PHASE 4.18 — CHAT SORTING
+==================================================
+
+Sort chats by:
+
+Most recent activity
+
+Default:
+
+descending last activity.
+
+Prepare architecture for future:
+
+Pinned
+Unread
+Mentions
+
+but do NOT implement full functionality yet.
+
+==================================================
+PHASE 4.19 — CHAT CACHE
+==================================================
+
+Implement reasonable local/server caching.
+
+Goal:
+
+Opening Chats should feel fast.
+
+Possible approach:
+
+MongoDB stores normalized chat/message data.
+
+Use:
+
+syncStatus
+lastSyncedAt
+
+However:
+
+Do NOT build a full background sync system in Phase 4.
+
+Manual refresh is enough.
+
+==================================================
+PHASE 4.20 — MANUAL REFRESH
+==================================================
+
+Add:
+
+Pull to refresh
+
+on Android.
+
+Add:
+
+Refresh button
+
+on Web.
+
+Flow:
+
+Refresh
+ ↓
+Backend
+ ↓
+Microsoft Graph
+ ↓
+Normalize
+ ↓
+Update database/cache
+ ↓
+Return updated chats
+
+==================================================
+PHASE 4.21 — SYNC STATUS
+==================================================
+
+Show internal states:
+
+SYNCING
+SYNCED
+ERROR
+AUTH_REQUIRED
+
+User-friendly UI:
+
+"Syncing chats..."
+
+"Chats updated."
+
+"Unable to update chats."
+
+Do not expose raw Graph errors.
+
+==================================================
+PHASE 4.22 — GRAPH ERROR HANDLING
+==================================================
+
+Handle:
+
+401 Unauthorized
+403 Forbidden
+404 Not Found
+429 Too Many Requests
+5xx Microsoft errors
+Network errors
+Expired authorization
+Missing permissions
+
+For 429:
+
+Respect Microsoft Graph throttling guidance.
+
+Do not aggressively retry.
+
+Use exponential backoff where appropriate.
+
+==================================================
+PHASE 4.23 — AUTHENTICATION REQUIRED
+==================================================
+
+If Graph authorization is no longer valid:
+
+Return safe application status:
+
+AUTHENTICATION_REQUIRED
+
+UI:
+
+"Your Microsoft account needs to be reconnected."
+
+Button:
+
+Reconnect
+
+Do not ask user for password.
+
+Use Microsoft-supported authentication.
+
+==================================================
+PHASE 4.24 — EMPTY STATE
+==================================================
+
+If user has no chats:
+
+Show:
+
+"No conversations found"
+
+"Your Teams conversations will appear here."
+
+Do not display fake chats as real data.
+
+==================================================
+PHASE 4.25 — LOADING STATE
+==================================================
+
+Chat list:
+
+Skeleton loading.
+
+Conversation:
+
+Message skeleton.
+
+Refresh:
+
+Progress indicator.
+
+Avoid full-screen blocking when possible.
+
+==================================================
+PHASE 4.26 — ERROR STATE
+==================================================
+
+Example:
+
+"Couldn't load your Teams chats."
+
+Buttons:
+
+Retry
+Account Settings
+
+Do not show:
+
+Graph stack traces
+Tokens
+Internal IDs
+Raw HTTP response bodies
+
+==================================================
+PHASE 4.27 — DATABASE STRATEGY
+==================================================
+
+Use MongoDB as a normalized cache/index layer.
+
+Do not blindly save complete Microsoft Graph responses.
+
+Store only necessary normalized information.
+
+Support:
+
+userId
+connectedAccountId
+microsoftChatId
+
+and message relationships.
+
+Prepare indexes for:
+
+userId
+connectedAccountId
+microsoftChatId
+
+==================================================
+PHASE 4.28 — CHAT OWNERSHIP
+==================================================
+
+Every request must validate:
+
+authenticated TeamsHub user
+
+and:
+
+connectedAccountId belongs to authenticated user.
+
+For chat:
+
+chat.userId === authenticatedUserId
+
+AND
+
+chat.connectedAccountId === selectedAccountId
+
+Never trust frontend-provided:
+
+userId
+tenantId
+email
+
+as authorization proof.
+
+==================================================
+PHASE 4.29 — ANDROID ARCHITECTURE
+==================================================
+
+Implement:
+
+presentation/chats/
+
+ChatViewModel
+
+ChatUiState
+
+ChatRepository
+
+GetChatsUseCase
+
+GetChatMessagesUseCase
+
+RefreshChatsUseCase
+
+Use:
+
+StateFlow
+
+Coroutines
+
+Repository pattern.
+
+Do not put network calls directly inside Compose UI.
+
+==================================================
+PHASE 4.30 — WEB ARCHITECTURE
+==================================================
+
+Implement:
+
+pages/Chats
+
+components/chat/
+
+services/chatService
+
+hooks/useChats
+
+hooks/useMessages
+
+Use the existing authentication and account context.
+
+Do not put API calls directly throughout UI components.
+
+==================================================
+PHASE 4.31 — API RESPONSE FORMAT
+==================================================
+
+Use consistent API response structure.
+
+Example:
+
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "nextPage": null
+  }
+}
+
+Errors:
+
+{
+  "success": false,
+  "error": {
+    "code": "GRAPH_AUTH_REQUIRED",
+    "message": "Microsoft authorization is required."
+  }
+}
+
+Do not return secrets.
+
+==================================================
+PHASE 4.32 — PERFORMANCE
+==================================================
+
+Avoid:
+
+- Loading every message for every chat
+- Huge Graph requests
+- N+1 requests
+- Repeated duplicate API calls
+
+Chat list should load first.
+
+Messages should load only when opening a chat.
+
+Use pagination.
+
+==================================================
+PHASE 4.33 — REAL TEST ACCOUNT
+==================================================
+
+Use a real Microsoft test/work account only with proper authorization.
+
+Test at least:
+
+1 connected account
+2 connected accounts
+
+Verify:
+
+Account A:
+Chats from Account A
+
+Account B:
+Chats from Account B
+
+All Accounts:
+Chats from A + B
+
+No cross-account leakage.
+
+==================================================
+PHASE 4.34 — TEST CASES
+==================================================
+
+TEST 1:
+
+Connect Microsoft Account A.
+
+Open Chats.
+
+Expected:
+
+Real Account A chats.
+
+TEST 2:
+
+Connect Microsoft Account B.
+
+Select Account B.
+
+Expected:
+
+Only Account B chats.
+
+TEST 3:
+
+Select All Accounts.
+
+Expected:
+
+Aggregated chats from A + B.
+
+TEST 4:
+
+Open a chat from Account A.
+
+Expected:
+
+Messages belong to Account A chat.
+
+TEST 5:
+
+Open chat from Account B.
+
+Expected:
+
+Messages belong to Account B chat.
+
+TEST 6:
+
+Refresh chats.
+
+Expected:
+
+Latest data requested from Graph.
+
+TEST 7:
+
+Disconnect Account A.
+
+Expected:
+
+Account A chats no longer accessible through TeamsHub.
+
+Account B continues working.
+
+TEST 8:
+
+Graph authorization fails.
+
+Expected:
+
+Reconnect UI.
+
+TEST 9:
+
+Unauthorized accountId request.
+
+Expected:
+
+403/404 safe response.
+
+TEST 10:
+
+Large message history.
+
+Expected:
+
+Pagination works.
+
+==================================================
+PHASE 4.35 — ANDROID TESTING
+==================================================
+
+Verify:
+
+[ ] Real chat list loads
+[ ] Real chat detail loads
+[ ] Real messages load
+[ ] Account switcher works
+[ ] All Accounts works
+[ ] Pull-to-refresh works
+[ ] Pagination works
+[ ] Loading state works
+[ ] Empty state works
+[ ] Error state works
+[ ] No crashes
+[ ] No token leakage
+
+==================================================
+PHASE 4.36 — WEB TESTING
+==================================================
+
+Verify:
+
+[ ] Real chat list loads
+[ ] Real messages load
+[ ] Account filtering works
+[ ] All Accounts works
+[ ] Refresh works
+[ ] Pagination works
+[ ] Responsive layout works
+[ ] Loading state works
+[ ] Error state works
+
+==================================================
+PHASE 4.37 — SECURITY AUDIT
+==================================================
+
+Before completing Phase 4:
+
+[ ] No passwords stored
+[ ] No access tokens logged
+[ ] No client secrets in frontend
+[ ] No raw tokens returned from API
+[ ] User ownership checked
+[ ] Account ownership checked
+[ ] Chat ownership checked
+[ ] Message access checked
+[ ] HTML message content sanitized
+[ ] No unofficial Teams API
+[ ] No Teams scraping
+
+==================================================
+PHASE 4.38 — ACCEPTANCE CRITERIA
+==================================================
+
+PHASE 4 IS COMPLETE ONLY WHEN:
+
+REAL DATA:
+
+[ ] Microsoft Graph connected
+[ ] Real Teams chats retrieved
+[ ] Real messages retrieved
+[ ] Real sender information displayed
+[ ] Real timestamps displayed
+
+MULTI-ACCOUNT:
+
+[ ] Account A chats work
+[ ] Account B chats work
+[ ] All Accounts mode works
+[ ] Account context visible
+[ ] No cross-account leakage
+
+ANDROID:
+
+[ ] Real chat list
+[ ] Real conversation
+[ ] Pagination
+[ ] Refresh
+[ ] Loading
+[ ] Empty
+[ ] Error states
+
+WEB:
+
+[ ] Real chat list
+[ ] Real conversation
+[ ] Pagination
+[ ] Refresh
+[ ] Account filter
+[ ] All Accounts
+
+BACKEND:
+
+[ ] Graph service
+[ ] Chat API
+[ ] Message API
+[ ] Pagination
+[ ] Cache/normalization
+[ ] Ownership validation
+[ ] Error handling
+
+SECURITY:
+
+[ ] No password storage
+[ ] No token logging
+[ ] No secret exposure
+[ ] No unauthorized account access
+[ ] Safe HTML rendering
+
+==================================================
+PHASE 4.39 — IMPORTANT PRODUCT CHECK
+==================================================
+
+After implementation, verify this real-world scenario:
+
+User has:
+
+Microsoft Account A
+Microsoft Account B
+Microsoft Account C
+
+They open TeamsHub.
+
+They select:
+
+ALL ACCOUNTS
+
+They should see a unified chat list.
+
+Each chat must clearly indicate:
+
+Which Microsoft account/workspace it belongs to.
+
+Example:
+
+Rahul Patel
+Company A
+"API is ready"
+10:42 AM
+
+Client Team
+Company B
+"Please review the proposal"
+10:30 AM
+
+Project Group
+Company C
+"Meeting starts at 4"
+9:50 AM
+
+The user should NOT have to repeatedly switch Microsoft accounts to view these conversations.
+
+This is the core product direction.
+
+==================================================
+PHASE 4.40 — DO NOT IMPLEMENT
+==================================================
+
+STOP before implementing:
+
+❌ Send message
+❌ Edit message
+❌ Delete message
+❌ Reactions
+❌ Attachments
+❌ File upload
+❌ File download
+❌ Images
+❌ Videos
+❌ ZIP files
+❌ Global search
+❌ Notifications
+❌ AI
+
+These belong to later phases.
+
+==================================================
+PHASE 4 FINAL REPORT
+==================================================
+
+After implementation provide:
+
+1. Summary
+2. Microsoft Graph APIs used
+3. Permissions/scopes used
+4. Android files changed
+5. Web files changed
+6. Backend files changed
+7. Database changes
+8. API endpoints
+9. Authentication flow
+10. Account-specific Graph flow
+11. Chat sync flow
+12. Pagination implementation
+13. Error handling
+14. Security checks
+15. Test results
+16. Real test account result
+17. Screenshots
+18. Known limitations
+19. Any Microsoft admin consent requirements
+20. Phase 5 prerequisites
+
+IMPORTANT:
+
+DO NOT move to Phase 5.
+
+Stop after Phase 4.
+
+==================================================
+NEXT PHASE
+==================================================
+
+Phase 5:
+
+UNIVERSAL INBOX + REAL-TIME CHAT EXPERIENCE
+
+Phase 5 will focus on:
+
+- Unified inbox
+- Better multi-account aggregation
+- Unread messages
+- Message sending
+- Real-time updates
+- Socket.IO where appropriate
+- Chat synchronization
+- Account-aware notifications foundation

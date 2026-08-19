@@ -1,0 +1,22 @@
+/**
+ * TeamsHub API Client Service
+ */
+
+const API_BASE_URL = '/api';
+
+export const checkHealth = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch API health status:', error);
+    return {
+      success: false,
+      message: 'Unable to connect to TeamsHub Backend API',
+      error: error.message
+    };
+  }
+};

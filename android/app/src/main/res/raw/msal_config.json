@@ -1,0 +1,17 @@
+{
+  "client_id": "c0e59292-129d-4d40-8b90-c1b022e98deb",
+  "authorization_user_agent": "DEFAULT",
+  "redirect_uri": "msauth://com.teamshub.app/000000000000000000000000000=",
+  "account_mode": "MULTIPLE",
+  "broker_redirect_uri_registered": false,
+  "authorities": [
+    {
+      "type": "AAD",
+      "audience": {
+        "type": "AzureADandPersonalMicrosoftAccount",
+        "tenant_id": "common"
+      },
+      "default": true
+    }
+  ]
+}
