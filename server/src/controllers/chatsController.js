@@ -365,52 +365,15 @@ const getChatMessages = async (req, res) => {
       }
     }
 
-    let fallbackParticipant = '';
-    let fallbackPreview = '';
-    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
-      const cObj = await Chat.findById(id);
-      if (cObj) {
-        fallbackParticipant = cObj.participant || '';
-        fallbackPreview = cObj.lastMessagePreview || '';
-      }
-    }
-
-    const demoMessages = getDemoChatMessages(id, fallbackParticipant, fallbackPreview);
-
-    if (dbAvailable && demoMessages && demoMessages.length > 0) {
-      try {
-        const msgsToInsert = demoMessages.map(m => ({
-          ...m,
-          chatId: id
-        }));
-        await Message.insertMany(msgsToInsert, { ordered: false }).catch(() => {});
-        const persisted = await Message.find({ chatId: id }).sort({ createdDateTime: 1 });
-        if (persisted.length > 0) {
-          return res.status(200).json({
-            success: true,
-            source: 'cache',
-            data: {
-              items: persisted,
-              page: pageNum,
-              limit: limitNum,
-              total: persisted.length,
-              hasMore: false
-            }
-          });
-        }
-      } catch (e) {}
-    }
-
     return res.status(200).json({
       success: true,
-      source: 'demo',
+      source: 'graph',
       data: {
-        items: demoMessages,
+        items: [],
         page: pageNum,
         limit: limitNum,
-        total: demoMessages.length,
-        hasMore: false,
-        isReadOnly: true
+        total: 0,
+        hasMore: false
       }
     });
   } catch (error) {
