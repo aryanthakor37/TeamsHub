@@ -120,8 +120,8 @@ export const useChats = (selectedAccountId = 'all') => {
           const currentTs = new Date(chat.lastMessageTimestamp || 0).getTime();
           const prevTs = prevChatTimestamps.current.get(id) || 0;
 
-          // If timestamp is newer
-          if (currentTs > prevTs && prevTs > 0) {
+          // If timestamp is newer and chat is not a self-chat
+          if (currentTs > prevTs && prevTs > 0 && !chat.isSelfChat && !chat.participant?.includes('(You)')) {
             hasNewIncomingMessage = true;
             newestChat = chat;
             break;

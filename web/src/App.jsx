@@ -31,6 +31,7 @@ function MainLayout() {
     const handleToast = (e) => {
       const chat = e.detail?.chat;
       if (chat) {
+        if (chat.isSelfChat || chat.participant?.includes('(You)')) return;
         setActiveToast(chat);
         setTimeout(() => {
           setActiveToast((curr) => ((curr?._id || curr?.id) === (chat._id || chat.id) ? null : curr));

@@ -162,7 +162,7 @@ const getChats = async (req, res) => {
             accountBadge: accountName,
             chatType: 'oneOnOne',
             lastMessagePreview: 'Personal workspace & saved notes',
-            lastMessageTimestamp: new Date().toISOString(),
+            lastMessageTimestamp: '2026-01-01T00:00:00.000Z',
             unreadCount: 0,
             onlineStatus: 'online',
             isSelfChat: true
