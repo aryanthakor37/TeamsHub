@@ -392,6 +392,7 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     company,
     accountBadge: company,
     chatType: graphChat.chatType || 'oneOnOne',
+    isSelfChat,
     lastMessagePreview: graphChat.lastMessagePreview?.body?.content
       ? graphChat.lastMessagePreview.body.content.replace(/<[^>]*>/g, '').substring(0, 120)
       : '',
@@ -429,8 +430,8 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     if (graphMessage.body.contentType === 'html') {
       // Rewrite hosted image URLs. Graph sends src="../hostedContents/{id}/$value" or full URL with base64 ID
       content = content.replace(
-        /src=["']?[^"']*(?:hostedContents|messages\/[^"'/]+\/hostedContents)\/([^"'\s]+?)\/\$value["']?/gi,
-        (match, cid) => `src="/api/chats/${encodeURIComponent(chatId)}/messages/${graphMessage.id}/hostedContents/${encodeURIComponent(cid)}"`
+        /src=["']?(?:https?:\/\/[^"'\s]+?)?(?:hostedContents|messages\/[^"'\s]+\/hostedContents)\/([^"'\s]+?)(?:\/\$value)?["']?/gi,
+        (match, cid) => `src="/api/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(graphMessage.id)}/hostedContents/${encodeURIComponent(cid)}"`
       );
       // Remove potentially malicious script tags
       content = content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');

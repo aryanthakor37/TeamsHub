@@ -530,10 +530,19 @@ const getMessageImage = async (req, res) => {
       }
     }
 
-    if (!accessToken) {
-      const anyAccount = await ConnectedAccount.findOne({ microsoftAccessToken: { $ne: '' } }).select('+microsoftAccessToken');
-      if (anyAccount && anyAccount.microsoftAccessToken) {
-        accessToken = anyAccount.microsoftAccessToken;
+    if (!accessToken && req.query.token) {
+      accessToken = req.query.token;
+    }
+
+    if (!accessToken && dbAvailable) {
+      const anyAccount = await ConnectedAccount.findOne({
+        $or: [
+          { microsoftAccessToken: { $exists: true, $ne: '' } },
+          { graphAccessToken: { $exists: true, $ne: '' } }
+        ]
+      }).select('+microsoftAccessToken +graphAccessToken');
+      if (anyAccount) {
+        accessToken = anyAccount.microsoftAccessToken || anyAccount.graphAccessToken;
       }
     }
 
