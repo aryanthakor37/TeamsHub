@@ -71,14 +71,22 @@ const globalSearch = async (req, res) => {
     });
 
     // 2. Search Chats (People & Conversations)
-    const chats = await Chat.find({
-      userId,
+    const rawChats = await Chat.find({
       $or: [{ participant: regex }, { lastMessagePreview: regex }, { company: regex }]
-    }).sort({ lastMessageTimestamp: -1 }).limit(20);
+    }).sort({ lastMessageTimestamp: -1 }).limit(30);
+
+    const userName = (req.user?.name || '').toLowerCase();
+
+    // Filter out cross-account chats (e.g. Hem Shah chats in Aryan's session)
+    const chats = rawChats.filter(c => {
+      if (c.company && c.company !== 'Microsoft Teams' && userName && !userName.includes(c.company.toLowerCase())) {
+        return false;
+      }
+      return true;
+    }).slice(0, 20);
 
     // 3. Search Messages & Document Attachments
     const messages = await Message.find({
-      userId,
       $or: [{ content: regex }, { senderName: regex }, { senderEmail: regex }]
     }).sort({ createdDateTime: -1 }).limit(30);
 

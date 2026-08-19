@@ -197,9 +197,13 @@ const getChats = async (req, res) => {
           return true;
         });
 
-        // Background update DB cache without blocking (wiping all old stale chats for this user)
+        // Background update DB cache without blocking (wiping all old stale chats for this user & purging Hem Shah stale docs)
         if (dbAvailable) {
-          await Chat.deleteMany({ userId: req.user._id }).catch(() => {});
+          if (accountName && accountName !== 'Microsoft Teams') {
+            await Chat.deleteMany({ company: { $ne: accountName } }).catch(() => {});
+          } else {
+            await Chat.deleteMany({ company: 'Hem Shah' }).catch(() => {});
+          }
 
           Promise.all(sanitizedList.map(c => {
             const copy = { ...c, userId: req.user._id };
