@@ -188,8 +188,11 @@ const getChats = async (req, res) => {
           return timeB - timeA;
         });
 
-        // Background update DB cache without blocking
+        // Background update DB cache without blocking (purging stale cross-account chats)
         if (dbAvailable) {
+          if (accountName && accountName !== 'Microsoft Teams') {
+            await Chat.deleteMany({ userId: req.user._id, company: { $ne: accountName } }).catch(() => {});
+          }
           Promise.all(normalizedList.map(c => {
             const copy = { ...c, userId: req.user._id };
             delete copy._id;
@@ -215,7 +218,11 @@ const getChats = async (req, res) => {
       } catch (graphErr) {
         console.error('[TeamsHub getChats Graph Error]:', graphErr.message);
         if (dbAvailable && req.user?._id) {
-          const cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
+          const query = { userId: req.user._id };
+          if (accountName && accountName !== 'Microsoft Teams') {
+            query.company = accountName;
+          }
+          const cachedChats = await Chat.find(query).sort({ lastMessageTimestamp: -1 });
           if (cachedChats.length > 0) {
             return res.status(200).json({
               success: true,
