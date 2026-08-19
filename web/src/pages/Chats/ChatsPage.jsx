@@ -760,46 +760,69 @@ export default function ChatsPage({
                       <div
                         style={{
                           display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: msg.isOutgoing ? 'flex-end' : 'flex-start',
-                          marginTop: showHeader && index !== 0 ? '12px' : '2px',
+                          flexDirection: 'row',
+                          alignItems: 'flex-start',
+                          justifyContent: msg.isOutgoing ? 'flex-end' : 'flex-start',
+                          marginTop: showHeader && index !== 0 ? '14px' : '3px',
                           width: '100%',
-                          position: 'relative'
+                          gap: '10px'
                         }}
                       >
-
-                        {showHeader && (
-                          <div style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-muted)',
-                            marginBottom: '4px',
-                            padding: '0 4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}>
-                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{msg.senderName}</span>
-                            <span>{new Date(msg.createdDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        {/* Show Avatar ONLY for Incoming Messages on Left */}
+                        {!msg.isOutgoing && (
+                          <div style={{ width: '32px', height: '32px', flexShrink: 0, marginTop: '2px', opacity: showHeader ? 1 : 0 }}>
+                            <div className="avatar-3d" style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              backgroundColor: getAvatarColor(msg.senderName),
+                              color: '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '700',
+                              fontSize: '0.78rem'
+                            }}>
+                              {getInitials(msg.senderName)}
+                            </div>
                           </div>
                         )}
 
-                        <div style={{ position: 'relative', maxWidth: '82%', width: 'fit-content' }}>
-                          <div 
-                            id={`msg-bubble-${msg._id || msg.id || msg.microsoftMessageId || `msg-${index}`}`}
-                            className={msg.isOutgoing ? 'teams-msg-outgoing' : 'teams-msg-incoming'}
-                            style={{
-                              padding: '10px 14px',
-                              borderRadius: '8px',
-                              backgroundColor: msg.isOutgoing ? 'var(--accent-light)' : 'var(--bg-secondary)',
-                              color: msg.isOutgoing ? 'var(--accent-text)' : 'var(--text-primary)',
-                              fontSize: '0.9rem',
-                              lineHeight: '1.45',
-                              border: msg.isOutgoing ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid var(--border-color)',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                              wordBreak: 'break-word',
-                              overflow: 'hidden'
-                            }}
-                          >
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: msg.isOutgoing ? 'flex-end' : 'flex-start', maxWidth: '82%', minWidth: 0 }}>
+                          {showHeader && (
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-muted)',
+                              marginBottom: '4px',
+                              padding: '0 2px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}>
+                              {!msg.isOutgoing && (
+                                <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{msg.senderName}</span>
+                              )}
+                              <span>{new Date(msg.createdDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          )}
+
+                          <div style={{ position: 'relative', width: 'fit-content', maxWidth: '100%' }}>
+                            <div 
+                              id={`msg-bubble-${msg._id || msg.id || msg.microsoftMessageId || `msg-${index}`}`}
+                              className={msg.isOutgoing ? 'teams-msg-outgoing' : 'teams-msg-incoming'}
+                              style={{
+                                padding: '10px 14px',
+                                borderRadius: msg.isOutgoing ? '12px 8px 12px 12px' : '8px 12px 12px 12px',
+                                backgroundColor: msg.isOutgoing ? 'var(--accent-light)' : 'var(--bg-secondary)',
+                                color: msg.isOutgoing ? 'var(--accent-text)' : 'var(--text-primary)',
+                                fontSize: '0.9rem',
+                                lineHeight: '1.45',
+                                border: msg.isOutgoing ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid var(--border-color)',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                wordBreak: 'break-word',
+                                overflow: 'hidden'
+                              }}
+                            >
                             {msg.contentType === 'html' ? (
                               <div
                                 className="message-html-content"

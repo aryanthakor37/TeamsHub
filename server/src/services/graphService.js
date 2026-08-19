@@ -403,24 +403,21 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
  * Normalize Graph message response into TeamsHub Message schema
  */
 const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEmail, userId = null) => {
-  const senderEmail = graphMessage.from?.user?.email || graphMessage.from?.user?.displayName || '';
+  const senderEmail = graphMessage.from?.user?.email || graphMessage.from?.user?.userPrincipalName || '';
   const senderName = graphMessage.from?.user?.displayName || senderEmail || 'Unknown';
-  const senderId = graphMessage.from?.user?.id;
+  const senderId = graphMessage.from?.user?.id || '';
+
+  const currentEmail = (userEmail || '').toLowerCase().trim();
+  const currentUserId = (userId || '').toLowerCase().trim();
+  const sEmail = (senderEmail || '').toLowerCase().trim();
+  const sId = (senderId || '').toLowerCase().trim();
 
   let isOutgoing = false;
 
-  if (senderId && userId && senderId === userId) {
+  if (currentUserId && sId && sId === currentUserId) {
     isOutgoing = true;
-  } else if (senderEmail && userEmail && senderEmail.toLowerCase() === userEmail.toLowerCase()) {
+  } else if (currentEmail && sEmail && (sEmail === currentEmail || sEmail.includes(currentEmail) || currentEmail.includes(sEmail))) {
     isOutgoing = true;
-  } else if (senderName && userEmail && senderName.toLowerCase() === userEmail.toLowerCase()) {
-    isOutgoing = true;
-  } else if (userEmail) {
-    // Aggressive fallback: if the senderName contains the user's first name (e.g., 'aryan' from 'aryankumar...')
-    const firstNameMatch = userEmail.split('@')[0].split(/[\.\_]/)[0].replace(/[0-9]/g, '').toLowerCase();
-    if (firstNameMatch.length > 2 && senderName.toLowerCase().includes(firstNameMatch)) {
-      isOutgoing = true;
-    }
   }
 
   let content = '';
