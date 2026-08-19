@@ -105,9 +105,15 @@ const getChats = async (req, res) => {
         } else {
           acc = await ConnectedAccount.findOne({ accountId: connectedAccountId, userId: req.user._id }).select('+microsoftAccessToken +tokenExpiresAt');
         }
-      }
       if (!acc && req.user?.email) {
-        acc = await ConnectedAccount.findOne({ email: req.user.email.toLowerCase(), userId: req.user._id }).select('+microsoftAccessToken +tokenExpiresAt');
+        acc = await ConnectedAccount.findOne({
+          email: req.user.email.toLowerCase()
+        }).select('+microsoftAccessToken +tokenExpiresAt');
+      }
+      if (!acc) {
+        acc = await ConnectedAccount.findOne({
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
       if (acc && acc.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
