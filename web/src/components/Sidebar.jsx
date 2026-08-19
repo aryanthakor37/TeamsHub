@@ -33,7 +33,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
   const accountCount = connectedAccounts.length;
 
   return (
-    <aside style={{
+    <aside className="sidebar-container" style={{
       width: '240px',
       backgroundColor: 'var(--bg-secondary)',
       borderRight: '1px solid var(--border-color)',
@@ -43,7 +43,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
       userSelect: 'none'
     }}>
       {/* Brand Header */}
-      <div style={{
+      <div className="sidebar-brand-container" style={{
         padding: '22px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -62,11 +62,12 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
           fontWeight: '800',
           fontSize: '1.25rem',
           boxShadow: '0 6px 16px -2px rgba(79, 70, 229, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.4)',
-          border: '1px solid rgba(255, 255, 255, 0.2)'
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          flexShrink: 0
         }}>
           TH
         </div>
-        <div>
+        <div className="sidebar-brand-text">
           <h2 style={{ fontSize: '1.2rem', fontWeight: '800', lineHeight: 1.2, letterSpacing: '-0.01em' }}>TeamsHub</h2>
           <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: '700' }}>
             Enterprise Workspace
@@ -75,7 +76,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
       </div>
 
       {/* Navigation List */}
-      <nav style={{ padding: '16px 12px', flex: 1 }}>
+      <nav className="sidebar-nav-list" style={{ padding: '16px 12px', flex: 1 }}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -83,7 +84,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className="tab-pill-3d"
+              className="tab-pill-3d sidebar-item-btn"
               style={{
                 width: '100%',
                 display: 'flex',
@@ -104,13 +105,13 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
                 transition: 'all var(--transition-fast)'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="sidebar-item-inner" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Icon size={19} color={isActive ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
-                <span style={{ fontSize: '0.9rem' }}>{item.label}</span>
+                <span className="sidebar-item-label" style={{ fontSize: '0.9rem' }}>{item.label}</span>
               </div>
 
               {item.badge && (
-                <span className="badge" style={{
+                <span className="badge sidebar-item-badge" style={{
                   backgroundColor: item.isAlertBadge ? '#ef4444' : '#6366f1',
                   color: '#ffffff',
                   fontSize: '0.75rem',
@@ -130,7 +131,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
       </nav>
 
       {/* Footer Profile Info */}
-      <div style={{
+      <div className="sidebar-profile-footer" style={{
         padding: '16px 20px',
         borderTop: '1px solid var(--border-color)',
         display: 'flex',
@@ -153,7 +154,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
         }}>
           {userInitials}
         </div>
-        <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div className="sidebar-profile-info" style={{ flex: 1, overflow: 'hidden' }}>
           <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
             {userName}
           </div>

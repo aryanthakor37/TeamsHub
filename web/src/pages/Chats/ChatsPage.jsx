@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, RefreshCw, Send, Lock, ShieldCheck, CheckCircle2, MessageSquare, AlertCircle, Sparkles, FileText, Paperclip, Download, X, ExternalLink, Eye, Smile, ThumbsUp, Heart, LogIn, Check } from 'lucide-react';
+import { Search, RefreshCw, Send, Lock, ShieldCheck, CheckCircle2, MessageSquare, AlertCircle, Sparkles, FileText, Paperclip, Download, X, ExternalLink, Eye, Smile, ThumbsUp, Heart, LogIn, Check, ArrowLeft } from 'lucide-react';
 import { useChats } from '../../hooks/useChats';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../hooks/useAuth';
@@ -379,9 +379,9 @@ export default function ChatsPage({
   }, [messages, activeChat]);
 
   return (
-    <div style={{ flex: 1, display: 'flex', overflow: 'hidden', height: '100%' }}>
+    <div className="chats-page-container" style={{ flex: 1, display: 'flex', overflow: 'hidden', height: '100%' }}>
       {/* Sidebar Chat List Pane */}
-      <div style={{
+      <div className={`chats-sidebar-pane ${activeChatId ? 'mobile-hidden' : ''}`} style={{
         width: '360px',
         backgroundColor: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border-color)',
@@ -603,7 +603,7 @@ export default function ChatsPage({
       </div>
 
       {/* Main Conversation Thread View Pane */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
+      <div className={`chats-active-pane ${!activeChatId ? 'mobile-hidden' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
         {activeChat ? (
           <>
             {/* Conversation Header */}
@@ -617,6 +617,14 @@ export default function ChatsPage({
               justifyContent: 'space-between'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  className="mobile-back-btn"
+                  onClick={() => setActiveChatId(null)}
+                  title="Back to conversation list"
+                >
+                  <ArrowLeft size={16} />
+                  <span>Back</span>
+                </button>
                 <div style={{ position: 'relative' }}>
                   <div style={{
                     width: '40px',
