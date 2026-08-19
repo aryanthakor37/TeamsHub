@@ -188,11 +188,19 @@ const getChats = async (req, res) => {
           return timeB - timeA;
         });
 
+        // Strict filter: Ensure no chat has a mismatched company badge (e.g. Hem Shah chats in Aryan's session)
+        const sanitizedList = normalizedList.filter(c => {
+          if (c.company && accountName && accountName !== 'Microsoft Teams' && c.company !== accountName && c.company !== 'Microsoft Teams') {
+            return false;
+          }
+          return true;
+        });
+
         // Background update DB cache without blocking (wiping all old stale chats for this user)
         if (dbAvailable) {
           await Chat.deleteMany({ userId: req.user._id }).catch(() => {});
 
-          Promise.all(normalizedList.map(c => {
+          Promise.all(sanitizedList.map(c => {
             const copy = { ...c, userId: req.user._id };
             delete copy._id;
             return Chat.findOneAndUpdate(
@@ -207,10 +215,10 @@ const getChats = async (req, res) => {
           success: true,
           source: 'graph',
           data: {
-            items: normalizedList,
+            items: sanitizedList,
             page: 1,
-            limit: normalizedList.length,
-            total: normalizedList.length,
+            limit: sanitizedList.length,
+            total: sanitizedList.length,
             hasMore: !!graphResponse['@odata.nextLink']
           }
         });

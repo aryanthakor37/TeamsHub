@@ -13,6 +13,10 @@ const getAuthHeaders = async (accountId) => {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  const activeEmail = localStorage.getItem('teamshub_active_email');
+  if (activeEmail) {
+    headers['x-user-email'] = activeEmail;
+  }
   return headers;
 };
 
