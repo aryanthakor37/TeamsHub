@@ -398,10 +398,25 @@ const getChatMessages = async (req, res) => {
       }
 
       try {
-        const msEmail = (req.user?.email || '').toLowerCase().trim();
+        let msEmail = (req.user?.email || req.headers['x-user-email'] || '').toLowerCase().trim();
+        let msDisplayName = (req.user?.name || req.user?.displayName || 'Aryan Kumrecha').trim();
+
+        if (!msEmail || msEmail.includes('teamshub.app') || msEmail.includes('companya.com')) {
+          if (dbAvailable) {
+            const acc = await ConnectedAccount.findOne({
+              microsoftAccessToken: { $exists: true, $ne: '' }
+            }).sort({ updatedAt: -1 }).select('email displayName');
+            if (acc && acc.email) {
+              msEmail = acc.email.toLowerCase().trim();
+            }
+            if (acc && acc.displayName) {
+              msDisplayName = acc.displayName.trim();
+            }
+          }
+        }
         const graphResponse = await fetchGraphChatMessages(accessToken, microsoftChatId);
         const messages = (graphResponse.value || [])
-          .map((gm) => normalizeGraphMessage(gm, id, '', msEmail, ''))
+          .map((gm) => normalizeGraphMessage(gm, id, '', msEmail, msDisplayName))
           .filter(Boolean)
           .reverse(); // Reverse to chronological order (oldest top, newest bottom)
 

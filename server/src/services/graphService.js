@@ -405,21 +405,26 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
 /**
  * Normalize Graph message response into TeamsHub Message schema
  */
-const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEmail, userId = null) => {
-  const senderEmail = graphMessage.from?.user?.email || graphMessage.from?.user?.userPrincipalName || '';
-  const senderName = graphMessage.from?.user?.displayName || senderEmail || 'Unknown';
+const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEmail, currentDisplayName = '') => {
+  const senderEmail = (graphMessage.from?.user?.email || graphMessage.from?.user?.userPrincipalName || '').toLowerCase().trim();
+  const senderName = (graphMessage.from?.user?.displayName || senderEmail || 'Unknown').trim();
   const senderId = graphMessage.from?.user?.id || '';
 
-  const currentEmail = (userEmail || '').toLowerCase().trim();
-  const currentUserId = (userId || '').toLowerCase().trim();
-  const sEmail = (senderEmail || '').toLowerCase().trim();
-  const sId = (senderId || '').toLowerCase().trim();
+  const cEmail = (userEmail || '').toLowerCase().trim();
+  const cName = (currentDisplayName || '').toLowerCase().trim();
+  const sEmail = senderEmail;
+  const sName = senderName.toLowerCase();
+
+  const uPrefix = cEmail.split('@')[0].split('_')[0].split('#')[0];
+  const sPrefix = sEmail.split('@')[0].split('_')[0].split('#')[0];
 
   let isOutgoing = false;
 
-  if (currentUserId && sId && sId === currentUserId) {
+  if (uPrefix && sPrefix && uPrefix === sPrefix && !uPrefix.includes('teamshub')) {
     isOutgoing = true;
-  } else if (currentEmail && sEmail && sEmail === currentEmail) {
+  } else if (cEmail && sEmail && cEmail === sEmail) {
+    isOutgoing = true;
+  } else if (cName && sName && (cName === sName || (cName.includes('aryan') && sName.includes('aryan')))) {
     isOutgoing = true;
   }
 

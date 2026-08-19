@@ -826,7 +826,15 @@ export default function ChatsPage({
                             {msg.contentType === 'html' ? (
                               <div
                                 className="message-html-content"
-                                dangerouslySetInnerHTML={{ __html: msg.content }}
+                                dangerouslySetInnerHTML={{
+                                  __html: (() => {
+                                    if (!msg.content) return '';
+                                    const apiBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
+                                      ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
+                                      : '';
+                                    return apiBase ? msg.content.replace(/src=["'](?:\/api\/chats\/)/gi, `src="${apiBase}/api/chats/`) : msg.content;
+                                  })()
+                                }}
                                 style={{ margin: 0 }}
                                 onClick={(e) => {
                                   if (e.target.tagName === 'IMG' && e.target.src) {
