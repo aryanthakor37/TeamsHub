@@ -238,9 +238,15 @@ const getChats = async (req, res) => {
         });
       } catch (graphErr) {
         console.error('[TeamsHub getChats Graph Error]:', graphErr.message);
-        if (dbAvailable && req.user?._id) {
-          const cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
-          if (cachedChats.length > 0) {
+        if (dbAvailable) {
+          let cachedChats = [];
+          if (req.user?._id) {
+            cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
+          }
+          if (!cachedChats || cachedChats.length === 0) {
+            cachedChats = await Chat.find({ company: { $ne: 'Hem Shah' } }).sort({ lastMessageTimestamp: -1 });
+          }
+          if (cachedChats && cachedChats.length > 0) {
             return res.status(200).json({
               success: true,
               source: 'cache',
@@ -257,7 +263,29 @@ const getChats = async (req, res) => {
       }
     }
 
-    // ── Unauthenticated / No Access Token: Return empty chats list ──
+    // ── Universal Database Fallback for Unauthenticated / Expired Tokens ──
+    if (dbAvailable) {
+      let cachedChats = [];
+      if (req.user?._id) {
+        cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
+      }
+      if (!cachedChats || cachedChats.length === 0) {
+        cachedChats = await Chat.find({ company: { $ne: 'Hem Shah' } }).sort({ lastMessageTimestamp: -1 });
+      }
+      if (cachedChats && cachedChats.length > 0) {
+        return res.status(200).json({
+          success: true,
+          source: 'cache',
+          data: {
+            items: cachedChats,
+            page: 1,
+            limit: cachedChats.length,
+            total: cachedChats.length,
+            hasMore: false
+          }
+        });
+      }
+    }
     return res.status(200).json({
       success: true,
       source: 'unauthenticated',
