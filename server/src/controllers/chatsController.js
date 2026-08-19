@@ -146,6 +146,9 @@ const getChats = async (req, res) => {
               console.warn(`[TeamsHub Guard] Access token email prefix (${tokenPrefix}) does not match active logged-in user (${expectedPrefix}). Rejecting token.`);
               accessToken = null;
             } else {
+              if (profile.displayName) {
+                accountName = profile.displayName;
+              }
               currentUserInfo = {
                 email: profile.mail || profile.userPrincipalName || currentUserInfo.email,
                 displayName: profile.displayName || currentUserInfo.displayName,
@@ -209,11 +212,7 @@ const getChats = async (req, res) => {
 
         // Background update DB cache without blocking (wiping all old stale chats for this user & purging Hem Shah stale docs)
         if (dbAvailable) {
-          if (accountName && accountName !== 'Microsoft Teams') {
-            await Chat.deleteMany({ company: { $ne: accountName } }).catch(() => {});
-          } else {
-            await Chat.deleteMany({ company: 'Hem Shah' }).catch(() => {});
-          }
+          await Chat.deleteMany({ company: 'Hem Shah' }).catch(() => {});
 
           Promise.all(sanitizedList.map(c => {
             const copy = { ...c, userId: req.user._id };
@@ -240,11 +239,7 @@ const getChats = async (req, res) => {
       } catch (graphErr) {
         console.error('[TeamsHub getChats Graph Error]:', graphErr.message);
         if (dbAvailable && req.user?._id) {
-          const query = { userId: req.user._id };
-          if (accountName && accountName !== 'Microsoft Teams') {
-            query.company = accountName;
-          }
-          const cachedChats = await Chat.find(query).sort({ lastMessageTimestamp: -1 });
+          const cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
           if (cachedChats.length > 0) {
             return res.status(200).json({
               success: true,
