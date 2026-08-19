@@ -73,8 +73,17 @@ export const fetchFileBlob = async (url, accountId) => {
     return url;
   }
 
+  // Prepend backend base URL if relative path starting with /api
+  let fullUrl = url;
+  if (fullUrl.startsWith('/api') || fullUrl.startsWith('api/')) {
+    const backendBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
+      ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
+      : '';
+    fullUrl = `${backendBase}${fullUrl.startsWith('/') ? '' : '/'}${fullUrl}`;
+  }
+
   try {
-    const isGraphOrApi = url.includes('graph.microsoft.com') || url.includes('/api/') || url.includes('onrender.com');
+    const isGraphOrApi = fullUrl.includes('graph.microsoft.com') || fullUrl.includes('/api/') || fullUrl.includes('onrender.com');
     const headers = {};
     
     if (isGraphOrApi && accountId) {
@@ -84,7 +93,7 @@ export const fetchFileBlob = async (url, accountId) => {
       }
     }
 
-    const res = await fetch(url, { headers });
+    const res = await fetch(fullUrl, { headers });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -102,8 +111,16 @@ export const fetchFileBlob = async (url, accountId) => {
 export const fetchFileArrayBuffer = async (url, accountId) => {
   if (!url || url === '#') return null;
 
+  let fullUrl = url;
+  if (fullUrl.startsWith('/api') || fullUrl.startsWith('api/')) {
+    const backendBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
+      ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
+      : '';
+    fullUrl = `${backendBase}${fullUrl.startsWith('/') ? '' : '/'}${fullUrl}`;
+  }
+
   try {
-    const isGraphOrApi = url.includes('graph.microsoft.com') || url.includes('/api/') || url.includes('onrender.com');
+    const isGraphOrApi = fullUrl.includes('graph.microsoft.com') || fullUrl.includes('/api/') || fullUrl.includes('onrender.com');
     const headers = {};
     
     if (isGraphOrApi && accountId) {
@@ -113,7 +130,7 @@ export const fetchFileArrayBuffer = async (url, accountId) => {
       }
     }
 
-    const res = await fetch(url, { headers });
+    const res = await fetch(fullUrl, { headers });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
