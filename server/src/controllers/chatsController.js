@@ -183,40 +183,16 @@ const getChats = async (req, res) => {
       }
     }
 
-    // ── Fallback to MongoDB Cache ──
-    if (dbAvailable) {
-      const query = { userId: req.user._id };
-      if (connectedAccountId && connectedAccountId !== 'all') {
-        query.connectedAccountId = connectedAccountId;
-      }
-
-      const cachedChats = await Chat.find(query)
-        .sort({ lastMessageTimestamp: -1 })
-        .skip((pageNum - 1) * limitNum)
-        .limit(limitNum);
-
-      const total = await Chat.countDocuments(query);
-
-      if (cachedChats.length > 0) {
-        return res.status(200).json({
-          success: true,
-          source: 'cache',
-          data: {
-            items: cachedChats,
-            page: pageNum,
-            limit: limitNum,
-            total,
-            hasMore: pageNum * limitNum < total
-          }
-        });
-      }
-    }
-
-    return res.status(401).json({
-      success: false,
-      error: {
-        code: 'GRAPH_AUTH_REQUIRED',
-        message: 'No Microsoft access token available. Please authenticate first.'
+    // ── Unauthenticated / No Access Token: Return empty chats list ──
+    return res.status(200).json({
+      success: true,
+      source: 'unauthenticated',
+      data: {
+        items: [],
+        page: pageNum,
+        limit: limitNum,
+        total: 0,
+        hasMore: false
       }
     });
   } catch (error) {
@@ -309,12 +285,7 @@ const getChatMessages = async (req, res) => {
       ).catch(e => console.warn('[Token Persistence Warning]', e.message));
     }
 
-    if (!accessToken && dbAvailable) {
-      const acc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).select('+microsoftAccessToken +tokenExpiresAt');
-      if (acc && acc.microsoftAccessToken) {
-        accessToken = acc.microsoftAccessToken;
-      }
-    }
+
 
     if (accessToken) {
       // Need the microsoftChatId — look up from DB or use id directly
