@@ -5,6 +5,7 @@ export const getActiveMsalAccounts = async () => {
   try {
     await msalInstance.initialize();
     const accounts = msalInstance.getAllAccounts();
+    const activeAcc = msalInstance.getActiveAccount();
     const list = [];
     for (const acc of accounts) {
       const token = await acquireGraphToken(acc.homeAccountId || acc.username);
@@ -16,7 +17,7 @@ export const getActiveMsalAccounts = async () => {
         tenantId: acc.tenantId || 'common',
         accountType: 'Microsoft Work / Personal Account',
         status: 'connected',
-        isDefault: true,
+        isDefault: activeAcc ? (acc.username === activeAcc.username) : true,
         accessToken: token,
         badgeClass: 'badge-company-a',
         lastAuthenticatedAt: new Date().toISOString()
@@ -35,6 +36,8 @@ export const initializeMsal = async () => {
     const response = await msalInstance.handleRedirectPromise();
     if (response && response.account) {
       const account = response.account;
+      msalInstance.setActiveAccount(account);
+      localStorage.setItem('teamshub_active_email', account.username);
       const accountPayload = {
         accountId: account.homeAccountId || account.localAccountId,
         displayName: account.name || account.username.split('@')[0],
@@ -110,7 +113,8 @@ export const fetchConnectedAccountsFromBackend = async () => {
         data: []
       };
     }
-    const userEmail = activeAccs[0].email;
+    const activeMsalAccount = msalInstance.getActiveAccount() || activeAccs[0];
+    const userEmail = activeMsalAccount.username || activeMsalAccount.email || localStorage.getItem('teamshub_active_email') || '';
     const response = await fetch(`${API_BASE_URL}/accounts?email=${encodeURIComponent(userEmail)}`, {
       headers: {
         'x-user-email': userEmail
@@ -234,54 +238,22 @@ export const acquireGraphToken = async (accountId) => {
 /**
  * Initiate Microsoft Account Sign In
  *
- * When real MSAL is configured:
- *   - Opens Microsoft login popup
- *   - Acquires access token with Chat.Read scope
- *   - Sends access token to backend for Graph verification & storage
- *
- * When MSAL is not configured (placeholder client ID):
- *   - Uses demo/development flow
+ * Uses loginRedirect so authentication happens directly inside the SAME TAB (no popup windows).
  */
 export const loginMicrosoftAccount = async () => {
   if (isRealMsalConfigured()) {
-    // ── Real MSAL Authentication ──
     try {
       await msalInstance.initialize();
-      // Try loginPopup first for instant in-page auth dialog
-      const response = await msalInstance.loginPopup({ ...loginRequest, prompt: 'select_account' });
-      if (response && response.account) {
-        const account = response.account;
-        const accountPayload = {
-          accountId: account.homeAccountId || account.localAccountId,
-          displayName: account.name || account.username.split('@')[0],
-          email: account.username,
-          tenantId: account.tenantId || 'common',
-          accountType: 'Microsoft Work / Personal Account',
-          scopes: response.scopes || ['User.Read', 'Chat.Read'],
-          accessToken: response.accessToken
-        };
-        const syncResult = await syncAccountToBackend(accountPayload);
-        return {
-          success: true,
-          isDuplicate: syncResult.isDuplicate,
-          account: syncResult.data || accountPayload,
-          isRealAuth: true
-        };
-      }
-      return { success: false, error: 'No account returned from Microsoft.' };
+      // Use loginRedirect so Microsoft authentication opens in the SAME TAB (same window)
+      await msalInstance.loginRedirect({ ...loginRequest, prompt: 'select_account' });
+      return { success: true, isRealAuth: true };
     } catch (error) {
-      console.warn('[MSAL Popup Warning] Attempting loginRedirect fallback:', error.message);
-      try {
-        await msalInstance.loginRedirect({ ...loginRequest, prompt: 'select_account' });
-        return new Promise(() => { });
-      } catch (redirectErr) {
-        console.error('[MSAL Authentication Error]', redirectErr);
-        return {
-          success: false,
-          error: redirectErr.message || 'Microsoft sign-in failed.',
-          isRealAuth: true
-        };
-      }
+      console.error('[MSAL Redirect Error]', error);
+      return {
+        success: false,
+        error: error.message || 'Microsoft sign-in failed.',
+        isRealAuth: true
+      };
     }
   } else {
     // ── Demo Mode (no real Entra credentials) ──
