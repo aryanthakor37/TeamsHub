@@ -946,6 +946,7 @@ export default function ChatsPage({
                               </button>
                             </div>
                           )}
+                          </div>
                         </div>
                       </div>
                     </React.Fragment>
