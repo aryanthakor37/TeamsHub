@@ -103,8 +103,9 @@ const getChats = async (req, res) => {
         if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
           acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt');
         } else {
-          acc = await ConnectedAccount.findOne({ accountId: connectedAccountId, userId: req.user._id }).select('+microsoftAccessToken +tokenExpiresAt');
+          acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt');
         }
+      }
       if (!acc && req.user?.email) {
         acc = await ConnectedAccount.findOne({
           email: req.user.email.toLowerCase()
