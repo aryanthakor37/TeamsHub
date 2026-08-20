@@ -252,9 +252,6 @@ const getChats = async (req, res) => {
           if (req.user?._id) {
             cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
           }
-          if (!cachedChats || cachedChats.length === 0) {
-            cachedChats = await Chat.find({ company: { $ne: 'Hem Shah' } }).sort({ lastMessageTimestamp: -1 });
-          }
           if (cachedChats && cachedChats.length > 0) {
             return res.status(200).json({
               success: true,
@@ -277,9 +274,6 @@ const getChats = async (req, res) => {
       let cachedChats = [];
       if (req.user?._id) {
         cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
-      }
-      if (!cachedChats || cachedChats.length === 0) {
-        cachedChats = await Chat.find({ company: { $ne: 'Hem Shah' } }).sort({ lastMessageTimestamp: -1 });
       }
       if (cachedChats && cachedChats.length > 0) {
         return res.status(200).json({
@@ -711,12 +705,12 @@ const refreshChats = async (req, res) => {
     const accounts = await ConnectedAccount.find(accountQuery).select('+microsoftAccessToken +tokenExpiresAt');
 
     if (accounts.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'NO_ACCOUNTS',
-          message: 'No connected Microsoft accounts found. Please connect an account first.'
-        }
+      return res.status(200).json({
+        success: true,
+        source: 'none',
+        message: 'No connected Microsoft accounts found to refresh.',
+        syncedAt: new Date().toISOString(),
+        results: []
       });
     }
 
