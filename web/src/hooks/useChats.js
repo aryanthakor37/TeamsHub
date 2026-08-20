@@ -29,9 +29,11 @@ const saveStoredReadChat = (chatId) => {
 
 const getStoredLocalChats = () => {
   try {
+    const activeEmail = localStorage.getItem('teamshub_active_email');
+    if (!activeEmail) return [];
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter(c => c && c.company !== 'Hem Shah') : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     return [];
   }
@@ -39,8 +41,12 @@ const getStoredLocalChats = () => {
 
 const saveStoredLocalChats = (items) => {
   try {
-    const filtered = (items || []).filter(c => c && c.company !== 'Hem Shah');
-    localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
+    const activeEmail = localStorage.getItem('teamshub_active_email');
+    if (!activeEmail) {
+      localStorage.removeItem('teamshub_cached_chats');
+      return;
+    }
+    localStorage.setItem('teamshub_cached_chats', JSON.stringify(items || []));
   } catch (e) {}
 };
 
@@ -81,6 +87,8 @@ export const useChats = (selectedAccountId = 'all') => {
     };
 
     const handleLogoutEvent = () => {
+      localStorage.removeItem('teamshub_cached_chats');
+      localStorage.removeItem('teamshub_active_email');
       setChats([]);
       setLoading(false);
       setError(null);
