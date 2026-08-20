@@ -29,14 +29,10 @@ const saveStoredReadChat = (chatId) => {
 
 const isLegacyOrFakeChat = (c) => {
   if (!c) return true;
-  const id = (c.id || c._id || c.microsoftChatId || '').toString().toLowerCase();
   const company = (c.company || c.accountBadge || '').toLowerCase();
   const participant = (c.participant || '').toLowerCase();
 
-  if (id.includes('personal-chat-') || id.includes('mock-')) return true;
-  if (company.includes('hem shah') || participant.includes('hem shah')) return true;
-  if (participant.includes('meet thakor') || participant.includes('hardik thakor') || participant.includes('mittal trivedi') || participant.includes('aditya kumrecha')) return true;
-
+  if (company.includes('hem shah') || participant.includes('hem shah (you)')) return true;
   return false;
 };
 
