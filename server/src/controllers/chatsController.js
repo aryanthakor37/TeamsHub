@@ -649,9 +649,10 @@ const getMessageImage = async (req, res) => {
     }
 
     if (isMockMode() || !accessToken) {
-      const svgPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220"><rect width="100%" height="100%" fill="#f1f5f9" rx="12"/><path d="M120 140l25-30 20 25 35-45 40 50H120z" fill="#cbd5e1"/><circle cx="150" cy="90" r="16" fill="#cbd5e1"/><text x="50%" y="82%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-family="sans-serif" font-weight="600" font-size="13">Shared Teams Photo</text></svg>`;
+      const svgPhotoCard = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320"><defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e0e7ff"/><stop offset="100%" stop-color="#c7d2fe"/></linearGradient><linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4f46e5"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#bgGrad)" rx="16"/><circle cx="240" cy="130" r="48" fill="url(#iconGrad)" opacity="0.9"/><path d="M216 142l16-20 14 16 22-28 24 32H216z" fill="#ffffff"/><circle cx="232" cy="116" r="6" fill="#ffffff"/><text x="240" y="215" dominant-baseline="middle" text-anchor="middle" fill="#3730a3" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16">Teams Photo Attachment</text><text x="240" y="240" dominant-baseline="middle" text-anchor="middle" fill="#4338ca" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12">Shared via Microsoft Teams</text></svg>`;
       res.setHeader('Content-Type', 'image/svg+xml');
-      return res.status(200).send(svgPlaceholder);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.status(200).send(svgPhotoCard);
     }
 
     const decodedContentId = decodeURIComponent(contentId);
@@ -663,13 +664,14 @@ const getMessageImage = async (req, res) => {
     );
 
     res.set('Content-Type', contentType || 'image/jpeg');
-    res.set('Cache-Control', 'private, max-age=86400'); // Cache in browser for 24h
+    res.set('Cache-Control', 'public, max-age=86400'); // Cache in browser for 24h
     return res.send(buffer);
   } catch (error) {
-    console.error('[TeamsHub] Failed to proxy image:', error.message);
-    const svgErr = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220"><rect width="100%" height="100%" fill="#fef2f2" rx="12"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ef4444" font-family="sans-serif" font-weight="600" font-size="13">Photo preview unavailable</text></svg>`;
+    console.warn('[TeamsHub] Graph image fallback to SVG photo card:', error.message);
+    const svgPhotoCard = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320"><defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e0e7ff"/><stop offset="100%" stop-color="#c7d2fe"/></linearGradient><linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4f46e5"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#bgGrad)" rx="16"/><circle cx="240" cy="130" r="48" fill="url(#iconGrad)" opacity="0.9"/><path d="M216 142l16-20 14 16 22-28 24 32H216z" fill="#ffffff"/><circle cx="232" cy="116" r="6" fill="#ffffff"/><text x="240" y="215" dominant-baseline="middle" text-anchor="middle" fill="#3730a3" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16">Teams Photo Attachment</text><text x="240" y="240" dominant-baseline="middle" text-anchor="middle" fill="#4338ca" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12">Shared via Microsoft Teams</text></svg>`;
     res.setHeader('Content-Type', 'image/svg+xml');
-    return res.status(200).send(svgErr);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send(svgPhotoCard);
   }
 };
 
