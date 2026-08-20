@@ -539,10 +539,10 @@ const sendMessage = async (req, res) => {
         const graphResponse = await sendGraphChatMessage(accessToken, microsoftChatId, content);
         const normalizedMessage = normalizeGraphMessage(graphResponse, id, connectedAccountId, msEmail, msId);
 
-        // Save to DB cache if available
-        if (dbAvailable && normalizedMessage) {
-          normalizedMessage.userId = req.user._id;
-          await Message.create(normalizedMessage);
+        // Zero-Storage Mode: Pass-through response directly to browser RAM (NO DB storage)
+        const io = req.app.get('io');
+        if (io && normalizedMessage) {
+          io.to(`chat:${id}`).emit('new_message', normalizedMessage);
         }
 
         return res.status(201).json({
@@ -555,37 +555,30 @@ const sendMessage = async (req, res) => {
       }
     }
 
-    if (dbAvailable) {
-      const newMsg = await Message.create({
-        chatId: id,
-        microsoftMessageId: `msg-${Date.now()}`,
-        senderName: req.user?.name || req.user?.displayName || 'Aryan Kumrecha',
-        senderEmail: req.user?.email || 'aryan@companya.com',
-        content: content.trim(),
-        contentType: 'text',
-        isOutgoing: true,
-        createdDateTime: new Date().toISOString(),
-        reactions: []
-      });
+    // In-Memory Pass-Through for local/mock response
+    const passThroughMsg = {
+      _id: `msg-${Date.now()}`,
+      chatId: id,
+      microsoftMessageId: `msg-${Date.now()}`,
+      senderName: req.user?.name || req.user?.displayName || 'Aryan Kumrecha',
+      senderEmail: req.user?.email || 'aryan@companya.com',
+      content: content.trim(),
+      contentType: 'text',
+      isOutgoing: true,
+      createdDateTime: new Date().toISOString(),
+      reactions: []
+    };
 
-      if (/^[0-9a-fA-F]{24}$/.test(id)) {
-        await Chat.findByIdAndUpdate(id, {
-          lastMessagePreview: content.trim(),
-          lastMessageTimestamp: new Date().toISOString()
-        });
-      }
-
-      const io = req.app.get('io');
-      if (io) {
-        io.to(`chat:${id}`).emit('new_message', newMsg);
-      }
-
-      return res.status(201).json({
-        success: true,
-        source: 'db',
-        data: newMsg
-      });
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`chat:${id}`).emit('new_message', passThroughMsg);
     }
+
+    return res.status(201).json({
+      success: true,
+      source: 'passthrough',
+      data: passThroughMsg
+    });
 
     return res.status(401).json({
       success: false,
