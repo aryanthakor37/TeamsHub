@@ -107,169 +107,88 @@ const getChats = async (req, res) => {
       });
     }
 
-    // ── Real Mode: Find Token & Fetch Live Graph Chats ──
+    // ── Real Mode: Find Tokens & Fetch Live Graph Chats across ALL connected accounts ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
-    let accessToken = req.microsoftAccessToken;
-    let userEmail = clientUserEmail || req.user?.email || '';
-    let accountName = 'Microsoft Teams';
+    let targetAccounts = [];
 
-    // Strictly match token by current user's email or selected connectedAccountId
-    if (!accessToken && dbAvailable) {
-      let acc = null;
+    if (dbAvailable) {
       if (connectedAccountId && connectedAccountId !== 'all') {
+        let acc = null;
         if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
-          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt');
-        } else {
-          acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt');
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
+        if (!acc) {
+          acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc && clientUserEmail) {
+          acc = await ConnectedAccount.findOne({ email: clientUserEmail }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (acc) targetAccounts = [acc];
       }
-      if (!acc && clientUserEmail) {
-        acc = await ConnectedAccount.findOne({
-          email: clientUserEmail
+
+      if (targetAccounts.length === 0) {
+        // Fetch ALL connected accounts for the active session
+        targetAccounts = await ConnectedAccount.find({
+          microsoftAccessToken: { $exists: true, $ne: '' }
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
-      if (acc && acc.microsoftAccessToken) {
-        accessToken = acc.microsoftAccessToken;
-        userEmail = acc.email || userEmail;
-        accountName = acc.displayName || accountName;
       }
     }
 
-    if (accessToken) {
-      try {
-        let currentUserInfo = {
-          email: userEmail,
-          displayName: accountName !== 'Microsoft Teams' ? accountName : (req.user?.name || req.user?.displayName || ''),
-          id: ''
-        };
+    if (targetAccounts.length > 0) {
+      const allUnifiedChats = [];
 
-        try {
-          const profile = await fetchGraphUserProfile(accessToken);
-          if (profile) {
-            const rawTokenEmail = (profile.mail || profile.userPrincipalName || '').toLowerCase().trim();
-            const rawExpectedEmail = (req.user?.email || '').toLowerCase().trim();
-            const isFallbackEmail = !rawExpectedEmail || rawExpectedEmail.includes('teamshub.app') || rawExpectedEmail.includes('companya.com');
+      await Promise.all(
+        targetAccounts.map(async (acc) => {
+          if (!acc.microsoftAccessToken) return;
+          try {
+            let currentUserInfo = {
+              email: acc.email || '',
+              displayName: acc.displayName || 'Microsoft User',
+              id: ''
+            };
 
-            const tokenPrefix = rawTokenEmail.split('@')[0].split('_')[0].split('#')[0];
-            const expectedPrefix = rawExpectedEmail.split('@')[0].split('_')[0].split('#')[0];
-
-            // Strict email match guard: Reject only if both are real emails with completely different prefixes (e.g. hem.shah vs aryankumar.kumrecha)
-            if (!isFallbackEmail && tokenPrefix && expectedPrefix && tokenPrefix !== expectedPrefix) {
-              console.warn(`[TeamsHub Guard] Access token email prefix (${tokenPrefix}) does not match active logged-in user (${expectedPrefix}). Rejecting token.`);
-              accessToken = null;
-            } else {
-              if (profile.displayName) {
-                accountName = profile.displayName;
+            try {
+              const profile = await fetchGraphUserProfile(acc.microsoftAccessToken);
+              if (profile) {
+                currentUserInfo = {
+                  email: profile.mail || profile.userPrincipalName || acc.email,
+                  displayName: profile.displayName || acc.displayName,
+                  id: profile.id || ''
+                };
               }
-              currentUserInfo = {
-                email: profile.mail || profile.userPrincipalName || currentUserInfo.email,
-                displayName: profile.displayName || currentUserInfo.displayName,
-                id: profile.id || ''
-              };
-            }
-          }
-        } catch (profileErr) {
-          // Profile fallback on token expiry / demo token
-        }
+            } catch (pErr) {}
 
-        if (!accessToken) {
-          throw new Error('No valid access token available');
-        }
-
-        const graphResponse = await fetchGraphChatsFromAPI(accessToken);
-        const rawChats = graphResponse.value || [];
-        const normalizedList = rawChats.map((gc) =>
-          normalizeGraphChat(gc, connectedAccountId || 'default', accountName, currentUserInfo)
-        );
-
-        // Ensure Self Chat (You) is ALWAYS present for the authenticated user
-        const selfName = currentUserInfo.displayName || req.user?.name || 'You';
-        const hasSelfChat = normalizedList.some(c => c.participant && (c.participant.includes('(You)') || c.participant.toLowerCase().includes('you')));
-
-        if (!hasSelfChat && selfName) {
-          const selfChatObj = {
-            _id: `self-chat-${currentUserInfo.id || 'me'}`,
-            connectedAccountId: connectedAccountId || 'default',
-            microsoftChatId: `self-chat-${currentUserInfo.id || 'me'}`,
-            participant: `${selfName} (You)`,
-            role: 'Direct Message',
-            company: accountName,
-            accountBadge: accountName,
-            chatType: 'oneOnOne',
-            lastMessagePreview: 'Personal workspace & saved notes',
-            lastMessageTimestamp: '2026-01-01T00:00:00.000Z',
-            unreadCount: 0,
-            onlineStatus: 'online',
-            isSelfChat: true
-          };
-          normalizedList.unshift(selfChatObj);
-        }
-
-        // Sort latest first (keeping Self Chat at top if timestamps match)
-        normalizedList.sort((a, b) => {
-          if (a.isSelfChat) return -1;
-          if (b.isSelfChat) return 1;
-          const timeA = new Date(a.lastMessageTimestamp || 0).getTime();
-          const timeB = new Date(b.lastMessageTimestamp || 0).getTime();
-          return timeB - timeA;
-        });
-
-        // Strict filter: Ensure no chat has a mismatched company badge (e.g. Hem Shah chats in Aryan's session)
-        const sanitizedList = normalizedList.filter(c => {
-          if (c.company && accountName && accountName !== 'Microsoft Teams' && c.company !== accountName && c.company !== 'Microsoft Teams') {
-            return false;
-          }
-          return true;
-        });
-
-        // Background update DB cache without blocking (wiping all old stale chats for this user & purging Hem Shah stale docs)
-        if (dbAvailable) {
-          await Chat.deleteMany({ company: 'Hem Shah' }).catch(() => {});
-
-          Promise.all(sanitizedList.map(c => {
-            const copy = { ...c, userId: req.user._id };
-            delete copy._id;
-            return Chat.findOneAndUpdate(
-              { userId: req.user._id, microsoftChatId: c.microsoftChatId },
-              copy,
-              { upsert: true }
+            const graphResponse = await fetchGraphChatsFromAPI(acc.microsoftAccessToken);
+            const rawChats = graphResponse.value || [];
+            const normalizedList = rawChats.map((gc) =>
+              normalizeGraphChat(gc, acc._id.toString(), acc.displayName || 'Teams', currentUserInfo)
             );
-          })).catch(() => {});
-        }
 
-        return res.status(200).json({
-          success: true,
-          source: 'graph',
-          data: {
-            items: sanitizedList,
-            page: 1,
-            limit: sanitizedList.length,
-            total: sanitizedList.length,
-            hasMore: !!graphResponse['@odata.nextLink']
+            allUnifiedChats.push(...normalizedList);
+          } catch (err) {
+            console.warn(`[getChats] Warning fetching chats for ${acc.displayName}:`, err.message);
           }
-        });
-      } catch (graphErr) {
-        console.error('[TeamsHub getChats Graph Error]:', graphErr.message);
-        if (dbAvailable) {
-          let cachedChats = [];
-          if (req.user?._id) {
-            cachedChats = await Chat.find({ userId: req.user._id }).sort({ lastMessageTimestamp: -1 });
-          }
-          if (cachedChats && cachedChats.length > 0) {
-            return res.status(200).json({
-              success: true,
-              source: 'cache',
-              data: {
-                items: cachedChats,
-                page: 1,
-                limit: cachedChats.length,
-                total: cachedChats.length,
-                hasMore: false
-              }
-            });
-          }
+        })
+      );
+
+      // Sort combined multi-account chats chronologically
+      allUnifiedChats.sort((a, b) => {
+        const tA = new Date(a.lastMessageTimestamp || 0).getTime();
+        const tB = new Date(b.lastMessageTimestamp || 0).getTime();
+        return tB - tA;
+      });
+
+      return res.status(200).json({
+        success: true,
+        source: 'graph',
+        data: {
+          items: allUnifiedChats,
+          page: pageNum,
+          limit: limitNum,
+          total: allUnifiedChats.length,
+          hasMore: false
         }
-      }
+      });
     }
 
     // ── Universal Database Fallback for Unauthenticated / Expired Tokens ──
@@ -381,7 +300,7 @@ const getChatMessages = async (req, res) => {
     // We intentionally bypass the cache early-return here for now
     // because without webhooks/socket.io, returning only the cache
     // prevents the user from seeing new incoming replies from Graph.
-    
+
     // ── Real Mode: Token Lookup & Graph Call ──
     let accessToken = req.microsoftAccessToken;
 
@@ -811,12 +730,12 @@ const markChatRead = async (req, res) => {
     const dbAvailable = Chat.db && Chat.db.readyState === 1;
     if (dbAvailable) {
       await Chat.updateMany(
-        { 
-          userId: req.user._id, 
+        {
+          userId: req.user._id,
           $or: [
             { microsoftChatId: id },
             /^[0-9a-fA-F]{24}$/.test(id) ? { _id: id } : { microsoftChatId: id }
-          ] 
+          ]
         },
         { $set: { unreadCount: 0 } }
       );
