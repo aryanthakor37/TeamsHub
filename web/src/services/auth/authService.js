@@ -38,12 +38,16 @@ export const initializeMsal = async () => {
       const account = response.account;
       msalInstance.setActiveAccount(account);
       localStorage.setItem('teamshub_active_email', account.username);
+      if (response.accessToken) {
+        localStorage.setItem(`teamshub_token_${account.username.toLowerCase()}`, response.accessToken);
+        localStorage.setItem('teamshub_last_access_token', response.accessToken);
+      }
       const accountPayload = {
         accountId: account.homeAccountId || account.localAccountId,
         displayName: account.name || account.username.split('@')[0],
         email: account.username,
         tenantId: account.tenantId || 'common',
-        accountType: 'Microsoft Work Account',
+        accountType: 'Microsoft Work / Personal Account',
         scopes: response.scopes || ['User.Read', 'Chat.Read'],
         accessToken: response.accessToken
       };
@@ -246,9 +250,17 @@ export const acquireGraphToken = async (accountId) => {
             return fallbackResult.accessToken;
           }
         } catch (fErr) {
-          console.warn('[MSAL Fallback Token Warning]', fErr.message);
+          // Fallback to stored token if Incognito mode blocks MSAL silent token acquisition
+          const storedToken = localStorage.getItem(`teamshub_token_${targetAccount.username.toLowerCase()}`) || localStorage.getItem('teamshub_last_access_token');
+          if (storedToken) {
+            return storedToken;
+          }
         }
       }
+    }
+
+    if (activeEmail) {
+      return localStorage.getItem(`teamshub_token_${activeEmail.toLowerCase()}`) || localStorage.getItem('teamshub_last_access_token');
     }
 
     return null;
