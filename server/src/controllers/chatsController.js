@@ -827,8 +827,45 @@ const markChatRead = async (req, res) => {
       );
     }
     return res.status(200).json({ success: true, message: 'Chat marked as read' });
+// ============================================================
+// GET /api/chats/:id/messages/:msgId/hostedContents/:contentId
+// ============================================================
+
+const getMessageImage = async (req, res) => {
+  try {
+    const { id: chatId, msgId, contentId } = req.params;
+    const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
+    let accessToken = req.microsoftAccessToken;
+
+    if (!accessToken && dbAvailable) {
+      const clientEmail = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+      let acc = null;
+      if (clientEmail) {
+        acc = await ConnectedAccount.findOne({ email: clientEmail }).select('+microsoftAccessToken');
+      }
+      if (!acc && req.user?._id) {
+        acc = await ConnectedAccount.findOne({ userId: req.user._id }).select('+microsoftAccessToken');
+      }
+      if (acc && acc.microsoftAccessToken) {
+        accessToken = acc.microsoftAccessToken;
+      }
+    }
+
+    if (isMockMode() || !accessToken) {
+      const svgPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220"><rect width="100%" height="100%" fill="#f1f5f9" rx="12"/><path d="M120 140l25-30 20 25 35-45 40 50H120z" fill="#cbd5e1"/><circle cx="150" cy="90" r="16" fill="#cbd5e1"/><text x="50%" y="82%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-family="sans-serif" font-weight="600" font-size="13">Shared Teams Photo</text></svg>`;
+      res.setHeader('Content-Type', 'image/svg+xml');
+      return res.status(200).send(svgPlaceholder);
+    }
+
+    const { buffer, contentType } = await fetchGraphMessageImage(accessToken, chatId, msgId, contentId);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send(buffer);
   } catch (error) {
-    return sendGraphError(res, error);
+    console.error('[TeamsHub getMessageImage Error]:', error.message);
+    const svgErr = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220"><rect width="100%" height="100%" fill="#fef2f2" rx="12"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ef4444" font-family="sans-serif" font-weight="600" font-size="13">Photo preview unavailable</text></svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml');
+    return res.status(200).send(svgErr);
   }
 };
 

@@ -45,11 +45,29 @@ const globalSearch = async (req, res) => {
       const mockChatsList = getDemoMultiAccountChats('all');
       const matchedChats = mockChatsList.filter(c => regex.test(c.participant) || regex.test(c.lastMessagePreview || '') || regex.test(c.company || ''));
       const matchedFiles = allDemoFiles.filter(f => regex.test(f.name) || regex.test(f.category) || regex.test(f.sender));
+
+      // Dynamic message search across all chat conversations
+      const matchedMessages = [];
+      mockChatsList.forEach(chat => {
+        if (regex.test(chat.lastMessagePreview || '') || regex.test(chat.participant || '')) {
+          matchedMessages.push({
+            id: `msg-search-${chat._id}`,
+            chatId: chat._id,
+            microsoftMessageId: chat.microsoftChatId,
+            participant: chat.participant,
+            senderName: chat.participant,
+            createdDateTime: chat.lastMessageTimestamp,
+            content: chat.lastMessagePreview || 'Message content matched'
+          });
+        }
+      });
+
       return res.status(200).json({
         success: true,
         source: 'mock',
         data: {
           chats: matchedChats,
+          messages: matchedMessages,
           files: matchedFiles,
           accounts: []
         }

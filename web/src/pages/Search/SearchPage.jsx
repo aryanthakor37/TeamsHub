@@ -97,7 +97,12 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
         const apiBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
           ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
           : '/api';
-        const res = await fetch(`${apiBase}/search?q=${encodeURIComponent(query)}`);
+        const activeEmail = localStorage.getItem('teamshub_active_email') || '';
+        const res = await fetch(`${apiBase}/search?q=${encodeURIComponent(query)}`, {
+          headers: {
+            'x-user-email': activeEmail
+          }
+        });
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data) {
