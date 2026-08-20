@@ -108,10 +108,29 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
 };
 
 /**
- * Fetch chat messages — GET /v1.0/chats/{chatId}/messages?$top=30
+ * Fetch chat messages — GET /v1.0/chats/{chatId}/messages?$top=50
+ * Follows pagination to retrieve complete thread history (beginning to end).
  */
 const fetchGraphChatMessages = async (accessToken, chatId) => {
-  return await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages?$top=30`);
+  const firstPage = await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages?$top=50`);
+  let allValue = firstPage.value || [];
+
+  // Follow @odata.nextLink to fetch full message history
+  if (firstPage['@odata.nextLink'] && allValue.length < 100) {
+    try {
+      const nextRes = await fetch(firstPage['@odata.nextLink'], {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (nextRes.ok) {
+        const nextData = await nextRes.json();
+        allValue = [...allValue, ...(nextData.value || [])];
+      }
+    } catch (e) {
+      // Fallback to first page if pagination request fails
+    }
+  }
+
+  return { ...firstPage, value: allValue };
 };
 
 /**
