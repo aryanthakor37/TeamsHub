@@ -203,15 +203,30 @@ const connectMicrosoftAccount = async (req, res) => {
       }
     }
 
+    const resolvedEmail = (
+      graphProfile?.mail ||
+      graphProfile?.userPrincipalName ||
+      cleanEmail ||
+      req.user?.email ||
+      ''
+    ).toLowerCase().trim();
+
+    if (!resolvedEmail) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_EMAIL', message: 'Valid email address is required.' }
+      });
+    }
+
     const accountData = {
-      userId: req.user._id,
+      userId: req.user?._id,
       provider: 'microsoft',
       accountId: graphProfile?.id || accountId || `ms-oid-${Date.now()}`,
       microsoftUserId: graphProfile?.id || '',
-      displayName: graphProfile?.displayName || displayName || cleanEmail.split('@')[0],
-      email: graphProfile?.mail?.toLowerCase() || graphProfile?.userPrincipalName?.toLowerCase() || cleanEmail,
+      displayName: graphProfile?.displayName || displayName || resolvedEmail.split('@')[0] || 'User',
+      email: resolvedEmail,
       tenantId: tenantId || 'common',
-      accountType: accountType || 'Microsoft Work Account',
+      accountType: accountType || 'Microsoft Account',
       status: 'connected',
       isDefault: false,
       scopes: scopes || ['User.Read', 'Chat.Read'],
@@ -222,21 +237,20 @@ const connectMicrosoftAccount = async (req, res) => {
     const tokenFields = {};
     if (accessToken) {
       tokenFields.microsoftAccessToken = accessToken;
-      // Set expiry to 1 hour from now (default MSAL token lifetime)
       tokenFields.tokenExpiresAt = new Date(Date.now() + 3600 * 1000);
     }
 
     const realEmail = accountData.email;
 
     const User = require('../models/User');
-    if (User.db && User.db.readyState === 1 && req.user?.email) {
+    if (User.db && User.db.readyState === 1 && realEmail) {
       try {
         await User.findOneAndUpdate(
-          { email: req.user.email.toLowerCase() },
+          { email: realEmail },
           {
             _id: req.user._id,
-            name: req.user.name || accountData.displayName,
-            email: req.user.email.toLowerCase()
+            name: accountData.displayName,
+            email: realEmail
           },
           { upsert: true, new: true }
         );
@@ -255,9 +269,11 @@ const connectMicrosoftAccount = async (req, res) => {
     if (accessToken) {
       try {
         const guestTenants = await fetchGraphUserTenants(accessToken);
+        const emailDomain = realEmail.includes('@') ? realEmail.split('@')[1] : 'tenant.org';
         for (const guest of guestTenants) {
           if (!guest || !guest.displayName) continue;
-          const guestEmail = `${guest.displayName.toLowerCase().replace(/[^a-z0-9]/g, '')}@guest.${realEmail.split('@')[1] || 'tenant.org'}`;
+          const cleanGuestName = (guest.displayName || 'Guest').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const guestEmail = `${cleanGuestName}@guest.${emailDomain}`;
           await ConnectedAccount.findOneAndUpdate(
             { userId: req.user._id, displayName: guest.displayName },
             {
@@ -279,20 +295,20 @@ const connectMicrosoftAccount = async (req, res) => {
           );
         }
       } catch (tErr) {
-        // Fallback: Non-blocking guest discovery
+        console.warn('[AccountsController] Guest discovery warning:', tErr.message);
       }
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       source: 'database',
-      isDuplicate,
-      message: isDuplicate ? 'Account identity updated and re-authenticated' : 'New Microsoft account connected to TeamsHub',
-      data: savedAccount, // Token fields are select:false, so NOT included here
+      message: 'Microsoft account connected to TeamsHub',
+      data: savedAccount,
       activeAccountId: savedAccount._id
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('[AccountsController] Connection error:', error);
+    return res.status(500).json({
       success: false,
       error: {
         code: 'ACCOUNT_CONNECT_ERROR',
