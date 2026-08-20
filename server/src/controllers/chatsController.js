@@ -161,8 +161,10 @@ const getChats = async (req, res) => {
 
             const graphResponse = await fetchGraphChatsFromAPI(acc.microsoftAccessToken);
             const rawChats = graphResponse.value || [];
+            const accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email || 'Microsoft Account').trim();
+
             const normalizedList = rawChats.map((gc) =>
-              normalizeGraphChat(gc, acc._id.toString(), acc.displayName || 'Teams', currentUserInfo)
+              normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo)
             );
 
             allUnifiedChats.push(...normalizedList);
@@ -314,11 +316,21 @@ const getChatMessages = async (req, res) => {
 
     // ── Real Mode: Token Lookup & Graph Call ──
     let accessToken = req.microsoftAccessToken;
+    const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
 
     if (!accessToken && dbAvailable) {
-      const acc = await ConnectedAccount.findOne({
-        microsoftAccessToken: { $exists: true, $ne: '' }
-      }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      let acc = null;
+      if (activeEmailHeader) {
+        acc = await ConnectedAccount.findOne({
+          email: activeEmailHeader,
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+      if (!acc) {
+        acc = await ConnectedAccount.findOne({
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
       if (acc && acc.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
       }
