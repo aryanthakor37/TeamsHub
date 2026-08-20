@@ -230,9 +230,18 @@ export default function ChatsPage({
   const rawMessages = Array.isArray(messages) ? messages : [];
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
 
+  const getSenderString = (s) => {
+    if (!s) return '';
+    if (typeof s === 'string') return s;
+    if (typeof s === 'object') return s.name || s.displayName || s.user?.displayName || s.email || '';
+    return String(s);
+  };
+
   const safeMessages = rawMessages.map((m) => {
-    const sName = (m.senderName || m.sender || '').toLowerCase().trim();
-    const sEmail = (m.senderEmail || '').toLowerCase().trim();
+    const rawSender = m.senderName || m.sender;
+    const senderStr = getSenderString(rawSender);
+    const sName = senderStr.toLowerCase().trim();
+    const sEmail = (typeof m.senderEmail === 'string' ? m.senderEmail : getSenderString(m.senderEmail)).toLowerCase().trim();
     const pName = (activeChat?.participant || '').toLowerCase().trim();
     const pFirst = pName ? pName.split(' ')[0] : '';
 
@@ -247,7 +256,11 @@ export default function ChatsPage({
       isOut = true;
     }
 
-    return { ...m, isOutgoing: isOut };
+    return {
+      ...m,
+      senderName: senderStr || (typeof m.senderName === 'string' ? m.senderName : '') || 'Teams User',
+      isOutgoing: isOut
+    };
   });
 
   // Smooth scroll & highlight targeted search message (Bright Yellow / Glow like Teams)
