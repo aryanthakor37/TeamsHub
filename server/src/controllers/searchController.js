@@ -1,7 +1,7 @@
 const Chat = require('../models/Chat');
 const Message = require('../models/Message');
 const ConnectedAccount = require('../models/ConnectedAccount');
-const { isMockMode, getDemoMultiAccountChats } = require('../services/graphService');
+const { isMockMode, getDemoMultiAccountChats, getDemoChatMessages } = require('../services/graphService');
 
 /**
  * GET /api/search?q=query&filter=All
@@ -49,17 +49,20 @@ const globalSearch = async (req, res) => {
       // Dynamic message search across all chat conversations
       const matchedMessages = [];
       mockChatsList.forEach(chat => {
-        if (regex.test(chat.lastMessagePreview || '') || regex.test(chat.participant || '')) {
-          matchedMessages.push({
-            id: `msg-search-${chat._id}`,
-            chatId: chat._id,
-            microsoftMessageId: chat.microsoftChatId,
-            participant: chat.participant,
-            senderName: chat.participant,
-            createdDateTime: chat.lastMessageTimestamp,
-            content: chat.lastMessagePreview || 'Message content matched'
-          });
-        }
+        const chatMsgs = getDemoChatMessages(chat._id, chat.participant, chat.lastMessagePreview);
+        chatMsgs.forEach(m => {
+          if (regex.test(m.content || '') || regex.test(m.senderName || '')) {
+            matchedMessages.push({
+              id: m._id || m.id || `msg-search-${chat._id}`,
+              chatId: chat._id,
+              microsoftMessageId: m.microsoftMessageId || chat.microsoftChatId,
+              participant: chat.participant,
+              senderName: m.senderName || chat.participant,
+              createdDateTime: m.createdDateTime || chat.lastMessageTimestamp,
+              content: m.content || chat.lastMessagePreview
+            });
+          }
+        });
       });
 
       return res.status(200).json({

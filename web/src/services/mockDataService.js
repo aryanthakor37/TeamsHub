@@ -107,7 +107,10 @@ export const mockMessages = {
     { id: 'm-mt-9', sender: 'Aryan Thakor', text: 'Javu che', timestamp: '12:40 PM', isOutgoing: false },
     { id: 'm-mt-10', sender: 'Aryan Thakor', text: 'Hu bar betho', timestamp: '12:41 PM', isOutgoing: false },
     { id: 'm-mt-11', sender: 'Aryan Thakor', text: 'Ha', timestamp: '12:44 PM', isOutgoing: false },
-    { id: 'm-mt-12', sender: 'Aryan Thakor', text: 'Ave etle msg kar je hu ander avi gayo', timestamp: '12:58 PM', isOutgoing: false }
+    { id: 'm-mt-12', sender: 'Aryan Thakor', text: 'Ave to msg kar je hu ander avi gayo', timestamp: '12:58 PM', isOutgoing: false },
+    { id: 'm-mt-13', sender: 'Meet Thakor', text: 'Chal', timestamp: '01:05 PM', isOutgoing: false },
+    { id: 'm-mt-14', sender: 'Meet Thakor', text: 'to Hardik ne puchi jo', timestamp: '03:19 PM', isOutgoing: false },
+    { id: 'm-mt-15', sender: 'Meet Thakor', text: 'Pan hamna raja par che', timestamp: '03:18 PM', isOutgoing: false }
   ],
   'Hardik Thakor': [
     { id: 'm-ht-1', sender: 'Hardik Thakor', text: 'Okay', timestamp: '03:21 PM', isOutgoing: false },
