@@ -18,7 +18,10 @@ import { getSocket } from './services/socketService';
 import { MessageSquare, X, ExternalLink } from 'lucide-react';
 
 function MainLayout() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    const hasActiveAccount = !!localStorage.getItem('teamshub_active_email');
+    return hasActiveAccount ? 'dashboard' : 'welcome';
+  });
   const [isMicrosoftModalOpen, setIsMicrosoftModalOpen] = useState(false);
   const [theme, setTheme] = useState('light');
   const [activeToast, setActiveToast] = useState(null);

@@ -70,9 +70,23 @@ const sendGraphError = (res, error) => {
 
 const getChats = async (req, res) => {
   try {
-    const { connectedAccountId, page = 1, limit = 50 } = req.query;
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const clientUserEmail = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+
+    // ── Check if Request is from an Unauthenticated Visitor ──
+    if (!clientUserEmail && (!connectedAccountId || connectedAccountId === 'all') && !req.microsoftAccessToken) {
+      return res.status(200).json({
+        success: true,
+        source: 'unauthenticated',
+        data: {
+          items: [],
+          page: pageNum,
+          limit: limitNum,
+          total: 0,
+          hasMore: false,
+          requiresAuth: true
+        }
+      });
+    }
 
     // ── Mock Mode ──
     if (isMockMode()) {
@@ -93,7 +107,7 @@ const getChats = async (req, res) => {
     // ── Real Mode: Find Token & Fetch Live Graph Chats ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     let accessToken = req.microsoftAccessToken;
-    let userEmail = req.user?.email || '';
+    let userEmail = clientUserEmail || req.user?.email || '';
     let accountName = 'Microsoft Teams';
 
     // Strictly match token by current user's email or selected connectedAccountId
@@ -106,15 +120,10 @@ const getChats = async (req, res) => {
           acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt');
         }
       }
-      if (!acc && req.user?.email) {
+      if (!acc && clientUserEmail) {
         acc = await ConnectedAccount.findOne({
-          email: req.user.email.toLowerCase()
-        }).select('+microsoftAccessToken +tokenExpiresAt');
-      }
-      if (!acc) {
-        acc = await ConnectedAccount.findOne({
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+          email: clientUserEmail
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
       if (acc && acc.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;

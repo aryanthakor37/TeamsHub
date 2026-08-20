@@ -495,10 +495,31 @@ export default function ChatsPage({
               ))}
             </div>
           ) : chats.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <MessageSquare size={32} style={{ marginBottom: '8px', opacity: 0.6 }} />
-              <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>No conversations found</div>
-              <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>Your Teams conversations will appear here.</div>
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {!localStorage.getItem('teamshub_active_email') ? (
+                <>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--accent-light)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                    <Lock size={24} />
+                  </div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>No Account Connected</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px', maxWidth: '220px' }}>
+                    Connect your Microsoft Teams account to view your live chats.
+                  </div>
+                  <button
+                    onClick={onOpenMicrosoftModal}
+                    className="btn btn-primary"
+                    style={{ fontSize: '0.8rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <LogIn size={14} /> Connect Account
+                  </button>
+                </>
+              ) : (
+                <>
+                  <MessageSquare size={32} style={{ marginBottom: '8px', opacity: 0.6 }} />
+                  <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>No conversations found</div>
+                  <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>Your Teams conversations will appear here.</div>
+                </>
+              )}
             </div>
           ) : filteredChats.length === 0 ? (
             <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -1017,8 +1038,27 @@ export default function ChatsPage({
             </div>
           </>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-            Select a conversation to view messages
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', padding: '24px', textAlign: 'center' }}>
+            {!localStorage.getItem('teamshub_active_email') ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', maxWidth: '360px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--accent-light)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={28} />
+                </div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)' }}>Account Authentication Required</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                  To access your Microsoft Teams chats, messages, and files, please connect your Microsoft account.
+                </p>
+                <button
+                  onClick={onOpenMicrosoftModal}
+                  className="btn btn-primary"
+                  style={{ padding: '10px 24px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}
+                >
+                  <LogIn size={16} /> Connect Microsoft Account
+                </button>
+              </div>
+            ) : (
+              <div>Select a conversation to view messages</div>
+            )}
           </div>
         )}
       </div>
