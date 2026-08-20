@@ -337,18 +337,20 @@ export default function ChatsPage({
     );
     if (!matchesSearch) return false;
 
-    if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
+    if (!selectedFilterAccount || selectedFilterAccount === 'all' || connectedAccounts.length <= 1) return true;
 
     const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id) === selectedFilterAccount);
     if (targetAccount) {
       const targetName = (targetAccount.displayName || targetAccount.company || targetAccount.email || '').toLowerCase().trim();
       const chatAccId = (chat.connectedAccountId || '').toString();
       const chatCompany = (chat.company || chat.accountBadge || '').toLowerCase().trim();
+      const targetEmailPrefix = targetAccount.email ? targetAccount.email.split('@')[0].toLowerCase() : '';
 
       return (
         chatAccId === selectedFilterAccount.toString() ||
         chatCompany === targetName ||
-        (targetAccount.email && chatCompany.includes(targetAccount.email.split('@')[0]))
+        (targetEmailPrefix && chatCompany.includes(targetEmailPrefix)) ||
+        (targetAccount.email && chat.participant?.toLowerCase().includes(targetEmailPrefix))
       );
     }
     return true;
