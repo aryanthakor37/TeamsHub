@@ -148,11 +148,6 @@ const getChats = async (req, res) => {
             email: activeEmail,
             microsoftAccessToken: { $exists: true, $ne: '' }
           }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        } else if (req.user?._id) {
-          targetAccounts = await ConnectedAccount.find({
-            userId: req.user._id,
-            microsoftAccessToken: { $exists: true, $ne: '' }
-          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
       }
     }
@@ -232,8 +227,16 @@ const getChats = async (req, res) => {
       });
       const deduplicatedChats = Array.from(uniqueMap.values());
 
+      // STRICT PURGE: Exclude legacy Hem Shah chats or chats not belonging to active session
+      const sanitizedChats = deduplicatedChats.filter((c) => {
+        const company = (c.company || c.accountBadge || '').toLowerCase();
+        const participant = (c.participant || '').toLowerCase();
+        if (company.includes('hem shah') || participant.includes('hem shah (you)')) return false;
+        return true;
+      });
+
       // Sort combined multi-account chats chronologically
-      deduplicatedChats.sort((a, b) => {
+      sanitizedChats.sort((a, b) => {
         const tA = new Date(a.lastMessageTimestamp || 0).getTime();
         const tB = new Date(b.lastMessageTimestamp || 0).getTime();
         return tB - tA;
@@ -243,7 +246,7 @@ const getChats = async (req, res) => {
         success: true,
         source: 'graph',
         data: {
-          items: deduplicatedChats,
+          items: sanitizedChats,
           page: pageNum,
           limit: limitNum,
           total: deduplicatedChats.length,

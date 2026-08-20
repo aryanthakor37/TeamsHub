@@ -33,7 +33,12 @@ const getStoredLocalChats = () => {
     if (!activeEmail) return [];
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((c) => {
+      const company = (c?.company || c?.accountBadge || '').toLowerCase();
+      const participant = (c?.participant || '').toLowerCase();
+      return !company.includes('hem shah') && !participant.includes('hem shah (you)');
+    });
   } catch (e) {
     return [];
   }
@@ -46,7 +51,12 @@ const saveStoredLocalChats = (items) => {
       localStorage.removeItem('teamshub_cached_chats');
       return;
     }
-    localStorage.setItem('teamshub_cached_chats', JSON.stringify(items || []));
+    const filtered = (items || []).filter((c) => {
+      const company = (c?.company || c?.accountBadge || '').toLowerCase();
+      const participant = (c?.participant || '').toLowerCase();
+      return !company.includes('hem shah') && !participant.includes('hem shah (you)');
+    });
+    localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
   } catch (e) {}
 };
 
