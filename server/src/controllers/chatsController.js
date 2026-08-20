@@ -128,19 +128,10 @@ const getChats = async (req, res) => {
       }
 
       if (targetAccounts.length === 0) {
-        const activeUserEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
-        if (activeUserEmail) {
-          targetAccounts = await ConnectedAccount.find({
-            email: activeUserEmail,
-            microsoftAccessToken: { $exists: true, $ne: '' }
-          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-
-        if (targetAccounts.length === 0) {
-          targetAccounts = await ConnectedAccount.find({
-            microsoftAccessToken: { $exists: true, $ne: '' }
-          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
+        // Fetch ALL connected accounts that have valid Microsoft access tokens
+        targetAccounts = await ConnectedAccount.find({
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
     }
 
@@ -704,14 +695,15 @@ const refreshChats = async (req, res) => {
 
         for (const gc of graphChats) {
           const normalized = normalizeGraphChat(gc, account._id.toString(), account.displayName, currentUserInfo);
-          normalized.userId = req.user._id;
-          delete normalized._id;
-
-          await Chat.findOneAndUpdate(
-            { userId: req.user._id, microsoftChatId: normalized.microsoftChatId },
-            normalized,
-            { upsert: true, new: true }
-          );
+          if (req.user?._id) {
+            normalized.userId = req.user._id;
+            delete normalized._id;
+            await Chat.findOneAndUpdate(
+              { userId: req.user._id, microsoftChatId: normalized.microsoftChatId },
+              normalized,
+              { upsert: true, new: true }
+            ).catch(() => {});
+          }
           syncedCount++;
         }
 
