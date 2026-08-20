@@ -229,39 +229,22 @@ export default function ChatsPage({
   const { messages, loading: messagesLoading, error: messagesError, sendMessage } = useMessages(selectedChatId, activeChat?.connectedAccountId);
   const rawMessages = Array.isArray(messages) ? messages : [];
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
-  const storedUser = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('teamshub_user') || '{}');
-    } catch (e) {
-      return {};
-    }
-  })();
-  const currentUserName = (storedUser.name || storedUser.displayName || storedUser.userPrincipalName || activeEmail.split('@')[0] || '').toLowerCase().trim();
-  const currentUserFirst = currentUserName.split(' ')[0];
 
   const safeMessages = rawMessages.map((m) => {
     const sName = (m.senderName || m.sender || '').toLowerCase().trim();
     const sEmail = (m.senderEmail || '').toLowerCase().trim();
     const pName = (activeChat?.participant || '').toLowerCase().trim();
-    const pFirst = pName.split(' ')[0];
+    const pFirst = pName ? pName.split(' ')[0] : '';
 
     let isOut = m.isOutgoing;
 
-    // Rule A: If sender matches current logged in user (by email, full name, first name, or 'you'), it IS OUTGOING (true -> RIGHT side)
-    if (
-      sName === 'you' ||
-      (activeEmail && sEmail && sEmail === activeEmail) ||
-      (currentUserName && sName && (sName === currentUserName || currentUserName.includes(sName))) ||
-      (currentUserFirst && currentUserFirst.length >= 2 && sName.includes(currentUserFirst))
-    ) {
-      isOut = true;
-    }
-    // Rule B: If sender matches the participant of this conversation (e.g. Hem Shah / Aryan / Meet), it IS INCOMING (false -> LEFT side)
-    else if (
-      (pName && sName && (sName === pName || pName.includes(sName))) ||
-      (pFirst && pFirst.length >= 2 && sName.includes(pFirst))
-    ) {
+    // In a 1:1 conversation:
+    // If the message sender is the participant (e.g. "Hem Shah"), it MUST be on the LEFT side (isOutgoing = false).
+    // If the message sender is NOT the participant (e.g. "Aryan Kumrecha" / "You"), it MUST be on the RIGHT side (isOutgoing = true).
+    if (pFirst && pFirst.length >= 2 && (sName.includes(pFirst) || (pName && sName.includes(pName)))) {
       isOut = false;
+    } else {
+      isOut = true;
     }
 
     return { ...m, isOutgoing: isOut };
