@@ -422,8 +422,7 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
 
   if (
     sName === 'you' ||
-    sName.includes('aryan') ||
-    (cName && (sName.includes(cName) || cName.includes(sName))) ||
+    (cName && cName.length >= 2 && (sName.includes(cName) || cName.includes(sName))) ||
     (uPrefix && sPrefix && uPrefix === sPrefix && !uPrefix.includes('teamshub')) ||
     (cEmail && sEmail && cEmail === sEmail)
   ) {
