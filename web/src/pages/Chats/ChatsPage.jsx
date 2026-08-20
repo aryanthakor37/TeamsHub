@@ -235,11 +235,19 @@ export default function ChatsPage({
     const sName = (m.senderName || m.sender || '').toLowerCase().trim();
     const sEmail = (m.senderEmail || '').toLowerCase().trim();
 
+    // 1. If sender name matches the current active chat participant, it MUST be incoming (false)
+    if (activeChat?.participant) {
+      const pFirst = activeChat.participant.toLowerCase().trim().split(' ')[0];
+      if (pFirst && pFirst.length >= 2 && sName.includes(pFirst)) {
+        isOut = false;
+      }
+    }
+
+    // 2. If sender is Aryan, You, or active email, it MUST be outgoing (true)
     if (sName === 'you' || sName.includes('aryan') || (activeEmail && sEmail === activeEmail)) {
       isOut = true;
-    } else if (activeChat?.participant && sName.includes(activeChat.participant.toLowerCase().split(' ')[0])) {
-      isOut = false;
     }
+
     return { ...m, isOutgoing: isOut };
   });
 

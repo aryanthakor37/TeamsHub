@@ -420,7 +420,13 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
 
   let isOutgoing = false;
 
-  if (sName === 'you' || sName.includes('aryan') || (uPrefix && sPrefix && uPrefix === sPrefix && !uPrefix.includes('teamshub')) || (cEmail && sEmail && cEmail === sEmail) || (cName && sName && (cName === sName || (cName.includes('aryan') && sName.includes('aryan'))))) {
+  if (
+    sName === 'you' ||
+    sName.includes('aryan') ||
+    (cName && (sName.includes(cName) || cName.includes(sName))) ||
+    (uPrefix && sPrefix && uPrefix === sPrefix && !uPrefix.includes('teamshub')) ||
+    (cEmail && sEmail && cEmail === sEmail)
+  ) {
     isOutgoing = true;
   }
 
