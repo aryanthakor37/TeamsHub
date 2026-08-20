@@ -61,22 +61,17 @@ const protect = async (req, res, next) => {
 
     try {
       if (User.db && User.db.readyState === 1) {
-        if (userId) {
-          currentUser = await User.findById(userId);
-        }
-        if (!currentUser) {
-          // Find or create user by email from token claims
-          const userEmail = req.headers['x-user-email'];
-          const userName = req.headers['x-user-name'];
-          if (userEmail) {
-            currentUser = await User.findOne({ email: userEmail.toLowerCase() });
-            if (!currentUser) {
-              currentUser = await User.create({
-                name: userName || userEmail.split('@')[0],
-                email: userEmail.toLowerCase()
-              });
-            }
+        const userEmail = req.headers['x-user-email'] ? req.headers['x-user-email'].toLowerCase().trim() : null;
+        if (userEmail) {
+          currentUser = await User.findOne({ email: userEmail });
+          if (!currentUser) {
+            currentUser = await User.create({
+              name: req.headers['x-user-name'] || userEmail.split('@')[0],
+              email: userEmail
+            });
           }
+        } else if (userId) {
+          currentUser = await User.findById(userId);
         }
       }
     } catch (err) {
