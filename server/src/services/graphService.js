@@ -125,35 +125,43 @@ const fetchGraphUserTenants = async (accessToken) => {
 
 const fetchGraphChatsFromAPI = async (accessToken) => {
   try {
-    return await graphRequest(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
-  } catch (err) {
-    try {
-      // Personal Account Fallback (@gmail.com, @outlook.com) where $expand is restricted by Microsoft
-      const basicChats = await graphRequest(accessToken, '/me/chats?$top=50');
-      const items = basicChats.value || [];
+    const res = await graphRequest(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
+    if (res && res.value && res.value.length > 0) return res;
+  } catch (err) {}
 
-      // For personal account chats, enrich members & lastMessagePreview if missing
-      const enriched = await Promise.all(
-        items.map(async (c) => {
-          try {
-            if (!c.members || c.members.length === 0) {
-              const memRes = await graphRequest(accessToken, `/chats/${encodeURIComponent(c.id)}/members`);
-              c.members = memRes.value || [];
-            }
-            if (!c.lastMessagePreview) {
-              const msgRes = await graphRequest(accessToken, `/chats/${encodeURIComponent(c.id)}/messages?$top=1`);
-              if (msgRes.value && msgRes.value.length > 0) {
-                c.lastMessagePreview = msgRes.value[0];
-              }
-            }
-          } catch (e) {}
-          return c;
-        })
-      );
-      return { ...basicChats, value: enriched };
-    } catch (fallbackErr) {
-      throw err;
+  try {
+    // Personal Account Fallback (@gmail.com, @outlook.com) where $expand is restricted by Microsoft
+    const basicChats = await graphRequest(accessToken, '/me/chats?$top=50');
+    let items = basicChats.value || [];
+
+    if (items.length === 0) {
+      try {
+        const altChats = await graphRequest(accessToken, '/chats?$top=50');
+        if (altChats && altChats.value) items = altChats.value;
+      } catch (e) {}
     }
+
+    // For personal account chats, enrich members & lastMessagePreview if missing
+    const enriched = await Promise.all(
+      items.map(async (c) => {
+        try {
+          if (!c.members || c.members.length === 0) {
+            const memRes = await graphRequest(accessToken, `/chats/${encodeURIComponent(c.id)}/members`);
+            c.members = memRes.value || [];
+          }
+          if (!c.lastMessagePreview) {
+            const msgRes = await graphRequest(accessToken, `/chats/${encodeURIComponent(c.id)}/messages?$top=1`);
+            if (msgRes.value && msgRes.value.length > 0) {
+              c.lastMessagePreview = msgRes.value[0];
+            }
+          }
+        } catch (e) {}
+        return c;
+      })
+    );
+    return { value: enriched };
+  } catch (fallbackErr) {
+    return { value: [] };
   }
 };
 
