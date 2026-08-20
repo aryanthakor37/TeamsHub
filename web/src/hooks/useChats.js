@@ -138,8 +138,9 @@ export const useChats = (selectedAccountId = 'all') => {
           const ts = new Date(c.lastMessageTimestamp || 0).getTime();
           prevChatTimestamps.current.set(id, ts);
         });
-      } else {
+      } else if (data.source === 'unauthenticated' || data.source === 'empty') {
         setChats([]);
+        saveStoredLocalChats([]);
       }
       isInitialLoad.current = false;
     } catch (err) {
