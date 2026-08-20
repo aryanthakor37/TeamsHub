@@ -124,24 +124,38 @@ const fetchGraphUserTenants = async (accessToken) => {
 };
 
 const fetchGraphChatsFromAPI = async (accessToken) => {
+  let items = [];
+
+  // Tier 1: Standard expand
   try {
     const res = await graphRequest(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
     if (res && res.value && res.value.length > 0) return res;
   } catch (err) {}
 
+  // Tier 2: Basic me/chats
   try {
-    // Personal Account Fallback (@gmail.com, @outlook.com) where $expand is restricted by Microsoft
-    const basicChats = await graphRequest(accessToken, '/me/chats?$top=50');
-    let items = basicChats.value || [];
+    const res = await graphRequest(accessToken, '/me/chats?$top=50');
+    if (res && res.value && res.value.length > 0) items = res.value;
+  } catch (err) {}
 
-    if (items.length === 0) {
-      try {
-        const altChats = await graphRequest(accessToken, '/chats?$top=50');
-        if (altChats && altChats.value) items = altChats.value;
-      } catch (e) {}
-    }
+  // Tier 3: oneOnOne filter for personal consumer accounts
+  if (items.length === 0) {
+    try {
+      const res = await graphRequest(accessToken, "/me/chats?$filter=chatType eq 'oneOnOne'");
+      if (res && res.value && res.value.length > 0) items = res.value;
+    } catch (err) {}
+  }
 
-    // For personal account chats, enrich members & lastMessagePreview if missing
+  // Tier 4: Direct /chats endpoint
+  if (items.length === 0) {
+    try {
+      const res = await graphRequest(accessToken, '/chats?$top=50');
+      if (res && res.value && res.value.length > 0) items = res.value;
+    } catch (err) {}
+  }
+
+  // For personal account chats, enrich members & lastMessagePreview if missing
+  if (items.length > 0) {
     const enriched = await Promise.all(
       items.map(async (c) => {
         try {
@@ -160,9 +174,9 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
       })
     );
     return { value: enriched };
-  } catch (fallbackErr) {
-    return { value: [] };
   }
+
+  return { value: [] };
 };
 
 /**
