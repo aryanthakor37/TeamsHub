@@ -170,7 +170,8 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
  * Follows pagination to retrieve complete thread history (beginning to end).
  */
 const fetchGraphChatMessages = async (accessToken, chatId) => {
-  const firstPage = await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages?$top=50`);
+  const cleanId = decodeURIComponent(chatId);
+  const firstPage = await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanId)}/messages?$top=50`);
   let allValue = firstPage.value || [];
 
   // Follow @odata.nextLink to fetch full message history

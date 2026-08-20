@@ -347,7 +347,7 @@ const getChatMessages = async (req, res) => {
 
       try {
         let msEmail = (req.user?.email || req.headers['x-user-email'] || '').toLowerCase().trim();
-        let msDisplayName = (req.user?.name || req.user?.displayName || 'Aryan Kumrecha').trim();
+        let msDisplayName = (req.user?.name || req.user?.displayName || 'User').trim();
 
         if (!msEmail || msEmail.includes('teamshub.app') || msEmail.includes('companya.com')) {
           if (dbAvailable) {
@@ -362,7 +362,8 @@ const getChatMessages = async (req, res) => {
             }
           }
         }
-        const graphResponse = await fetchGraphChatMessages(accessToken, microsoftChatId);
+        const cleanChatId = decodeURIComponent(microsoftChatId);
+        const graphResponse = await fetchGraphChatMessages(accessToken, cleanChatId);
         const messages = (graphResponse.value || [])
           .map((gm) => normalizeGraphMessage(gm, id, '', msEmail, msDisplayName))
           .filter(Boolean)
@@ -381,7 +382,7 @@ const getChatMessages = async (req, res) => {
           }
         });
       } catch (graphErr) {
-        // Fallback to cache or demo messages if Graph API call fails or token is expired/demo
+        console.warn('[getChatMessages] Graph API error for chat:', id, graphErr.message);
       }
     }
 
