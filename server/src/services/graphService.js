@@ -439,7 +439,8 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
         (match, rawChatId, rawMsgId, cid) => {
           const finalChatId = (rawChatId && rawChatId.startsWith('19:')) ? rawChatId : chatId;
           const finalMsgId = rawMsgId || graphMessage.id;
-          return `src="/api/chats/${encodeURIComponent(finalChatId)}/messages/${encodeURIComponent(finalMsgId)}/hostedContents/${encodeURIComponent(cid)}"`;
+          const emailParam = userEmail ? `?email=${encodeURIComponent(userEmail)}` : '';
+          return `src="/api/chats/${encodeURIComponent(finalChatId)}/messages/${encodeURIComponent(finalMsgId)}/hostedContents/${encodeURIComponent(cid)}${emailParam}"`;
         }
       );
       // Remove potentially malicious script tags
