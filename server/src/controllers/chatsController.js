@@ -111,6 +111,19 @@ const getChats = async (req, res) => {
     // ── Real Mode: Find Tokens & Fetch Live Graph Chats across ALL connected accounts ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     let targetAccounts = [];
+    const headerToken = req.microsoftAccessToken;
+
+    // Auto-update connected account token in MongoDB if fresh token sent in header
+    if (headerToken && dbAvailable) {
+      const activeEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+      if (activeEmail) {
+        await ConnectedAccount.findOneAndUpdate(
+          { email: activeEmail },
+          { microsoftAccessToken: headerToken, tokenExpiresAt: new Date(Date.now() + 3600 * 1000) },
+          { upsert: true }
+        ).catch(() => {});
+      }
+    }
 
     if (dbAvailable) {
       if (connectedAccountId && connectedAccountId !== 'all') {
@@ -133,6 +146,15 @@ const getChats = async (req, res) => {
           microsoftAccessToken: { $exists: true, $ne: '' }
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
+    }
+
+    if (targetAccounts.length === 0 && headerToken) {
+      targetAccounts = [{
+        _id: 'header-token-acc',
+        microsoftAccessToken: headerToken,
+        email: clientUserEmail || req.user?.email || 'User',
+        displayName: req.user?.name || 'User'
+      }];
     }
 
     if (targetAccounts.length > 0) {
