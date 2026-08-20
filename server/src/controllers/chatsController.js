@@ -354,7 +354,27 @@ const getChatMessages = async (req, res) => {
       let microsoftChatId = id;
       if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
         const chat = await Chat.findById(id);
-        if (chat) microsoftChatId = chat.microsoftChatId;
+        if (chat && chat.microsoftChatId) {
+          microsoftChatId = chat.microsoftChatId;
+        } else {
+          microsoftChatId = null;
+        }
+      }
+
+      if (!microsoftChatId || /^[0-9a-fA-F]{24}$/.test(microsoftChatId)) {
+        const cachedMessages = dbAvailable ? await Message.find({ chatId: id }).sort({ createdDateTime: 1 }) : [];
+        return res.status(200).json({
+          success: true,
+          source: 'cache',
+          data: {
+            items: cachedMessages,
+            page: pageNum,
+            limit: limitNum,
+            total: cachedMessages.length,
+            hasMore: false,
+            isReadOnly: true
+          }
+        });
       }
 
       try {
