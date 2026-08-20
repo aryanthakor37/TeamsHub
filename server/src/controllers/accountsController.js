@@ -1,5 +1,5 @@
 const ConnectedAccount = require('../models/ConnectedAccount');
-const { isMockMode, fetchGraphUserProfile, GraphApiError } = require('../services/graphService');
+const { isMockMode, fetchGraphUserProfile, fetchGraphUserTenants, GraphApiError } = require('../services/graphService');
 
 // ============================================================
 // Mock in-memory accounts (ONLY when MOCK_GRAPH_DATA=true)
@@ -245,14 +245,43 @@ const connectMicrosoftAccount = async (req, res) => {
       }
     }
 
-    const existing = await ConnectedAccount.findOne({ email: realEmail });
-    const isDuplicate = !!existing;
-
     const savedAccount = await ConnectedAccount.findOneAndUpdate(
       { email: realEmail },
       { ...accountData, ...tokenFields },
       { upsert: true, new: true }
     );
+
+    // Auto-discover Guest Tenant Organizations (e.g. BayWa r.e., DR SCHAER AG, Kerry Dines Ltd)
+    if (accessToken) {
+      try {
+        const guestTenants = await fetchGraphUserTenants(accessToken);
+        for (const guest of guestTenants) {
+          if (!guest || !guest.displayName) continue;
+          const guestEmail = `${guest.displayName.toLowerCase().replace(/[^a-z0-9]/g, '')}@guest.${realEmail.split('@')[1] || 'tenant.org'}`;
+          await ConnectedAccount.findOneAndUpdate(
+            { userId: req.user._id, displayName: guest.displayName },
+            {
+              userId: req.user._id,
+              provider: 'microsoft',
+              accountId: guest.id || `guest-${Date.now()}`,
+              microsoftUserId: accountData.microsoftUserId,
+              displayName: guest.displayName,
+              email: guestEmail,
+              tenantId: guest.id || 'guest-tenant',
+              accountType: 'Guest Tenant Workspace',
+              status: 'connected',
+              isDefault: false,
+              lastAuthenticatedAt: new Date(),
+              microsoftAccessToken: accessToken,
+              tokenExpiresAt: new Date(Date.now() + 3600 * 1000)
+            },
+            { upsert: true, new: true }
+          );
+        }
+      } catch (tErr) {
+        // Fallback: Non-blocking guest discovery
+      }
+    }
 
     res.status(201).json({
       success: true,

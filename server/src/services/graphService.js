@@ -101,6 +101,29 @@ const fetchGraphUserProfile = async (accessToken) => {
 };
 
 /**
+ * Fetch guest tenant organizations — GET /v1.0/me/account/tenants
+ * Discovers linked external organizations (e.g. BayWa r.e., DR SCHAER AG, Kerry Dines Ltd)
+ */
+const fetchGraphUserTenants = async (accessToken) => {
+  try {
+    const res = await graphRequest(accessToken, '/me/account/tenants');
+    return res.value || [];
+  } catch (e) {
+    try {
+      // Fallback: fetch joined teams to extract tenant organization names
+      const res = await graphRequest(accessToken, '/me/joinedTeams');
+      return (res.value || []).map(t => ({
+        id: t.id,
+        displayName: t.displayName || t.description || 'Guest Organization',
+        tenantType: 'Guest'
+      }));
+    } catch (err) {
+      return [];
+    }
+  }
+};
+
+/**
  * Fetch chats — GET /v1.0/me/chats?$expand=members,lastMessagePreview&$top=50
  */
 const fetchGraphChatsFromAPI = async (accessToken) => {
@@ -834,6 +857,7 @@ module.exports = {
   GraphApiError,
   isMockMode,
   fetchGraphUserProfile,
+  fetchGraphUserTenants,
   fetchGraphChatsFromAPI,
   fetchGraphChatMessages,
   sendGraphChatMessage,
