@@ -172,8 +172,18 @@ const getChats = async (req, res) => {
         })
       );
 
+      // Deduplicate combined multi-account chats by microsoftChatId
+      const uniqueMap = new Map();
+      allUnifiedChats.forEach((c) => {
+        const key = c.microsoftChatId || c._id;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, c);
+        }
+      });
+      const deduplicatedChats = Array.from(uniqueMap.values());
+
       // Sort combined multi-account chats chronologically
-      allUnifiedChats.sort((a, b) => {
+      deduplicatedChats.sort((a, b) => {
         const tA = new Date(a.lastMessageTimestamp || 0).getTime();
         const tB = new Date(b.lastMessageTimestamp || 0).getTime();
         return tB - tA;
@@ -183,10 +193,10 @@ const getChats = async (req, res) => {
         success: true,
         source: 'graph',
         data: {
-          items: allUnifiedChats,
+          items: deduplicatedChats,
           page: pageNum,
           limit: limitNum,
-          total: allUnifiedChats.length,
+          total: deduplicatedChats.length,
           hasMore: false
         }
       });
@@ -305,15 +315,14 @@ const getChatMessages = async (req, res) => {
     // ── Real Mode: Token Lookup & Graph Call ──
     let accessToken = req.microsoftAccessToken;
 
-    // Auto-save incoming token into ConnectedAccount for persistence
-    if (accessToken && dbAvailable) {
-      ConnectedAccount.updateOne(
-        { userId: req.user._id },
-        { microsoftAccessToken: accessToken, tokenExpiresAt: new Date(Date.now() + 3600 * 1000) }
-      ).catch(e => console.warn('[Token Persistence Warning]', e.message));
+    if (!accessToken && dbAvailable) {
+      const acc = await ConnectedAccount.findOne({
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      if (acc && acc.microsoftAccessToken) {
+        accessToken = acc.microsoftAccessToken;
+      }
     }
-
-
 
     if (accessToken) {
       // Need the microsoftChatId — look up from DB or use id directly
