@@ -27,6 +27,19 @@ const saveStoredReadChat = (chatId) => {
   } catch (e) {}
 };
 
+const isLegacyOrFakeChat = (c) => {
+  if (!c) return true;
+  const id = (c.id || c._id || c.microsoftChatId || '').toString().toLowerCase();
+  const company = (c.company || c.accountBadge || '').toLowerCase();
+  const participant = (c.participant || '').toLowerCase();
+
+  if (id.includes('personal-chat-') || id.includes('mock-')) return true;
+  if (company.includes('hem shah') || participant.includes('hem shah')) return true;
+  if (participant.includes('meet thakor') || participant.includes('hardik thakor') || participant.includes('mittal trivedi') || participant.includes('aditya kumrecha')) return true;
+
+  return false;
+};
+
 const getStoredLocalChats = () => {
   try {
     const activeEmail = localStorage.getItem('teamshub_active_email');
@@ -34,11 +47,7 @@ const getStoredLocalChats = () => {
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((c) => {
-      const company = (c?.company || c?.accountBadge || '').toLowerCase();
-      const participant = (c?.participant || '').toLowerCase();
-      return !company.includes('hem shah') && !participant.includes('hem shah (you)');
-    });
+    return parsed.filter((c) => !isLegacyOrFakeChat(c));
   } catch (e) {
     return [];
   }
@@ -51,11 +60,7 @@ const saveStoredLocalChats = (items) => {
       localStorage.removeItem('teamshub_cached_chats');
       return;
     }
-    const filtered = (items || []).filter((c) => {
-      const company = (c?.company || c?.accountBadge || '').toLowerCase();
-      const participant = (c?.participant || '').toLowerCase();
-      return !company.includes('hem shah') && !participant.includes('hem shah (you)');
-    });
+    const filtered = (items || []).filter((c) => !isLegacyOrFakeChat(c));
     localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
   } catch (e) {}
 };
