@@ -173,7 +173,6 @@ export const useChats = (selectedAccountId = 'all') => {
     if (!activeEmail) return;
 
     try {
-      await refreshChatsOnBackend(selectedAccountId);
       const data = await fetchChatsFromBackend(selectedAccountId);
       const rawItems = data.items || [];
       const withRead = applyReadStatus(rawItems);
@@ -218,7 +217,9 @@ export const useChats = (selectedAccountId = 'all') => {
         window.dispatchEvent(new CustomEvent('teamshub:new-toast-notification', { detail: { chat: newestChat } }));
       }
 
-      setChats(sorted);
+      if (sorted.length > 0) {
+        setChats(sorted);
+      }
     } catch (err) {
       console.warn('Silent chat list sync failed:', err.message);
     }
@@ -263,10 +264,10 @@ export const useChats = (selectedAccountId = 'all') => {
   useEffect(() => {
     loadChats();
     
-    // Live Background Polling every 4 seconds for real-time Teams updates
+    // Background polling every 15 seconds for Teams updates
     const interval = setInterval(() => {
       loadChatsSilently();
-    }, 4000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [loadChats, loadChatsSilently]);
