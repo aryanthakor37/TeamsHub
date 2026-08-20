@@ -143,14 +143,12 @@ const getChats = async (req, res) => {
       if (targetAccounts.length === 0) {
         const activeEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
 
-        if (activeEmail) {
+        if (activeEmail && activeEmail !== 'user@teamshub.app') {
           targetAccounts = await ConnectedAccount.find({
             email: activeEmail,
             microsoftAccessToken: { $exists: true, $ne: '' }
           }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-
-        if (targetAccounts.length === 0 && req.user?._id) {
+        } else if (req.user?._id) {
           targetAccounts = await ConnectedAccount.find({
             userId: req.user._id,
             microsoftAccessToken: { $exists: true, $ne: '' }
@@ -160,12 +158,29 @@ const getChats = async (req, res) => {
     }
 
     if (targetAccounts.length === 0 && headerToken) {
-      targetAccounts = [{
-        _id: 'header-token-acc',
-        microsoftAccessToken: headerToken,
-        email: clientUserEmail || req.user?.email || 'User',
-        displayName: req.user?.name || 'User'
-      }];
+      const activeEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+      if (activeEmail && activeEmail !== 'user@teamshub.app') {
+        targetAccounts = [{
+          _id: 'header-token-acc',
+          microsoftAccessToken: headerToken,
+          email: activeEmail,
+          displayName: req.user?.name || 'User'
+        }];
+      }
+    }
+
+    if (targetAccounts.length === 0) {
+      return res.status(200).json({
+        success: true,
+        source: 'unauthenticated',
+        data: {
+          items: [],
+          page: pageNum,
+          limit: limitNum,
+          total: 0,
+          hasMore: false
+        }
+      });
     }
 
     if (targetAccounts.length > 0) {
