@@ -123,11 +123,38 @@ const fetchGraphUserTenants = async (accessToken) => {
   }
 };
 
-/**
- * Fetch chats — GET /v1.0/me/chats?$expand=members,lastMessagePreview&$top=50
- */
 const fetchGraphChatsFromAPI = async (accessToken) => {
-  return await graphRequest(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
+  try {
+    return await graphRequest(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
+  } catch (err) {
+    try {
+      // Personal Account Fallback (@gmail.com, @outlook.com) where $expand is restricted by Microsoft
+      const basicChats = await graphRequest(accessToken, '/me/chats?$top=50');
+      const items = basicChats.value || [];
+
+      // For personal account chats, enrich members & lastMessagePreview if missing
+      const enriched = await Promise.all(
+        items.map(async (c) => {
+          try {
+            if (!c.members || c.members.length === 0) {
+              const memRes = await graphRequest(accessToken, `/chats/${encodeURIComponent(c.id)}/members`);
+              c.members = memRes.value || [];
+            }
+            if (!c.lastMessagePreview) {
+              const msgRes = await graphRequest(accessToken, `/chats/${encodeURIComponent(c.id)}/messages?$top=1`);
+              if (msgRes.value && msgRes.value.length > 0) {
+                c.lastMessagePreview = msgRes.value[0];
+              }
+            }
+          } catch (e) {}
+          return c;
+        })
+      );
+      return { ...basicChats, value: enriched };
+    } catch (fallbackErr) {
+      throw err;
+    }
+  }
 };
 
 /**
