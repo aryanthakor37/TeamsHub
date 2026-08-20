@@ -420,11 +420,7 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
 
   let isOutgoing = false;
 
-  if (uPrefix && sPrefix && uPrefix === sPrefix && !uPrefix.includes('teamshub')) {
-    isOutgoing = true;
-  } else if (cEmail && sEmail && cEmail === sEmail) {
-    isOutgoing = true;
-  } else if (cName && sName && (cName === sName || (cName.includes('aryan') && sName.includes('aryan')))) {
+  if (sName === 'you' || sName.includes('aryan') || (uPrefix && sPrefix && uPrefix === sPrefix && !uPrefix.includes('teamshub')) || (cEmail && sEmail && cEmail === sEmail) || (cName && sName && (cName === sName || (cName.includes('aryan') && sName.includes('aryan'))))) {
     isOutgoing = true;
   }
 

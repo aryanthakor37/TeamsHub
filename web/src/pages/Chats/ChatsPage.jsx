@@ -227,7 +227,21 @@ export default function ChatsPage({
   const selectedChatId = activeChatId || (chats.length > 0 ? (chats[0]._id || chats[0].microsoftChatId || chats[0].id) : null);
   const activeChat = chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId));
   const { messages, loading: messagesLoading, error: messagesError, sendMessage } = useMessages(selectedChatId, activeChat?.connectedAccountId);
-  const safeMessages = Array.isArray(messages) ? messages : [];
+  const rawMessages = Array.isArray(messages) ? messages : [];
+  const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+
+  const safeMessages = rawMessages.map((m) => {
+    let isOut = m.isOutgoing;
+    const sName = (m.senderName || m.sender || '').toLowerCase().trim();
+    const sEmail = (m.senderEmail || '').toLowerCase().trim();
+
+    if (sName === 'you' || sName.includes('aryan') || (activeEmail && sEmail === activeEmail)) {
+      isOut = true;
+    } else if (activeChat?.participant && sName.includes(activeChat.participant.toLowerCase().split(' ')[0])) {
+      isOut = false;
+    }
+    return { ...m, isOutgoing: isOut };
+  });
 
   // Smooth scroll & highlight targeted search message (Bright Yellow / Glow like Teams)
   useEffect(() => {
