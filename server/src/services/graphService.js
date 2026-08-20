@@ -1,4 +1,5 @@
 const GRAPH_API_BASE = 'https://graph.microsoft.com/v1.0';
+const GRAPH_API_BETA_BASE = 'https://graph.microsoft.com/beta';
 
 const isMockMode = () => process.env.MOCK_GRAPH_DATA === 'true';
 
@@ -93,6 +94,27 @@ const graphRequest = async (accessToken, endpoint, options = {}, maxRetries = 3)
 };
 
 /**
+ * Microsoft Graph Beta API request helper for Personal Consumer Accounts
+ */
+const graphRequestBeta = async (accessToken, endpoint, options = {}) => {
+  try {
+    const response = await fetch(`${GRAPH_API_BETA_BASE}${endpoint}`, {
+      method: options.method || 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
+      body: options.body
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (e) {
+    return null;
+  }
+};
+
+/**
  * Fetch user profile — GET /v1.0/me
  * Used to verify token and extract identity.
  */
@@ -126,19 +148,19 @@ const fetchGraphUserTenants = async (accessToken) => {
 const fetchGraphChatsFromAPI = async (accessToken) => {
   let items = [];
 
-  // Tier 1: Standard expand
+  // Tier 1: Standard v1.0 expand
   try {
     const res = await graphRequest(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
     if (res && res.value && res.value.length > 0) return res;
   } catch (err) {}
 
-  // Tier 2: Basic me/chats
+  // Tier 2: Basic v1.0 me/chats
   try {
     const res = await graphRequest(accessToken, '/me/chats?$top=50');
     if (res && res.value && res.value.length > 0) items = res.value;
   } catch (err) {}
 
-  // Tier 3: oneOnOne filter for personal consumer accounts
+  // Tier 3: v1.0 oneOnOne filter for personal consumer accounts
   if (items.length === 0) {
     try {
       const res = await graphRequest(accessToken, "/me/chats?$filter=chatType eq 'oneOnOne'");
@@ -146,7 +168,23 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
     } catch (err) {}
   }
 
-  // Tier 4: Direct /chats endpoint
+  // Tier 4: Graph Beta Consumer API endpoint for Personal Microsoft Accounts
+  if (items.length === 0) {
+    try {
+      const res = await graphRequestBeta(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
+      if (res && res.value && res.value.length > 0) return res;
+    } catch (err) {}
+  }
+
+  // Tier 5: Graph Beta Basic Consumer API endpoint
+  if (items.length === 0) {
+    try {
+      const res = await graphRequestBeta(accessToken, '/me/chats?$top=50');
+      if (res && res.value && res.value.length > 0) items = res.value;
+    } catch (err) {}
+  }
+
+  // Tier 6: Direct /chats endpoint
   if (items.length === 0) {
     try {
       const res = await graphRequest(accessToken, '/chats?$top=50');
