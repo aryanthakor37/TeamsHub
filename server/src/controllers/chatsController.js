@@ -141,10 +141,21 @@ const getChats = async (req, res) => {
       }
 
       if (targetAccounts.length === 0) {
-        // Fetch ALL connected accounts that have valid Microsoft access tokens
-        targetAccounts = await ConnectedAccount.find({
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        const activeEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+
+        if (activeEmail) {
+          targetAccounts = await ConnectedAccount.find({
+            email: activeEmail,
+            microsoftAccessToken: { $exists: true, $ne: '' }
+          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+
+        if (targetAccounts.length === 0 && req.user?._id) {
+          targetAccounts = await ConnectedAccount.find({
+            userId: req.user._id,
+            microsoftAccessToken: { $exists: true, $ne: '' }
+          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
       }
     }
 

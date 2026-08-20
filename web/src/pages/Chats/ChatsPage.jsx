@@ -330,11 +330,28 @@ export default function ChatsPage({
 
   const filteredChats = chats.filter((chat) => {
     const q = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       chat.participant?.toLowerCase().includes(q) ||
       chat.company?.toLowerCase().includes(q) ||
       chat.lastMessagePreview?.toLowerCase().includes(q)
     );
+    if (!matchesSearch) return false;
+
+    if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
+
+    const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id) === selectedFilterAccount);
+    if (targetAccount) {
+      const targetName = (targetAccount.displayName || targetAccount.company || targetAccount.email || '').toLowerCase().trim();
+      const chatAccId = (chat.connectedAccountId || '').toString();
+      const chatCompany = (chat.company || chat.accountBadge || '').toLowerCase().trim();
+
+      return (
+        chatAccId === selectedFilterAccount.toString() ||
+        chatCompany === targetName ||
+        (targetAccount.email && chatCompany.includes(targetAccount.email.split('@')[0]))
+      );
+    }
+    return true;
   });
 
   // Auto-scroll to bottom when messages update
