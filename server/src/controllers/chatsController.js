@@ -414,7 +414,9 @@ const getChatMessages = async (req, res) => {
           }
         });
       } catch (graphErr) {
-        console.warn('[getChatMessages] Graph API error for chat:', id, graphErr.message);
+        if (graphErr.httpStatus !== 403 && graphErr.httpStatus !== 404) {
+          console.warn('[getChatMessages] Graph API notice:', graphErr.message);
+        }
       }
     }
 
