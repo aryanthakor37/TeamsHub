@@ -307,6 +307,27 @@ h1, h2, h3, h4, h5, h6 {
   word-break: break-all;
 }
 
+/* Teams Inline Chat Photo & Screenshot Styling */
+.teams-chat-html-content img,
+.message-html-content img {
+  max-width: 100%;
+  max-height: 380px;
+  border-radius: 12px;
+  margin: 6px 0;
+  display: block;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.teams-chat-html-content img:hover,
+.message-html-content img:hover {
+  transform: scale(1.015);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
 /* Microsoft Teams Reply / Quote block formatting */
 .message-html-content blockquote {
   margin: 6px 0 10px 0;

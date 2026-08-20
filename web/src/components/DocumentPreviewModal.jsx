@@ -377,7 +377,7 @@ export default function DocumentPreviewModal({ file, accountId, onClose }) {
               createdUrl = objUrl;
               setBlobUrl(objUrl);
             } else {
-              setBlobUrl(null);
+              setBlobUrl(targetUrl);
             }
             setLoading(false);
           }
