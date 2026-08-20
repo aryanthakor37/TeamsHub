@@ -231,7 +231,23 @@ export const acquireGraphToken = async (accountId) => {
           return result.accessToken;
         }
       } catch (silentErr) {
-        console.warn('[MSAL Silent Token Warning]', silentErr.message);
+        // Fallback for Personal Consumer Accounts (@gmail.com, @outlook.com) where Work-only scopes are rejected
+        try {
+          const fallbackResult = await msalInstance.acquireTokenSilent({
+            scopes: ['User.Read', 'Chat.Read', 'Chat.ReadWrite', 'openid', 'profile'],
+            account: targetAccount
+          });
+          if (fallbackResult && fallbackResult.accessToken) {
+            syncAccountToBackend({
+              email: targetAccount.username,
+              displayName: targetAccount.name || targetAccount.username,
+              accessToken: fallbackResult.accessToken
+            }).catch(() => { });
+            return fallbackResult.accessToken;
+          }
+        } catch (fErr) {
+          console.warn('[MSAL Fallback Token Warning]', fErr.message);
+        }
       }
     }
 
