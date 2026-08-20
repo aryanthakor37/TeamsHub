@@ -109,13 +109,30 @@ export const MicrosoftAuthProvider = ({ children }) => {
   };
 
   const handleDisconnectAccount = async (accId) => {
-    await disconnectAccountFromBackend(accId);
-    setConnectedAccounts(prev => prev.map(a => {
-      if (a._id === accId || a.accountId === accId || a.id === accId) {
-        return { ...a, status: 'disconnected' };
+    try {
+      await disconnectAccountFromBackend(accId);
+    } catch (e) {}
+
+    setConnectedAccounts((prev) => {
+      const targetAcc = prev.find((a) => a._id === accId || a.accountId === accId || a.id === accId);
+      if (targetAcc && targetAcc.email) {
+        localStorage.removeItem(`teamshub_token_${targetAcc.email.toLowerCase()}`);
       }
-      return a;
-    }));
+
+      const remaining = prev.filter((a) => a._id !== accId && a.accountId !== accId && a.id !== accId);
+
+      if (activeAccount && (activeAccount._id === accId || activeAccount.accountId === accId || activeAccount.id === accId)) {
+        const nextActive = remaining.length > 0 ? remaining[0] : null;
+        setActiveAccountState(nextActive);
+        if (nextActive) {
+          localStorage.setItem('teamshub_active_email', nextActive.email);
+        } else {
+          localStorage.removeItem('teamshub_active_email');
+        }
+      }
+
+      return remaining;
+    });
   };
 
   const loginWithMicrosoft = async () => {

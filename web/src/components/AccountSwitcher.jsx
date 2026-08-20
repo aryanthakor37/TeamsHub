@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronDown, Check, Plus, ShieldCheck, RefreshCw } from 'lucide-react';
+import { ChevronDown, Check, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function AccountSwitcher({ onOpenMicrosoftModal }) {
-  const { connectedAccounts, activeAccount, setActiveAccount } = useAuth();
+  const { connectedAccounts, activeAccount, setActiveAccount, disconnectAccount } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const activeAcc = activeAccount || (connectedAccounts && connectedAccounts.length > 0 ? connectedAccounts[0] : null);
@@ -70,6 +70,7 @@ export default function AccountSwitcher({ onOpenMicrosoftModal }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '240px', overflowY: 'auto' }}>
             {connectedAccounts.map((acc) => {
               const isSelected = activeAcc && (activeAcc._id === acc._id || activeAcc.email === acc.email);
+              const accIdToDisconnect = acc._id || acc.accountId || acc.id || acc.email;
               return (
                 <div
                   key={acc._id || acc.id || acc.email}
@@ -96,7 +97,33 @@ export default function AccountSwitcher({ onOpenMicrosoftModal }) {
                       {acc.email}
                     </div>
                   </div>
-                  {isSelected && <Check size={16} style={{ color: 'var(--accent-primary)', marginLeft: '8px' }} />}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {isSelected && <Check size={16} style={{ color: 'var(--accent-primary)' }} />}
+                    <button
+                      title="Remove/Disconnect Account"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        disconnectAccount(accIdToDisconnect);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.7,
+                        transition: 'opacity 0.2s'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               );
             })}
