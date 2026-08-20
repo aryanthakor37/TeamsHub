@@ -54,14 +54,20 @@ function MainLayout() {
       }
     };
 
+    const handleLogout = () => {
+      setActiveTab('welcome');
+    };
+
     socket.on('teamshub:new-toast-notification', handleSocketToast);
     window.addEventListener('teamshub:new-toast-notification', handleToast);
     window.addEventListener('teamshub:open-chat', handleOpenChat);
+    window.addEventListener('teamshub:logout', handleLogout);
 
     return () => {
       socket.off('teamshub:new-toast-notification', handleSocketToast);
       window.removeEventListener('teamshub:new-toast-notification', handleToast);
       window.removeEventListener('teamshub:open-chat', handleOpenChat);
+      window.removeEventListener('teamshub:logout', handleLogout);
     };
   }, []);
 

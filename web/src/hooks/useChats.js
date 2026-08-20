@@ -65,7 +65,7 @@ export const useChats = (selectedAccountId = 'all') => {
     requestNotificationPermission();
   }, []);
 
-  // Synchronize read chats across all components when marked read
+  // Synchronize read chats and clear state on logout
   useEffect(() => {
     const handleReadEvent = (e) => {
       const { chatId } = e.detail || {};
@@ -80,8 +80,18 @@ export const useChats = (selectedAccountId = 'all') => {
       }
     };
 
+    const handleLogoutEvent = () => {
+      setChats([]);
+      setLoading(false);
+      setError(null);
+    };
+
     window.addEventListener('teamshub:chat-marked-read', handleReadEvent);
-    return () => window.removeEventListener('teamshub:chat-marked-read', handleReadEvent);
+    window.addEventListener('teamshub:logout', handleLogoutEvent);
+    return () => {
+      window.removeEventListener('teamshub:chat-marked-read', handleReadEvent);
+      window.removeEventListener('teamshub:logout', handleLogoutEvent);
+    };
   }, []);
 
   const applyReadStatus = (items) => {

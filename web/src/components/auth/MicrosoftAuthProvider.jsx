@@ -150,9 +150,31 @@ export const MicrosoftAuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // 1. Clear all localStorage session tokens & active email
+    localStorage.removeItem('teamshub_active_email');
+    localStorage.removeItem('teamshub_user');
+    localStorage.removeItem('teamshub_token');
+    localStorage.removeItem('teamshub_cached_chats');
+    localStorage.removeItem('teamshub_read_chats');
+
+    // 2. Clear MSAL cache keys from localStorage and sessionStorage
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('msal.') || key.includes('teamshub')) {
+          localStorage.removeItem(key);
+        }
+      });
+      sessionStorage.clear();
+    } catch (e) {}
+
+    // 3. Clear auth context state
     setAuthState('SIGNED_OUT');
     setUser(null);
+    setConnectedAccounts([]);
     setActiveAccountState(null);
+
+    // 4. Fire logout event to immediately switch activeTab to 'welcome'
+    window.dispatchEvent(new CustomEvent('teamshub:logout'));
   };
 
   return (
