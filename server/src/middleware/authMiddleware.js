@@ -85,10 +85,12 @@ const protect = async (req, res, next) => {
 
     if (!currentUser) {
       // Fallback: create in-memory user from headers
+      const headerEmail = (req.headers['x-user-email'] || 'user@teamshub.app').toLowerCase().trim();
+      const generatedId = 'usr_' + Buffer.from(headerEmail).toString('hex').substring(0, 18);
       currentUser = {
-        _id: userId || '65c1f0000000000000000001',
-        name: req.headers['x-user-name'] || 'TeamsHub User',
-        email: req.headers['x-user-email'] || 'user@teamshub.app',
+        _id: userId || generatedId,
+        name: req.headers['x-user-name'] || headerEmail.split('@')[0],
+        email: headerEmail,
         avatar: '',
         activeAccountId: null
       };

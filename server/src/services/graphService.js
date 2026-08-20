@@ -311,6 +311,7 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
   // Extract participant name from members (exclude self)
   let participantName = '';
   let participantEmail = '';
+  let isSelfChat = false;
 
   // 1. Group Chat Topic
   if (graphChat.chatType === 'group' && graphChat.topic && graphChat.topic.trim()) {
@@ -333,7 +334,6 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     });
 
     // Check if chat is self-chat (Saved Messages / Chat with You)
-    let isSelfChat = false;
     if (graphChat.chatType === 'oneOnOne') {
       const names = new Set(graphChat.members.map(m => (m.displayName || '').toLowerCase().trim()).filter(Boolean));
       const emails = new Set(graphChat.members.map(m => (m.email || m.userPrincipalName || m.emailAddress?.address || '').toLowerCase().trim()).filter(Boolean));
