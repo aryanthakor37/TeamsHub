@@ -227,6 +227,24 @@ const connectMicrosoftAccount = async (req, res) => {
     }
 
     const realEmail = accountData.email;
+
+    const User = require('../models/User');
+    if (User.db && User.db.readyState === 1 && req.user?.email) {
+      try {
+        await User.findOneAndUpdate(
+          { email: req.user.email.toLowerCase() },
+          {
+            _id: req.user._id,
+            name: req.user.name || accountData.displayName,
+            email: req.user.email.toLowerCase()
+          },
+          { upsert: true, new: true }
+        );
+      } catch (uErr) {
+        // User upsert fallback
+      }
+    }
+
     const existing = await ConnectedAccount.findOne({ email: realEmail });
     const isDuplicate = !!existing;
 

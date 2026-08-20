@@ -84,11 +84,12 @@ const protect = async (req, res, next) => {
     }
 
     if (!currentUser) {
-      // Fallback: create in-memory user from headers
+      // Fallback: create in-memory user from headers with a valid 24-character hex ObjectId
+      const crypto = require('crypto');
       const headerEmail = (req.headers['x-user-email'] || 'user@teamshub.app').toLowerCase().trim();
-      const generatedId = 'usr_' + Buffer.from(headerEmail).toString('hex').substring(0, 18);
+      const validHexId = crypto.createHash('md5').update(headerEmail).digest('hex').substring(0, 24);
       currentUser = {
-        _id: userId || generatedId,
+        _id: validHexId,
         name: req.headers['x-user-name'] || headerEmail.split('@')[0],
         email: headerEmail,
         avatar: '',
