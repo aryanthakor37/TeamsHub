@@ -70,6 +70,9 @@ const sendGraphError = (res, error) => {
 
 const getChats = async (req, res) => {
   try {
+    const { connectedAccountId, page = 1, limit = 50 } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
     const clientUserEmail = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
 
     // ── Check if Request is from an Unauthenticated Visitor ──
