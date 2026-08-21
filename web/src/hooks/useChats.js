@@ -47,11 +47,6 @@ const getStoredLocalChats = () => {
 
 const saveStoredLocalChats = (items) => {
   try {
-    const activeEmail = localStorage.getItem('teamshub_active_email');
-    if (!activeEmail) {
-      localStorage.removeItem('teamshub_cached_chats');
-      return;
-    }
     const filtered = (items || []).filter((c) => !isLegacyOrFakeChat(c));
     localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
   } catch (e) {}
@@ -127,13 +122,6 @@ export const useChats = (selectedAccountId = 'all') => {
   };
 
   const loadChats = useCallback(async () => {
-    const activeEmail = localStorage.getItem('teamshub_active_email');
-    if (!activeEmail) {
-      setChats([]);
-      setLoading(false);
-      return;
-    }
-
     if (chats.length === 0) {
       setLoading(true);
     }
@@ -153,9 +141,6 @@ export const useChats = (selectedAccountId = 'all') => {
           const ts = new Date(c.lastMessageTimestamp || 0).getTime();
           prevChatTimestamps.current.set(id, ts);
         });
-      } else if (data.source === 'unauthenticated' || data.source === 'empty') {
-        setChats([]);
-        saveStoredLocalChats([]);
       }
       isInitialLoad.current = false;
     } catch (err) {
@@ -166,8 +151,6 @@ export const useChats = (selectedAccountId = 'all') => {
   }, [selectedAccountId, chats.length]);
 
   const loadChatsSilently = useCallback(async () => {
-    const activeEmail = localStorage.getItem('teamshub_active_email');
-    if (!activeEmail) return;
 
     try {
       const data = await fetchChatsFromBackend(selectedAccountId);

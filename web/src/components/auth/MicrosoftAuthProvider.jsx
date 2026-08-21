@@ -60,6 +60,9 @@ export const MicrosoftAuthProvider = ({ children }) => {
         const matchedActive = mergedAccounts.find(a => a._id === activeId || a.accountId === activeId);
         const chosenActive = matchedActive || mergedAccounts[0];
         setActiveAccountState(chosenActive);
+        if (chosenActive.email) {
+          localStorage.setItem('teamshub_active_email', chosenActive.email);
+        }
         setDefaultAccountIdState(chosenActive._id || chosenActive.accountId);
         setUser({
           name: chosenActive.displayName || chosenActive.email.split('@')[0],
@@ -85,6 +88,9 @@ export const MicrosoftAuthProvider = ({ children }) => {
     }
     if (targetAcc) {
       setActiveAccountState(targetAcc);
+      if (targetAcc.email) {
+        localStorage.setItem('teamshub_active_email', targetAcc.email);
+      }
       await setActiveAccountOnBackend(targetAcc._id || targetAcc.accountId || targetAcc.id);
     }
   };
