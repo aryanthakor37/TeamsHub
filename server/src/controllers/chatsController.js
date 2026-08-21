@@ -158,7 +158,15 @@ const getChats = async (req, res) => {
             } catch (gErr) {}
           }
 
-          const accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email || 'Microsoft Account').trim();
+          let accountCompanyBadge = 'Microsoft Account';
+          const userEmailClean = (acc.email || currentUserInfo.email || clientUserEmail || '').toLowerCase();
+          if (userEmailClean.includes('thakoraryan') || userEmailClean.includes('gmail')) {
+            accountCompanyBadge = 'Aaryan Thakor';
+          } else if (userEmailClean.includes('aryankumar') || userEmailClean.includes('estatic')) {
+            accountCompanyBadge = 'Aryan Kumrecha';
+          } else {
+            accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email || 'Microsoft Account').trim();
+          }
 
           let normalizedList = rawChats.map((gc) =>
             normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo)
