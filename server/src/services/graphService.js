@@ -845,21 +845,22 @@ const getDemoChatMessages = (chatId, participantName = '', previewText = '') => 
         chatId: chatId,
         microsoftMessageId: `1700000401`,
         senderName: 'Hem Shah',
-        content: 'hi',
+        content: 'Sent an image',
         contentType: 'text',
         isOutgoing: false,
-        createdDateTime: new Date(Date.now() - 18000000).toISOString(),
+        createdDateTime: new Date('2026-08-20T16:30:00Z').toISOString(),
         reactions: []
       },
       {
         _id: `msg-hem-2`,
         chatId: chatId,
         microsoftMessageId: `1700000402`,
-        senderName: 'Aryan Kumrecha',
-        content: 'Hello Hem! Let me know if you need any updates.',
+        senderName: 'Aaryan Thakor',
+        senderEmail: 'thakoraryan94@gmail.com',
+        content: '1 min check karie',
         contentType: 'text',
         isOutgoing: true,
-        createdDateTime: new Date(Date.now() - 9000000).toISOString(),
+        createdDateTime: new Date('2026-08-20T16:31:00Z').toISOString(),
         reactions: []
       }
     ],
@@ -869,10 +870,21 @@ const getDemoChatMessages = (chatId, participantName = '', previewText = '') => 
         chatId: chatId,
         microsoftMessageId: `1700000501`,
         senderName: 'Hardik Thakor',
-        content: 'Okay',
+        content: 'app testing karva mari gmail account n...',
         contentType: 'text',
         isOutgoing: false,
-        createdDateTime: new Date(Date.now() - 25000000).toISOString(),
+        createdDateTime: new Date('2026-08-21T11:18:00Z').toISOString(),
+        reactions: []
+      },
+      {
+        _id: `msg-hardik-2`,
+        chatId: chatId,
+        microsoftMessageId: `1700000502`,
+        senderName: 'Hardik Thakor',
+        content: 'Please come',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-08-21T11:31:00Z').toISOString(),
         reactions: []
       }
     ],
@@ -881,11 +893,202 @@ const getDemoChatMessages = (chatId, participantName = '', previewText = '') => 
         _id: `msg-fenil-1`,
         chatId: chatId,
         microsoftMessageId: `1700000601`,
+        senderName: 'Aaryan Thakor',
+        senderEmail: 'thakoraryan94@gmail.com',
+        content: 'Chalo',
+        contentType: 'text',
+        isOutgoing: true,
+        createdDateTime: new Date('2026-07-02T15:15:00Z').toISOString(),
+        reactions: []
+      },
+      {
+        _id: `msg-fenil-2`,
+        chatId: chatId,
+        microsoftMessageId: `1700000602`,
         senderName: 'Fenil Lathigara',
         content: 'Ok vandho ni',
         contentType: 'text',
         isOutgoing: false,
-        createdDateTime: new Date(Date.now() - 30000000).toISOString(),
+        createdDateTime: new Date('2026-07-02T15:20:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'Mansi Senjaliya': [
+      {
+        _id: `msg-mansi-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000701`,
+        senderName: 'Mansi Senjaliya',
+        content: 'Hello Aryan&nbsp;Kumrecha&nbsp;Good morning',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-07-02T14:10:00Z').toISOString(),
+        reactions: []
+      },
+      {
+        _id: `msg-mansi-2`,
+        chatId: chatId,
+        microsoftMessageId: `1700000702`,
+        senderName: 'Aaryan Thakor',
+        senderEmail: 'thakoraryan94@gmail.com',
+        content: 'Thank you',
+        contentType: 'text',
+        isOutgoing: true,
+        createdDateTime: new Date('2026-07-02T14:15:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'Yash Kalya': [
+      {
+        _id: `msg-yash-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000711`,
+        senderName: 'Yash Kalya',
+        content: 'This message was deleted',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-07-01T12:00:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'Jay Gadesha': [
+      {
+        _id: `msg-jay-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000721`,
+        senderName: 'Jay Gadesha',
+        content: 'A suggestion: Try and use "Are you Av...',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-06-26T16:40:00Z').toISOString(),
+        reactions: []
+      },
+      {
+        _id: `msg-jay-2`,
+        chatId: chatId,
+        microsoftMessageId: `1700000722`,
+        senderName: 'Jay Gadesha',
+        content: 'Done. Thanks!',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-06-26T16:45:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'Nirav Mojagar': [
+      {
+        _id: `msg-nirav-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000731`,
+        senderName: 'Aaryan Thakor',
+        senderEmail: 'thakoraryan94@gmail.com',
+        content: 'Please review it and let me know if any updates',
+        contentType: 'text',
+        isOutgoing: true,
+        createdDateTime: new Date('2026-06-26T14:20:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'Ruchit dalsaniya': [
+      {
+        _id: `msg-ruchit-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000741`,
+        senderName: 'Aaryan Thakor',
+        senderEmail: 'thakoraryan94@gmail.com',
+        content: 'hi',
+        contentType: 'text',
+        isOutgoing: true,
+        createdDateTime: new Date('2026-06-25T19:40:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'PARTH PANCHOLI': [
+      {
+        _id: `msg-parth-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000751`,
+        senderName: 'Aaryan Thakor',
+        senderEmail: 'thakoraryan94@gmail.com',
+        content: 'hi',
+        contentType: 'text',
+        isOutgoing: true,
+        createdDateTime: new Date('2026-06-25T20:50:00Z').toISOString(),
+        reactions: []
+      },
+      {
+        _id: `msg-parth-2`,
+        chatId: chatId,
+        microsoftMessageId: `1700000752`,
+        senderName: 'PARTH PANCHOLI',
+        content: 'vandho nhi',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-06-25T20:52:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'Mittal Trivedi': [
+      {
+        _id: `msg-mittal-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000761`,
+        senderName: 'Mittal Trivedi',
+        content: 'Server name: EIPL-CC1SQL22TRAINEE',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-06-25T17:30:00Z').toISOString(),
+        reactions: []
+      },
+      {
+        _id: `msg-mittal-2`,
+        chatId: chatId,
+        microsoftMessageId: `1700000762`,
+        senderName: 'Mittal Trivedi',
+        content: 'https://teamshub.onrender.com/',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-06-25T17:35:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'Saumya Vaswani': [
+      {
+        _id: `msg-saumya-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000771`,
+        senderName: 'Saumya Vaswani',
+        content: 'Is it done now?',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-06-25T21:15:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'Divya Panchal': [
+      {
+        _id: `msg-divya-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000781`,
+        senderName: 'Divya Panchal',
+        content: 'https://code.visualstudio.com/download',
+        contentType: 'text',
+        isOutgoing: false,
+        createdDateTime: new Date('2026-06-25T16:45:00Z').toISOString(),
+        reactions: []
+      }
+    ],
+    'adii kumrecha': [
+      {
+        _id: `msg-adii-1`,
+        chatId: chatId,
+        microsoftMessageId: `1700000791`,
+        senderName: 'Aaryan Thakor',
+        senderEmail: 'thakoraryan94@gmail.com',
+        content: 'hello',
+        contentType: 'text',
+        isOutgoing: true,
+        createdDateTime: new Date('2026-06-25T15:30:00Z').toISOString(),
         reactions: []
       }
     ],
