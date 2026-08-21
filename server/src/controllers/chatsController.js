@@ -172,10 +172,6 @@ const getChats = async (req, res) => {
             normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo)
           );
 
-          if (normalizedList.length === 0) {
-            normalizedList = getPersonalAccountChats(acc, currentUserInfo);
-          }
-
           allUnifiedChats.push(...normalizedList);
         } catch (err) {
           console.warn(`[getChats] Warning fetching chats for ${acc.displayName}:`, err.message);
@@ -398,22 +394,6 @@ const getChatMessages = async (req, res) => {
           }
         });
       }
-    }
-
-    // Fallback for personal account chats or demo messages
-    const demoMsgs = getDemoChatMessages(id);
-    if (demoMsgs && demoMsgs.length > 0) {
-      return res.status(200).json({
-        success: true,
-        source: 'fallback',
-        data: {
-          items: demoMsgs,
-          page: pageNum,
-          limit: limitNum,
-          total: demoMsgs.length,
-          hasMore: false
-        }
-      });
     }
 
     return res.status(200).json({
