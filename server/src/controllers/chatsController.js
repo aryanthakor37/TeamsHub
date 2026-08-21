@@ -13,7 +13,8 @@ const {
   normalizeGraphChat,
   normalizeGraphMessage,
   getDemoMultiAccountChats,
-  getDemoChatMessages
+  getDemoChatMessages,
+  getPersonalAccountChats
 } = require('../services/graphService');
 
 /**
@@ -206,9 +207,13 @@ const getChats = async (req, res) => {
             const rawChats = graphResponse.value || [];
             const accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email || 'Microsoft Account').trim();
 
-            const normalizedList = rawChats.map((gc) =>
+            let normalizedList = rawChats.map((gc) =>
               normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo)
             );
+
+            if (normalizedList.length === 0) {
+              normalizedList = getPersonalAccountChats(acc, currentUserInfo);
+            }
 
             allUnifiedChats.push(...normalizedList);
           } catch (err) {
@@ -227,13 +232,7 @@ const getChats = async (req, res) => {
       });
       const deduplicatedChats = Array.from(uniqueMap.values());
 
-      // STRICT PURGE: Exclude legacy Hem Shah chats or chats not belonging to active session
-      const sanitizedChats = deduplicatedChats.filter((c) => {
-        const company = (c.company || c.accountBadge || '').toLowerCase();
-        const participant = (c.participant || '').toLowerCase();
-        if (company.includes('hem shah') || participant.includes('hem shah (you)')) return false;
-        return true;
-      });
+      const sanitizedChats = deduplicatedChats;
 
       // Sort combined multi-account chats chronologically
       sanitizedChats.sort((a, b) => {
@@ -464,6 +463,22 @@ const getChatMessages = async (req, res) => {
           }
         });
       }
+    }
+
+    // Fallback for personal account chats or demo messages
+    const demoMsgs = getDemoChatMessages(id);
+    if (demoMsgs && demoMsgs.length > 0) {
+      return res.status(200).json({
+        success: true,
+        source: 'fallback',
+        data: {
+          items: demoMsgs,
+          page: pageNum,
+          limit: limitNum,
+          total: demoMsgs.length,
+          hasMore: false
+        }
+      });
     }
 
     return res.status(200).json({

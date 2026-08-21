@@ -29,10 +29,6 @@ const saveStoredReadChat = (chatId) => {
 
 const isLegacyOrFakeChat = (c) => {
   if (!c) return true;
-  const company = (c.company || c.accountBadge || '').toLowerCase();
-  const participant = (c.participant || '').toLowerCase();
-
-  if (company.includes('hem shah') || participant.includes('hem shah (you)')) return true;
   return false;
 };
 
