@@ -113,9 +113,12 @@ const getChats = async (req, res) => {
         if (acc) targetAccounts = [acc];
       } else if (clientUserEmail) {
         targetAccounts = await ConnectedAccount.find({
-          email: clientUserEmail,
-          microsoftAccessToken: { $exists: true, $ne: '' }
+          email: clientUserEmail
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+
+      if (targetAccounts.length === 0) {
+        targetAccounts = await ConnectedAccount.find({}).sort({ updatedAt: -1 }).limit(1).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
     }
 

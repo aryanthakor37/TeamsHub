@@ -120,9 +120,7 @@ export const useChats = (selectedAccountId = 'all') => {
   };
 
   const loadChats = useCallback(async () => {
-    if (chats.length === 0) {
-      setLoading(true);
-    }
+    setLoading(true);
     setError(null);
     try {
       const data = await fetchChatsFromBackend(selectedAccountId);
@@ -130,19 +128,17 @@ export const useChats = (selectedAccountId = 'all') => {
         ? data
         : (data?.items || data?.chats || data?.value || []);
 
-      if (rawItems.length > 0) {
-        const withRead = applyReadStatus(rawItems);
-        const sorted = sortChatsByDate(withRead);
-        setChats(sorted);
-        saveStoredLocalChats(sorted);
+      const withRead = applyReadStatus(rawItems);
+      const sorted = sortChatsByDate(withRead);
+      setChats(sorted);
+      saveStoredLocalChats(sorted);
 
-        // Record initial timestamps
-        rawItems.forEach(c => {
-          const id = c._id || c.id || c.microsoftChatId;
-          const ts = new Date(c.lastMessageTimestamp || 0).getTime();
-          prevChatTimestamps.current.set(id, ts);
-        });
-      }
+      // Record initial timestamps
+      rawItems.forEach(c => {
+        const id = c._id || c.id || c.microsoftChatId;
+        const ts = new Date(c.lastMessageTimestamp || 0).getTime();
+        prevChatTimestamps.current.set(id, ts);
+      });
       isInitialLoad.current = false;
     } catch (err) {
       console.warn('[useChats] load error:', err.message);
@@ -150,7 +146,7 @@ export const useChats = (selectedAccountId = 'all') => {
     } finally {
       setLoading(false);
     }
-  }, [selectedAccountId, chats.length]);
+  }, [selectedAccountId]);
 
   const loadChatsSilently = useCallback(async () => {
 
