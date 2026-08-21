@@ -1034,7 +1034,22 @@ const getDemoChatMessages = (chatId, participantName = '', previewText = '') => 
     return store[matchedKey];
   }
 
-  return [];
+  const nameToUse = participantName || 'Participant';
+  const textToUse = (previewText && previewText.trim()) ? previewText.trim() : 'Active conversation';
+
+  return [
+    {
+      _id: `msg-preview-${chatId}`,
+      chatId: chatId,
+      microsoftMessageId: `1700000999`,
+      senderName: nameToUse,
+      content: textToUse,
+      contentType: 'text',
+      isOutgoing: false,
+      createdDateTime: new Date(Date.now() - 60000).toISOString(),
+      reactions: []
+    }
+  ];
 };
 
 const getPersonalAccountChats = (acc, currentUserInfo = {}) => {
