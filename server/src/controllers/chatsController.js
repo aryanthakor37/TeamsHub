@@ -111,17 +111,9 @@ const getChats = async (req, res) => {
           acc = await ConnectedAccount.findOne({ email: clientUserEmail }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
         if (acc) targetAccounts = [acc];
-      }
-
-      if (targetAccounts.length === 0 && clientUserEmail) {
+      } else if (clientUserEmail) {
         targetAccounts = await ConnectedAccount.find({
           email: clientUserEmail,
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
-
-      if (targetAccounts.length === 0) {
-        targetAccounts = await ConnectedAccount.find({
           microsoftAccessToken: { $exists: true, $ne: '' }
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
@@ -129,10 +121,10 @@ const getChats = async (req, res) => {
 
     if (targetAccounts.length === 0) {
       targetAccounts = [{
-        _id: 'default-active-acc',
+        _id: 'active-user-session',
         microsoftAccessToken: headerToken || '',
         email: clientUserEmail || 'thakoraryan94@gmail.com',
-        displayName: (clientUserEmail && clientUserEmail.includes('@')) ? clientUserEmail.split('@')[0] : 'Aaryan Thakor'
+        displayName: (clientUserEmail && clientUserEmail.includes('estatic')) ? 'Aryan Kumrecha' : 'Aaryan Thakor'
       }];
     }
 
@@ -290,19 +282,12 @@ const getChatMessages = async (req, res) => {
     let accessToken = req.microsoftAccessToken;
     const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
 
-    if (!accessToken && dbAvailable) {
-      let acc = null;
-      if (activeEmailHeader) {
-        acc = await ConnectedAccount.findOne({
-          email: activeEmailHeader,
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
-      if (!acc) {
-        acc = await ConnectedAccount.findOne({
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
+    if (!accessToken && dbAvailable && activeEmailHeader) {
+      const acc = await ConnectedAccount.findOne({
+        email: activeEmailHeader,
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+
       if (acc && acc.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
       }
