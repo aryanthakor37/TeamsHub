@@ -1034,33 +1034,7 @@ const getDemoChatMessages = (chatId, participantName = '', previewText = '') => 
     return store[matchedKey];
   }
 
-  const nameToUse = participantName || 'Teams Participant';
-  const textToUse = previewText || 'hi';
-
-  return [
-    {
-      _id: `msg-gen-1-${chatId}`,
-      chatId: chatId,
-      microsoftMessageId: `1700000999`,
-      senderName: nameToUse,
-      content: textToUse,
-      contentType: 'text',
-      isOutgoing: false,
-      createdDateTime: new Date(Date.now() - 3600000).toISOString(),
-      reactions: []
-    },
-    {
-      _id: `msg-gen-2-${chatId}`,
-      chatId: chatId,
-      microsoftMessageId: `1700001000`,
-      senderName: 'Aryan Kumrecha',
-      content: 'Received! Thanks.',
-      contentType: 'text',
-      isOutgoing: true,
-      createdDateTime: new Date(Date.now() - 1800000).toISOString(),
-      reactions: []
-    }
-  ];
+  return [];
 };
 
 const getPersonalAccountChats = (acc, currentUserInfo = {}) => {
