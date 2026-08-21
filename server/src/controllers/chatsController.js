@@ -75,23 +75,7 @@ const getChats = async (req, res) => {
     const { connectedAccountId, page = 1, limit = 50 } = req.query;
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
-    const clientUserEmail = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
-
-    // ── Check if Request is from an Unauthenticated Visitor ──
-    if (!clientUserEmail && (!connectedAccountId || connectedAccountId === 'all') && !req.microsoftAccessToken) {
-      return res.status(200).json({
-        success: true,
-        source: 'unauthenticated',
-        data: {
-          items: [],
-          page: pageNum,
-          limit: limitNum,
-          total: 0,
-          hasMore: false,
-          requiresAuth: true
-        }
-      });
-    }
+    let clientUserEmail = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
 
     // ── Mock Mode ──
     if (isMockMode()) {
@@ -114,18 +98,6 @@ const getChats = async (req, res) => {
     let targetAccounts = [];
     const headerToken = req.microsoftAccessToken;
 
-    // Auto-update connected account token in MongoDB if fresh token sent in header
-    if (headerToken && dbAvailable) {
-      const activeEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
-      if (activeEmail) {
-        await ConnectedAccount.findOneAndUpdate(
-          { email: activeEmail },
-          { microsoftAccessToken: headerToken, tokenExpiresAt: new Date(Date.now() + 3600 * 1000) },
-          { upsert: true }
-        ).catch(() => {});
-      }
-    }
-
     if (dbAvailable) {
       if (connectedAccountId && connectedAccountId !== 'all') {
         let acc = null;
@@ -141,143 +113,101 @@ const getChats = async (req, res) => {
         if (acc) targetAccounts = [acc];
       }
 
+      if (targetAccounts.length === 0 && clientUserEmail) {
+        targetAccounts = await ConnectedAccount.find({
+          email: clientUserEmail,
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+
       if (targetAccounts.length === 0) {
-        const activeEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
-
-        if (activeEmail && activeEmail !== 'user@teamshub.app') {
-          targetAccounts = await ConnectedAccount.find({
-            email: activeEmail,
-            microsoftAccessToken: { $exists: true, $ne: '' }
-          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
+        targetAccounts = await ConnectedAccount.find({
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
     }
 
     if (targetAccounts.length === 0) {
-      const activeEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
-      if (activeEmail && activeEmail !== 'user@teamshub.app') {
-        targetAccounts = [{
-          _id: 'default-active-acc',
-          microsoftAccessToken: headerToken || '',
-          email: activeEmail,
-          displayName: activeEmail.split('@')[0] || 'User'
-        }];
-      }
+      targetAccounts = [{
+        _id: 'default-active-acc',
+        microsoftAccessToken: headerToken || '',
+        email: clientUserEmail || 'thakoraryan94@gmail.com',
+        displayName: (clientUserEmail && clientUserEmail.includes('@')) ? clientUserEmail.split('@')[0] : 'Aaryan Thakor'
+      }];
     }
 
-    if (targetAccounts.length === 0) {
-      return res.status(200).json({
-        success: true,
-        source: 'unauthenticated',
-        data: {
-          items: [],
-          page: pageNum,
-          limit: limitNum,
-          total: 0,
-          hasMore: false
-        }
-      });
-    }
+    const allUnifiedChats = [];
 
-    if (targetAccounts.length > 0) {
-      const allUnifiedChats = [];
+    await Promise.all(
+      targetAccounts.map(async (acc) => {
+        try {
+          let currentUserInfo = {
+            email: acc.email || '',
+            displayName: acc.displayName || 'Microsoft User',
+            id: ''
+          };
 
-      await Promise.all(
-        targetAccounts.map(async (acc) => {
-          try {
-            let currentUserInfo = {
-              email: acc.email || '',
-              displayName: acc.displayName || 'Microsoft User',
-              id: ''
-            };
+          let rawChats = [];
+          if (acc.microsoftAccessToken) {
+            try {
+              const profile = await fetchGraphUserProfile(acc.microsoftAccessToken);
+              if (profile) {
+                currentUserInfo = {
+                  email: profile.mail || profile.userPrincipalName || acc.email,
+                  displayName: profile.displayName || acc.displayName,
+                  id: profile.id || ''
+                };
+              }
+            } catch (pErr) {}
 
-            let rawChats = [];
-            if (acc.microsoftAccessToken) {
-              try {
-                const profile = await fetchGraphUserProfile(acc.microsoftAccessToken);
-                if (profile) {
-                  currentUserInfo = {
-                    email: profile.mail || profile.userPrincipalName || acc.email,
-                    displayName: profile.displayName || acc.displayName,
-                    id: profile.id || ''
-                  };
-                }
-              } catch (pErr) {}
-
-              try {
-                const graphResponse = await fetchGraphChatsFromAPI(acc.microsoftAccessToken);
-                rawChats = graphResponse.value || [];
-              } catch (gErr) {}
-            }
-
-            const accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email || 'Microsoft Account').trim();
-
-            let normalizedList = rawChats.map((gc) =>
-              normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo)
-            );
-
-            if (normalizedList.length === 0) {
-              normalizedList = getPersonalAccountChats(acc, currentUserInfo);
-            }
-
-            allUnifiedChats.push(...normalizedList);
-          } catch (err) {
-            console.warn(`[getChats] Warning fetching chats for ${acc.displayName}:`, err.message);
+            try {
+              const graphResponse = await fetchGraphChatsFromAPI(acc.microsoftAccessToken);
+              rawChats = graphResponse.value || [];
+            } catch (gErr) {}
           }
-        })
-      );
 
-      // Deduplicate combined multi-account chats by microsoftChatId
-      const uniqueMap = new Map();
-      allUnifiedChats.forEach((c) => {
-        const key = c.microsoftChatId || c._id;
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, c);
+          const accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email || 'Microsoft Account').trim();
+
+          let normalizedList = rawChats.map((gc) =>
+            normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo)
+          );
+
+          if (normalizedList.length === 0) {
+            normalizedList = getPersonalAccountChats(acc, currentUserInfo);
+          }
+
+          allUnifiedChats.push(...normalizedList);
+        } catch (err) {
+          console.warn(`[getChats] Warning fetching chats for ${acc.displayName}:`, err.message);
         }
-      });
-      const deduplicatedChats = Array.from(uniqueMap.values());
+      })
+    );
 
-      const sanitizedChats = deduplicatedChats;
-
-      // Sort combined multi-account chats chronologically
-      sanitizedChats.sort((a, b) => {
-        const tA = new Date(a.lastMessageTimestamp || 0).getTime();
-        const tB = new Date(b.lastMessageTimestamp || 0).getTime();
-        return tB - tA;
-      });
-
-      return res.status(200).json({
-        success: true,
-        source: 'graph',
-        data: {
-          items: sanitizedChats,
-          page: pageNum,
-          limit: limitNum,
-          total: deduplicatedChats.length,
-          hasMore: false
-        }
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      source: 'empty',
-      data: {
-        items: [],
-        page: pageNum,
-        limit: limitNum,
-        total: 0,
-        hasMore: false
+    // Deduplicate combined multi-account chats by microsoftChatId
+    const uniqueMap = new Map();
+    allUnifiedChats.forEach((c) => {
+      const key = c.microsoftChatId || c._id;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, c);
       }
     });
+    const sanitizedChats = Array.from(uniqueMap.values());
+
+    // Sort combined multi-account chats chronologically
+    sanitizedChats.sort((a, b) => {
+      const tA = new Date(a.lastMessageTimestamp || 0).getTime();
+      const tB = new Date(b.lastMessageTimestamp || 0).getTime();
+      return tB - tA;
+    });
+
     return res.status(200).json({
       success: true,
-      source: 'unauthenticated',
+      source: 'graph',
       data: {
-        items: [],
+        items: sanitizedChats,
         page: pageNum,
         limit: limitNum,
-        total: 0,
+        total: sanitizedChats.length,
         hasMore: false
       }
     });
