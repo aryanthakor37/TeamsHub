@@ -900,9 +900,7 @@ const getDemoChatMessages = (chatId, participantName = '', previewText = '') => 
         createdDateTime: new Date(Date.now() - 30000000).toISOString(),
         reactions: []
       }
-    ]
-  };
-
+    ],
     'Harshal Joshi': [
       {
         _id: `msg-harshal-1`,
