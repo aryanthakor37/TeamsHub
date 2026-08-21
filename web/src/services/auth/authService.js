@@ -204,66 +204,67 @@ export const disconnectAccountFromBackend = async (accountId) => {
 export const acquireGraphToken = async (accountId) => {
   if (!isRealMsalConfigured()) return null;
   try {
-    await msalInstance.initialize();
-    const accounts = msalInstance.getAllAccounts();
-    if (!accounts || accounts.length === 0) return null;
+    const tokenPromise = (async () => {
+      await msalInstance.initialize();
+      const accounts = msalInstance.getAllAccounts();
+      if (!accounts || accounts.length === 0) return null;
 
-    const activeEmail = localStorage.getItem('teamshub_active_email');
-    let targetAccount = msalInstance.getActiveAccount();
-    if (!targetAccount && activeEmail) {
-      targetAccount = accounts.find(acc => acc.username?.toLowerCase() === activeEmail.toLowerCase());
-    }
-    if (accountId) {
-      targetAccount = accounts.find(acc => acc.homeAccountId === accountId || acc.username === accountId) || targetAccount;
-    }
-    if (!targetAccount && accounts.length > 0) {
-      targetAccount = accounts[0];
-    }
+      const activeEmail = localStorage.getItem('teamshub_active_email');
+      let targetAccount = msalInstance.getActiveAccount();
+      if (!targetAccount && activeEmail) {
+        targetAccount = accounts.find(acc => acc.username?.toLowerCase() === activeEmail.toLowerCase());
+      }
+      if (accountId) {
+        targetAccount = accounts.find(acc => acc.homeAccountId === accountId || acc.username === accountId) || targetAccount;
+      }
+      if (!targetAccount && accounts.length > 0) {
+        targetAccount = accounts[0];
+      }
 
-    if (targetAccount) {
-      try {
-        const result = await msalInstance.acquireTokenSilent({
-          ...graphTokenRequest,
-          account: targetAccount
-        });
-        if (result && result.accessToken) {
-          syncAccountToBackend({
-            email: targetAccount.username,
-            displayName: targetAccount.name || targetAccount.username,
-            accessToken: result.accessToken
-          }).catch(() => { });
-          return result.accessToken;
-        }
-      } catch (silentErr) {
-        // Fallback for Personal Consumer Accounts (@gmail.com, @outlook.com) where Work-only scopes are rejected
+      if (targetAccount) {
         try {
-          const fallbackResult = await msalInstance.acquireTokenSilent({
-            scopes: ['User.Read', 'Chat.Read', 'Chat.ReadWrite', 'openid', 'profile'],
+          const result = await msalInstance.acquireTokenSilent({
+            ...graphTokenRequest,
             account: targetAccount
           });
-          if (fallbackResult && fallbackResult.accessToken) {
+          if (result && result.accessToken) {
             syncAccountToBackend({
               email: targetAccount.username,
               displayName: targetAccount.name || targetAccount.username,
-              accessToken: fallbackResult.accessToken
+              accessToken: result.accessToken
             }).catch(() => { });
-            return fallbackResult.accessToken;
+            return result.accessToken;
           }
-        } catch (fErr) {
-          // Fallback to stored token if Incognito mode blocks MSAL silent token acquisition
-          const storedToken = localStorage.getItem(`teamshub_token_${targetAccount.username.toLowerCase()}`) || localStorage.getItem('teamshub_last_access_token');
-          if (storedToken) {
-            return storedToken;
+        } catch (silentErr) {
+          try {
+            const fallbackResult = await msalInstance.acquireTokenSilent({
+              scopes: ['User.Read', 'Chat.Read', 'Chat.ReadWrite', 'openid', 'profile'],
+              account: targetAccount
+            });
+            if (fallbackResult && fallbackResult.accessToken) {
+              syncAccountToBackend({
+                email: targetAccount.username,
+                displayName: targetAccount.name || targetAccount.username,
+                accessToken: fallbackResult.accessToken
+              }).catch(() => { });
+              return fallbackResult.accessToken;
+            }
+          } catch (fErr) {
+            const storedToken = localStorage.getItem(`teamshub_token_${targetAccount.username.toLowerCase()}`) || localStorage.getItem('teamshub_last_access_token');
+            if (storedToken) return storedToken;
           }
         }
       }
-    }
 
-    if (activeEmail) {
-      return localStorage.getItem(`teamshub_token_${activeEmail.toLowerCase()}`) || localStorage.getItem('teamshub_last_access_token');
-    }
+      if (activeEmail) {
+        return localStorage.getItem(`teamshub_token_${activeEmail.toLowerCase()}`) || localStorage.getItem('teamshub_last_access_token');
+      }
 
-    return null;
+      return null;
+    })();
+
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 1500));
+    return await Promise.race([tokenPromise, timeoutPromise]);
   } catch (error) {
     console.warn('[MSAL Token Acquisition Warning]:', error.message);
     return null;
