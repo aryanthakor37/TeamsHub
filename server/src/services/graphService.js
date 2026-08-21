@@ -1025,10 +1025,16 @@ const getDemoChatMessages = (chatId, participantName = '', previewText = '') => 
     ]
   };
 
-  const matchedKey = Object.keys(store).find(k =>
-    (participantName && participantName.toLowerCase().includes(k.toLowerCase())) ||
-    (chatId && chatId.toLowerCase().includes(k.toLowerCase()))
-  );
+  const matchedKey = Object.keys(store).find(k => {
+    const keyLower = k.toLowerCase();
+    const firstWord = keyLower.split(' ')[0];
+    const idLower = (chatId || '').toLowerCase();
+    const nameLower = (participantName || '').toLowerCase();
+    return (
+      (nameLower && (nameLower.includes(keyLower) || nameLower.includes(firstWord))) ||
+      (idLower && (idLower.includes(keyLower) || idLower.includes(firstWord)))
+    );
+  });
 
   if (matchedKey && store[matchedKey]) {
     return store[matchedKey];
