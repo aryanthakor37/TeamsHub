@@ -223,15 +223,9 @@ export const acquireGraphToken = async (accountId) => {
 
       if (targetAccount) {
         try {
-          let guestAuthority = undefined;
-          if (targetAccount.username?.toLowerCase().includes('gmail') || targetAccount.username?.toLowerCase().includes('thakoraryan')) {
-            guestAuthority = 'https://login.microsoftonline.com/08f20236-6247-4526-91c6-7b4a0a092c1c';
-          }
-
           const result = await msalInstance.acquireTokenSilent({
             ...graphTokenRequest,
-            account: targetAccount,
-            ...(guestAuthority ? { authority: guestAuthority } : {})
+            account: targetAccount
           });
           if (result && result.accessToken) {
             syncAccountToBackend({
@@ -243,15 +237,9 @@ export const acquireGraphToken = async (accountId) => {
           }
         } catch (silentErr) {
           try {
-            let guestAuthority = undefined;
-            if (targetAccount.username?.toLowerCase().includes('gmail') || targetAccount.username?.toLowerCase().includes('thakoraryan')) {
-              guestAuthority = 'https://login.microsoftonline.com/08f20236-6247-4526-91c6-7b4a0a092c1c';
-            }
-
             const fallbackResult = await msalInstance.acquireTokenSilent({
               scopes: ['User.Read', 'Chat.Read', 'Chat.ReadWrite', 'openid', 'profile'],
-              account: targetAccount,
-              ...(guestAuthority ? { authority: guestAuthority } : {})
+              account: targetAccount
             });
             if (fallbackResult && fallbackResult.accessToken) {
               syncAccountToBackend({
