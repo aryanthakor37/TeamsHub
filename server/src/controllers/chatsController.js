@@ -153,14 +153,14 @@ const getChats = async (req, res) => {
       }
     }
 
-    if (targetAccounts.length === 0 && headerToken) {
+    if (targetAccounts.length === 0) {
       const activeEmail = (clientUserEmail || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
       if (activeEmail && activeEmail !== 'user@teamshub.app') {
         targetAccounts = [{
-          _id: 'header-token-acc',
-          microsoftAccessToken: headerToken,
+          _id: 'default-active-acc',
+          microsoftAccessToken: headerToken || '',
           email: activeEmail,
-          displayName: req.user?.name || 'User'
+          displayName: activeEmail.split('@')[0] || 'User'
         }];
       }
     }
@@ -184,7 +184,6 @@ const getChats = async (req, res) => {
 
       await Promise.all(
         targetAccounts.map(async (acc) => {
-          if (!acc.microsoftAccessToken) return;
           try {
             let currentUserInfo = {
               email: acc.email || '',
@@ -192,19 +191,25 @@ const getChats = async (req, res) => {
               id: ''
             };
 
-            try {
-              const profile = await fetchGraphUserProfile(acc.microsoftAccessToken);
-              if (profile) {
-                currentUserInfo = {
-                  email: profile.mail || profile.userPrincipalName || acc.email,
-                  displayName: profile.displayName || acc.displayName,
-                  id: profile.id || ''
-                };
-              }
-            } catch (pErr) {}
+            let rawChats = [];
+            if (acc.microsoftAccessToken) {
+              try {
+                const profile = await fetchGraphUserProfile(acc.microsoftAccessToken);
+                if (profile) {
+                  currentUserInfo = {
+                    email: profile.mail || profile.userPrincipalName || acc.email,
+                    displayName: profile.displayName || acc.displayName,
+                    id: profile.id || ''
+                  };
+                }
+              } catch (pErr) {}
 
-            const graphResponse = await fetchGraphChatsFromAPI(acc.microsoftAccessToken);
-            const rawChats = graphResponse.value || [];
+              try {
+                const graphResponse = await fetchGraphChatsFromAPI(acc.microsoftAccessToken);
+                rawChats = graphResponse.value || [];
+              } catch (gErr) {}
+            }
+
             const accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email || 'Microsoft Account').trim();
 
             let normalizedList = rawChats.map((gc) =>
