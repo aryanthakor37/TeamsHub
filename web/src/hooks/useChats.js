@@ -34,8 +34,6 @@ const isLegacyOrFakeChat = (c) => {
 
 const getStoredLocalChats = () => {
   try {
-    const activeEmail = localStorage.getItem('teamshub_active_email');
-    if (!activeEmail) return [];
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
@@ -128,7 +126,10 @@ export const useChats = (selectedAccountId = 'all') => {
     setError(null);
     try {
       const data = await fetchChatsFromBackend(selectedAccountId);
-      const rawItems = data.items || [];
+      const rawItems = Array.isArray(data)
+        ? data
+        : (data?.items || data?.chats || data?.value || []);
+
       if (rawItems.length > 0) {
         const withRead = applyReadStatus(rawItems);
         const sorted = sortChatsByDate(withRead);
@@ -144,6 +145,7 @@ export const useChats = (selectedAccountId = 'all') => {
       }
       isInitialLoad.current = false;
     } catch (err) {
+      console.warn('[useChats] load error:', err.message);
       setError(err.message || 'Failed to load Microsoft Graph chats.');
     } finally {
       setLoading(false);
