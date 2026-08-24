@@ -474,44 +474,87 @@ export default function ChatsPage({
           </div>
 
           {/* Account Filter Chips Bar */}
-          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+          <div style={{
+            display: 'flex',
+            gap: '6px',
+            overflowX: 'auto',
+            paddingBottom: '2px',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}>
             <button
               onClick={() => setSelectedFilterAccount('all')}
               style={{
-                padding: '4px 10px',
+                padding: '6px 12px',
                 borderRadius: 'var(--radius-full)',
                 fontSize: '0.75rem',
-                fontWeight: '700',
+                fontWeight: selectedFilterAccount === 'all' ? '700' : '600',
                 backgroundColor: selectedFilterAccount === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                color: selectedFilterAccount === 'all' ? '#fff' : 'var(--text-secondary)',
-                border: '1px solid var(--border-color)',
+                color: selectedFilterAccount === 'all' ? '#ffffff' : 'var(--text-secondary)',
+                border: selectedFilterAccount === 'all' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                boxShadow: selectedFilterAccount === 'all' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.18s ease'
               }}
             >
-              ✨ All Accounts ({connectedAccounts.length})
+              <span>✨</span>
+              <span>All Accounts</span>
+              <span style={{
+                backgroundColor: selectedFilterAccount === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-secondary)',
+                padding: '1px 6px',
+                borderRadius: '10px',
+                fontSize: '0.7rem',
+                fontWeight: '700'
+              }}>
+                {connectedAccounts.length}
+              </span>
             </button>
 
             {connectedAccounts.map((acc) => {
               const accId = acc._id || acc.accountId || acc.id;
               const isSelected = selectedFilterAccount === accId;
+              const name = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
+              const initial = (name[0] || 'A').toUpperCase();
               return (
                 <button
                   key={accId}
                   onClick={() => setSelectedFilterAccount(accId)}
                   style={{
-                    padding: '4px 10px',
+                    padding: '5px 12px 5px 6px',
                     borderRadius: 'var(--radius-full)',
                     fontSize: '0.75rem',
-                    fontWeight: '600',
+                    fontWeight: isSelected ? '700' : '600',
                     backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                    color: isSelected ? '#fff' : 'var(--text-secondary)',
-                    border: '1px solid var(--border-color)',
+                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    boxShadow: isSelected ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.18s ease'
                   }}
                 >
-                  {acc.displayName || acc.company}
+                  <span style={{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    backgroundColor: isSelected ? 'rgba(255,255,255,0.3)' : getAvatarColor(name),
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.65rem',
+                    fontWeight: '700'
+                  }}>
+                    {initial}
+                  </span>
+                  <span>{name}</span>
                 </button>
               );
             })}
