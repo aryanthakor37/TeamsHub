@@ -69,11 +69,12 @@ export const fetchChatsFromBackend = async (accountId = 'all', page = 1, limit =
 /**
  * Fetch Conversation Message History
  */
-export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limit = 30) => {
+export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limit = 50) => {
   try {
     const headers = await getAuthHeaders(accountId);
+    const accParam = accountId ? `&connectedAccountId=${encodeURIComponent(accountId)}` : '';
     const response = await fetch(
-      `${API_BASE_URL}/chats/${chatId}/messages?page=${page}&limit=${limit}`,
+      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages?page=${page}&limit=${limit}${accParam}`,
       { headers }
     );
 

@@ -322,19 +322,32 @@ const getChatMessages = async (req, res) => {
     // ── Real Mode: Try MongoDB cache first ──
     const dbAvailable = Message.db && Message.db.readyState === 1;
 
-    // We intentionally bypass the cache early-return here for now
-    // because without webhooks/socket.io, returning only the cache
-    // prevents the user from seeing new incoming replies from Graph.
-
     // ── Real Mode: Token Lookup & Graph Call ──
     let accessToken = req.microsoftAccessToken;
     const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+    const { connectedAccountId } = req.query;
 
-    if (!accessToken && dbAvailable && activeEmailHeader) {
-      const acc = await ConnectedAccount.findOne({
-        email: activeEmailHeader,
-        microsoftAccessToken: { $exists: true, $ne: '' }
-      }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+    if (!accessToken && dbAvailable) {
+      let acc = null;
+      if (connectedAccountId && connectedAccountId !== 'all') {
+        if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc) {
+          acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+      }
+      if (!acc && activeEmailHeader) {
+        acc = await ConnectedAccount.findOne({
+          email: activeEmailHeader,
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+      if (!acc) {
+        acc = await ConnectedAccount.findOne({
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
 
       if (acc && acc.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
@@ -378,20 +391,19 @@ const getChatMessages = async (req, res) => {
             const acc = await ConnectedAccount.findOne({
               microsoftAccessToken: { $exists: true, $ne: '' }
             }).sort({ updatedAt: -1 }).select('email displayName');
-            if (acc && acc.email) {
-              msEmail = acc.email.toLowerCase().trim();
-            }
-            if (acc && acc.displayName) {
-              msDisplayName = acc.displayName.trim();
+            if (acc) {
+              msEmail = acc.email;
+              msDisplayName = acc.displayName;
             }
           }
         }
         const cleanChatId = decodeURIComponent(microsoftChatId);
         const graphResponse = await fetchGraphChatMessages(accessToken, cleanChatId);
-        const messages = (graphResponse.value || [])
-          .map((gm) => normalizeGraphMessage(gm, id, '', msEmail, msDisplayName))
-          .filter(Boolean)
-          .reverse(); // Reverse to chronological order (oldest top, newest bottom)
+        const rawMessages = graphResponse.value || [];
+        const messages = rawMessages.map((m) =>
+          normalizeGraphMessage(m, id, connectedAccountId || 'default', msEmail, msDisplayName)
+        );
+        messages.reverse(); // chronological order: oldest first, newest last
 
         return res.status(200).json({
           success: true,
@@ -409,25 +421,6 @@ const getChatMessages = async (req, res) => {
         if (graphErr.httpStatus !== 403 && graphErr.httpStatus !== 404) {
           console.warn('[getChatMessages] Graph API notice:', graphErr.message);
         }
-      }
-    }
-
-    // Only return demo fallback messages if a connected account exists or mock mode is enabled
-    const hasConnectedAccount = dbAvailable && activeEmailHeader && (await ConnectedAccount.exists({ email: activeEmailHeader }));
-    if (hasConnectedAccount) {
-      const demoMsgs = getDemoChatMessages(id);
-      if (demoMsgs && demoMsgs.length > 0) {
-        return res.status(200).json({
-          success: true,
-          source: 'fallback',
-          data: {
-            items: demoMsgs,
-            page: pageNum,
-            limit: limitNum,
-            total: demoMsgs.length,
-            hasMore: false
-          }
-        });
       }
     }
 
