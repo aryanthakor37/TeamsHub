@@ -9,9 +9,8 @@ export const getActiveMsalAccounts = async () => {
     const list = [];
     for (const acc of accounts) {
       const token = await acquireGraphToken(acc.homeAccountId || acc.username);
-      const envTenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID;
-      const isEnvTenantSpecific = envTenantId && envTenantId !== 'common' && envTenantId !== 'organizations' && envTenantId !== 'consumers';
-      const actualTenantId = isEnvTenantSpecific ? envTenantId : (acc.tenantId || acc.idTokenClaims?.tid || 'common');
+      // HARDCODE ESTATIC INFOTECH Tenant ID
+      const actualTenantId = '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
       
       list.push({
         _id: acc.homeAccountId || acc.localAccountId,
@@ -46,9 +45,8 @@ export const initializeMsal = async () => {
         localStorage.setItem(`teamshub_token_${account.username.toLowerCase()}`, response.accessToken);
         localStorage.setItem('teamshub_last_access_token', response.accessToken);
       }
-      const envTenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID;
-      const isEnvTenantSpecific = envTenantId && envTenantId !== 'common' && envTenantId !== 'organizations' && envTenantId !== 'consumers';
-      const actualTenantId = isEnvTenantSpecific ? envTenantId : (account.tenantId || account.idTokenClaims?.tid || 'common');
+      // HARDCODE ESTATIC INFOTECH Tenant ID to guarantee guest accounts get the correct token
+      const actualTenantId = '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
       
       const accountPayload = {
         accountId: account.homeAccountId || account.localAccountId,
@@ -230,15 +228,10 @@ export const acquireGraphToken = async (accountId) => {
       }
 
       if (targetAccount) {
-        // Prioritize explicit tenant ID from env if provided (to handle guest accounts logging into a specific company tenant)
-        const envTenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID;
-        const isEnvTenantSpecific = envTenantId && envTenantId !== 'common' && envTenantId !== 'organizations' && envTenantId !== 'consumers';
+        // HARDCODE ESTATIC INFOTECH Tenant ID
+        const targetTenantId = '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
         
-        const targetTenantId = isEnvTenantSpecific ? envTenantId : (targetAccount.tenantId || targetAccount.idTokenClaims?.tid);
-        
-        const tenantAuthority = targetTenantId && targetTenantId !== 'common' && targetTenantId !== 'consumers'
-          ? `https://login.microsoftonline.com/${targetTenantId}`
-          : null;
+        const tenantAuthority = `https://login.microsoftonline.com/${targetTenantId}`;
 
         try {
           const reqObj = {

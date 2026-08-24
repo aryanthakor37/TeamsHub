@@ -8,7 +8,7 @@ import { PublicClientApplication, LogLevel } from '@azure/msal-browser';
  *   VITE_MICROSOFT_TENANT_ID=common
  */
 const clientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || '00000000-0000-0000-0000-000000000000';
-const tenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID || 'organizations';
+const tenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
 
 export const isRealMsalConfigured = () => {
   return clientId && clientId !== '00000000-0000-0000-0000-000000000000';
