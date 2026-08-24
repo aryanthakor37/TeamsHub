@@ -33,17 +33,13 @@ const parseApiError = (responseData) => {
 /**
  * Fetch Microsoft Graph Files from Backend API
  */
-export const fetchFilesFromBackend = async (accountOrId) => {
+export const fetchFilesFromBackend = async (accountOrId = 'all') => {
   try {
     const accountId = typeof accountOrId === 'object' && accountOrId !== null
       ? (accountOrId._id || accountOrId.accountId || accountOrId.id)
-      : accountOrId;
+      : (accountOrId || 'all');
 
-    if (!accountId || accountId === 'all') {
-      return [];
-    }
-
-    const headers = await getAuthHeaders(accountId);
+    const headers = await getAuthHeaders(accountId === 'all' ? null : accountId);
     const response = await fetch(
       `${API_BASE_URL}/files?connectedAccountId=${encodeURIComponent(accountId)}`,
       { headers }

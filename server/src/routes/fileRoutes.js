@@ -12,129 +12,147 @@ router.get('/', async (req, res) => {
   try {
     const { connectedAccountId } = req.query;
 
-    if (!connectedAccountId || connectedAccountId === 'all' || connectedAccountId === '[object Object]') {
+    let targetAccounts = [];
+    const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
+
+    const userEmailsHeader = req.headers['x-user-emails'];
+    const activeEmailsList = userEmailsHeader
+      ? userEmailsHeader.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+      : [];
+
+    if (dbAvailable) {
+      if (connectedAccountId && connectedAccountId !== 'all' && connectedAccountId !== '[object Object]') {
+        let acc = null;
+        if (connectedAccountId.includes('@')) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc && mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc) {
+          acc = await ConnectedAccount.findOne({
+            $or: [
+              { accountId: connectedAccountId },
+              { microsoftUserId: connectedAccountId },
+              { email: connectedAccountId }
+            ]
+          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (acc) targetAccounts = [acc];
+      } else if (activeEmailsList.length > 0) {
+        targetAccounts = await ConnectedAccount.find({
+          email: { $in: activeEmailsList },
+          status: { $ne: 'disconnected' },
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+
+      if (targetAccounts.length === 0) {
+        targetAccounts = await ConnectedAccount.find({
+          status: { $ne: 'disconnected' },
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+    }
+
+    // Header token fallback
+    const authHeader = req.headers.authorization;
+    if (targetAccounts.length === 0 && authHeader && authHeader.startsWith('Bearer ')) {
+      targetAccounts = [{
+        _id: 'active-user-session',
+        microsoftAccessToken: authHeader.substring(7),
+        displayName: 'Microsoft Account',
+        email: ''
+      }];
+    }
+
+    if (targetAccounts.length === 0) {
       return res.status(200).json({ success: true, data: [] });
     }
 
-    // 1. Resolve access token from Authorization header if passed
-    let accessToken = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      accessToken = authHeader.substring(7);
-    }
+    const allUnifiedFiles = [];
 
-    // 2. Look up account in MongoDB safely
-    let account = null;
-    const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
-    if (dbAvailable) {
-      if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
-        account = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt');
-      }
-      if (!account) {
-        account = await ConnectedAccount.findOne({
-          $or: [
-            { accountId: connectedAccountId },
-            { microsoftUserId: connectedAccountId },
-            { email: connectedAccountId }
-          ]
-        }).select('+microsoftAccessToken +tokenExpiresAt');
-      }
-    }
+    await Promise.all(
+      targetAccounts.map(async (acc) => {
+        const token = acc.microsoftAccessToken;
+        if (!token) return;
 
-    // 3. If no header token, use token from database account if available
-    if (!accessToken && account && account.microsoftAccessToken) {
-      if (!account.tokenExpiresAt || new Date(account.tokenExpiresAt) >= new Date()) {
-        accessToken = account.microsoftAccessToken;
-      }
-    }
+        try {
+          const graphFiles = await graphService.fetchGraphRecentFiles(token);
+          const rawFiles = graphFiles.isNormalized ? graphFiles.value : (graphFiles?.value || []).map(file => {
+            let category = 'Documents';
+            const mime = file.file?.mimeType || '';
+            const nameLower = (file.name || '').toLowerCase();
+            
+            if (mime.includes('pdf') || nameLower.endsWith('.pdf')) category = 'PDF';
+            else if (mime.includes('image') || nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp)$/)) category = 'Images';
+            else if (mime.includes('video') || nameLower.match(/\.(mp4|mov|avi|mkv)$/)) category = 'Videos';
+            else if (mime.includes('zip') || mime.includes('compressed') || nameLower.match(/\.(zip|rar|7z)$/)) category = 'ZIP';
+            else if (mime.includes('excel') || mime.includes('spreadsheet') || nameLower.match(/\.(xls|xlsx|csv)$/)) category = 'Excel';
 
-    // 4. Mock / Demo fallback if mock mode is on or no token found for demo accounts
-    if (graphService.isMockMode() || (!accessToken && (!account || !account.microsoftAccessToken))) {
-      return res.json({
-        success: true,
-        source: 'mock',
-        data: []
-      });
-    }
+            const sizeBytes = file.size || 0;
+            let sizeStr = `${sizeBytes} B`;
+            if (sizeBytes > 1024 * 1024) sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+            else if (sizeBytes > 1024) sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
 
-    if (!accessToken) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: 'GRAPH_AUTH_REQUIRED',
-          message: 'Microsoft Graph access token is required or expired. Please re-authenticate.'
+            const date = new Date(file.lastModifiedDateTime || file.createdDateTime || Date.now());
+            const dateStr = isNaN(date.getTime())
+              ? 'Recent'
+              : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+            const cleanAccName = (acc.displayName || acc.email?.split('@')[0] || 'Microsoft Teams').replace(/[`'"]/g, '').trim();
+
+            return {
+              id: file.id || `file-${Math.random().toString(36).substring(2, 9)}`,
+              name: file.name || 'Untitled File',
+              category: category,
+              size: sizeStr,
+              account: cleanAccName,
+              accountEmail: (acc.email || '').toLowerCase(),
+              connectedAccountId: acc._id.toString(),
+              sender: file.lastModifiedBy?.user?.displayName || file.createdBy?.user?.displayName || 'Unknown',
+              date: dateStr,
+              webUrl: file.webUrl || '#'
+            };
+          });
+
+          const normalizedFilesWithProxy = rawFiles.map(f => {
+            const params = new URLSearchParams();
+            params.append('connectedAccountId', acc._id.toString());
+            if (f.name) params.append('name', f.name);
+            if (f.driveId) params.append('driveId', f.driveId);
+            if (f.downloadUrl && f.downloadUrl !== '#') params.append('downloadUrl', f.downloadUrl);
+            if (f.webUrl && f.webUrl !== '#') params.append('webUrl', f.webUrl);
+
+            const qs = params.toString();
+            return {
+              ...f,
+              previewUrl: `/api/files/${encodeURIComponent(f.id)}/content?${qs}`,
+              thumbnailUrl: `/api/files/${encodeURIComponent(f.id)}/content?${qs}`
+            };
+          });
+
+          allUnifiedFiles.push(...normalizedFilesWithProxy);
+        } catch (gErr) {
+          console.warn(`[FileRoutes] Graph files error for ${acc.displayName || acc.email}:`, gErr.message);
         }
-      });
+      })
+    );
+
+    // Deduplicate files by id
+    const uniqueFiles = [];
+    const seenIds = new Set();
+    for (const f of allUnifiedFiles) {
+      const uKey = `${f.connectedAccountId}-${f.id}`;
+      if (!seenIds.has(uKey)) {
+        seenIds.add(uKey);
+        uniqueFiles.push(f);
+      }
     }
-
-    // 5. Fetch Files from Graph API
-    let graphFiles = { value: [] };
-    try {
-      graphFiles = await graphService.fetchGraphRecentFiles(accessToken);
-    } catch (graphError) {
-      console.warn('[FileRoutes] Graph API fetch warning:', graphError.message);
-      return res.status(graphError.statusCode || 500).json({
-        success: false,
-        error: {
-          code: graphError.code || 'GRAPH_ERROR',
-          message: graphError.message || 'Failed to fetch files from Microsoft Graph.'
-        }
-      });
-    }
-
-    // 6. Return Normalized Files with Proxy Preview URLs
-    const rawFiles = graphFiles.isNormalized ? graphFiles.value : (graphFiles?.value || []).map(file => {
-      let category = 'Documents';
-      const mime = file.file?.mimeType || '';
-      const nameLower = (file.name || '').toLowerCase();
-      
-      if (mime.includes('pdf') || nameLower.endsWith('.pdf')) category = 'PDF';
-      else if (mime.includes('image') || nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp)$/)) category = 'Images';
-      else if (mime.includes('video') || nameLower.match(/\.(mp4|mov|avi|mkv)$/)) category = 'Videos';
-      else if (mime.includes('zip') || mime.includes('compressed') || nameLower.match(/\.(zip|rar|7z)$/)) category = 'ZIP';
-      else if (mime.includes('excel') || mime.includes('spreadsheet') || nameLower.match(/\.(xls|xlsx|csv)$/)) category = 'Excel';
-
-      const sizeBytes = file.size || 0;
-      let sizeStr = `${sizeBytes} B`;
-      if (sizeBytes > 1024 * 1024) sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
-      else if (sizeBytes > 1024) sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
-
-      const date = new Date(file.lastModifiedDateTime || file.createdDateTime || Date.now());
-      const dateStr = isNaN(date.getTime())
-        ? 'Recent'
-        : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-      return {
-        id: file.id || `file-${Math.random().toString(36).substring(2, 9)}`,
-        name: file.name || 'Untitled File',
-        category: category,
-        size: sizeStr,
-        account: account?.displayName || 'Microsoft Teams',
-        sender: file.lastModifiedBy?.user?.displayName || file.createdBy?.user?.displayName || 'Unknown',
-        date: dateStr,
-        webUrl: file.webUrl || '#'
-      };
-    });
-
-    const normalizedFilesWithProxy = rawFiles.map(f => {
-      const params = new URLSearchParams();
-      if (connectedAccountId) params.append('connectedAccountId', connectedAccountId);
-      if (f.name) params.append('name', f.name);
-      if (f.driveId) params.append('driveId', f.driveId);
-      if (f.downloadUrl && f.downloadUrl !== '#') params.append('downloadUrl', f.downloadUrl);
-      if (f.webUrl && f.webUrl !== '#') params.append('webUrl', f.webUrl);
-
-      const qs = params.toString();
-      return {
-        ...f,
-        previewUrl: `/api/files/${encodeURIComponent(f.id)}/content?${qs}`,
-        thumbnailUrl: `/api/files/${encodeURIComponent(f.id)}/content?${qs}`
-      };
-    });
 
     res.json({
       success: true,
-      data: normalizedFilesWithProxy
+      data: uniqueFiles
     });
   } catch (error) {
     console.error('[FileRoutes] Error fetching files:', error);

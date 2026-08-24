@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchFilesFromBackend, fetchFileBlob, fetchFileArrayBuffer } from '../../services/fileService';
+import { getAvatarColor, getInitials } from '../../utils/avatarUtils';
 import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
 import { renderAsync } from 'docx-preview';
@@ -477,11 +478,12 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     { name: 'Excel', icon: FileSpreadsheet, color: '#10b981' }
   ];
 
-  const currentAccountId = activeAccount ? (activeAccount._id || activeAccount.accountId || activeAccount.id) : null;
+  const [selectedFilterAccount, setSelectedFilterAccount] = useState('all');
+  const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
 
   useEffect(() => {
     const loadFiles = async () => {
-      if (!currentAccountId || currentAccountId === 'all') {
+      if (!isAccountConnected) {
         setFiles([]);
         return;
       }
@@ -489,7 +491,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchFilesFromBackend(currentAccountId);
+        const data = await fetchFilesFromBackend('all');
         setFiles(data || []);
       } catch (err) {
         setError(err.message || 'Failed to load files from Microsoft Graph. Make sure permissions are granted.');
@@ -500,7 +502,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     };
 
     loadFiles();
-  }, [currentAccountId]);
+  }, [isAccountConnected]);
 
   // Securely load blob / arrayBuffer preview when modal opens
   useEffect(() => {
@@ -533,10 +535,11 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       const fileNameLower = (previewFile.name || '').toLowerCase();
       const isExcel = previewFile.category === 'Excel' || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.csv');
       const isWord = fileNameLower.endsWith('.docx') || fileNameLower.endsWith('.doc');
+      const previewAccId = previewFile.connectedAccountId || previewFile.accountEmail;
 
       try {
         if (isExcel || isWord) {
-          const ab = await fetchFileArrayBuffer(targetUrl, currentAccountId);
+          const ab = await fetchFileArrayBuffer(targetUrl, previewAccId);
           if (active) {
             if (ab) {
               setPreviewArrayBuffer(ab);
@@ -547,7 +550,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
           }
         } else {
           // Images, PDF, Videos
-          const objUrl = await fetchFileBlob(targetUrl, currentAccountId);
+          const objUrl = await fetchFileBlob(targetUrl, previewAccId);
           if (active) {
             if (objUrl) {
               createdUrl = objUrl;
@@ -573,14 +576,37 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       active = false;
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
-  }, [previewFile, currentAccountId]);
+  }, [previewFile]);
 
   const filteredFiles = files.filter((file) => {
     const matchesCategory = selectedCategory === 'All' || file.category.toLowerCase() === selectedCategory.toLowerCase();
-    const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          file.sender.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          file.account.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q || (
+      file.name?.toLowerCase().includes(q) ||
+      file.sender?.toLowerCase().includes(q) ||
+      file.account?.toLowerCase().includes(q)
+    );
+    if (!matchesCategory || !matchesSearch) return false;
+
+    if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
+
+    const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id) === selectedFilterAccount);
+    if (targetAccount) {
+      const targetId = (targetAccount._id || targetAccount.accountId || targetAccount.id || '').toString();
+      const targetName = (targetAccount.displayName || targetAccount.company || '').toLowerCase().trim();
+      const targetEmail = (targetAccount.email || '').toLowerCase().trim();
+      const fileAccId = (file.connectedAccountId || '').toString();
+      const fileAcc = (file.account || '').toLowerCase().trim();
+      const fileEmail = (file.accountEmail || '').toLowerCase().trim();
+
+      if (targetId && fileAccId && fileAccId === targetId) return true;
+      if (targetAccount.accountId && fileAccId === targetAccount.accountId.toString()) return true;
+      if (targetEmail && fileEmail && fileEmail === targetEmail) return true;
+      if (targetName && fileAcc && (fileAcc === targetName || fileAcc.includes(targetName) || targetName.includes(fileAcc))) return true;
+
+      return false;
+    }
+    return true;
   });
 
   const getCategoryMeta = (category) => {
@@ -661,6 +687,103 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
 
       {/* Main Files Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '24px' }}>
+        {/* Account Filter Chips Bar */}
+        {connectedAccounts && connectedAccounts.length > 0 && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '6px',
+            alignItems: 'center',
+            marginBottom: '16px'
+          }}>
+            <button
+              onClick={() => setSelectedFilterAccount('all')}
+              title="Show files from all connected accounts"
+              style={{
+                padding: '5px 12px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '0.75rem',
+                fontWeight: selectedFilterAccount === 'all' ? '700' : '600',
+                backgroundColor: selectedFilterAccount === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                color: selectedFilterAccount === 'all' ? '#ffffff' : 'var(--text-secondary)',
+                border: selectedFilterAccount === 'all' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                boxShadow: selectedFilterAccount === 'all' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.18s ease'
+              }}
+            >
+              <span>✨</span>
+              <span>All Accounts</span>
+              <span style={{
+                backgroundColor: selectedFilterAccount === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-secondary)',
+                padding: '1px 6px',
+                borderRadius: '10px',
+                fontSize: '0.7rem',
+                fontWeight: '700'
+              }}>
+                {connectedAccounts.length}
+              </span>
+            </button>
+
+            {connectedAccounts.map((acc) => {
+              const accId = acc._id || acc.accountId || acc.id;
+              const isSelected = selectedFilterAccount === accId;
+              const rawName = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
+              const name = rawName.replace(/[`'"]/g, '').trim();
+              const initial = (name[0] || 'A').toUpperCase();
+              return (
+                <button
+                  key={accId}
+                  onClick={() => setSelectedFilterAccount(accId)}
+                  title={`${name} (${acc.email || ''})`}
+                  style={{
+                    padding: '4px 12px 4px 6px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.75rem',
+                    fontWeight: isSelected ? '700' : '600',
+                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    boxShadow: isSelected ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.18s ease'
+                  }}
+                >
+                  <span style={{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    backgroundColor: isSelected ? 'rgba(255,255,255,0.3)' : getAvatarColor(name),
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.65rem',
+                    fontWeight: '700',
+                    flexShrink: 0
+                  }}>
+                    {initial}
+                  </span>
+                  <span style={{
+                    maxWidth: '140px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', gap: '16px' }}>
           {/* Search Field */}
@@ -875,8 +998,29 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
 
                       <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
-                          <span className="badge" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                            {file.account}
+                          <span className="badge" style={{
+                            backgroundColor: 'var(--bg-tertiary)',
+                            color: 'var(--text-secondary)',
+                            fontSize: '0.75rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}>
+                            <span style={{
+                              width: '14px',
+                              height: '14px',
+                              borderRadius: '50%',
+                              backgroundColor: getAvatarColor(file.account),
+                              color: '#fff',
+                              fontSize: '0.55rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '700'
+                            }}>
+                              {(file.account?.[0] || 'A').toUpperCase()}
+                            </span>
+                            <span>{file.account}</span>
                           </span>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                             By {file.sender}
@@ -893,8 +1037,8 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                             style={{ 
                               background: 'var(--bg-tertiary)', 
                               border: 'none', 
-                              borderRadius: '6px',
-                              padding: '6px',
+                              borderRadius: '6px', 
+                              padding: '6px', 
                               cursor: 'pointer', 
                               color: 'var(--accent-primary)' 
                             }}
@@ -929,13 +1073,13 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             <div className="glass-card" style={{ overflow: 'hidden', borderRadius: 'var(--radius-md)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                 <thead>
-                  <tr style={{ backgroundColor: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     <th style={{ padding: '14px 20px' }}>Name</th>
                     <th style={{ padding: '14px 20px' }}>Category</th>
                     <th style={{ padding: '14px 20px' }}>Size</th>
                     <th style={{ padding: '14px 20px' }}>Account</th>
-                    <th style={{ padding: '14px 20px' }}>Sender</th>
-                    <th style={{ padding: '14px 20px' }}>Date</th>
+                    <th style={{ padding: '14px 20px' }}>Shared By</th>
+                    <th style={{ padding: '14px 20px' }}>Modified</th>
                     <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
@@ -978,8 +1122,28 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                         </td>
                         <td style={{ padding: '14px 20px', color: 'var(--text-muted)' }}>{file.size}</td>
                         <td style={{ padding: '14px 20px' }}>
-                          <span className="badge" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                            {file.account}
+                          <span className="badge" style={{
+                            backgroundColor: 'var(--bg-tertiary)',
+                            color: 'var(--text-secondary)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}>
+                            <span style={{
+                              width: '14px',
+                              height: '14px',
+                              borderRadius: '50%',
+                              backgroundColor: getAvatarColor(file.account),
+                              color: '#fff',
+                              fontSize: '0.55rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '700'
+                            }}>
+                              {(file.account?.[0] || 'A').toUpperCase()}
+                            </span>
+                            <span>{file.account}</span>
                           </span>
                         </td>
                         <td style={{ padding: '14px 20px', color: 'var(--text-secondary)' }}>{file.sender}</td>
