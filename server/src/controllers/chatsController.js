@@ -161,9 +161,11 @@ const getChats = async (req, res) => {
 
           let rawChats = [];
           const activeAccessToken = acc.microsoftAccessToken || headerToken;
+          console.log(`[getChats DEBUG] Account: ${acc.email || acc.displayName}, hasDBToken: ${!!acc.microsoftAccessToken}, hasHeaderToken: ${!!headerToken}, usingToken: ${activeAccessToken ? activeAccessToken.substring(0, 20) + '...' : 'NONE'}`);
           if (activeAccessToken) {
             try {
               const profile = await fetchGraphUserProfile(activeAccessToken);
+              console.log(`[getChats DEBUG] Profile result for ${acc.email}:`, profile ? `OK - ${profile.displayName} (${profile.mail || profile.userPrincipalName})` : 'NULL/FAILED');
               if (profile) {
                 currentUserInfo = {
                   email: profile.mail || profile.userPrincipalName || acc.email,
@@ -171,12 +173,20 @@ const getChats = async (req, res) => {
                   id: profile.id || ''
                 };
               }
-            } catch (pErr) {}
+            } catch (pErr) {
+              console.error(`[getChats DEBUG] Profile error for ${acc.email}:`, pErr.message);
+            }
 
             try {
               const graphResponse = await fetchGraphChatsFromAPI(activeAccessToken);
-              rawChats = graphResponse.value || [];
-            } catch (gErr) {}
+              rawChats = graphResponse?.value || [];
+              console.log(`[getChats DEBUG] Graph chats result for ${acc.email}: ${rawChats.length} chats found. Full response keys: ${graphResponse ? Object.keys(graphResponse).join(',') : 'null'}`);
+              if (rawChats.length === 0) {
+                console.log(`[getChats DEBUG] ZERO CHATS for ${acc.email}. graphResponse:`, JSON.stringify(graphResponse)?.substring(0, 500));
+              }
+            } catch (gErr) {
+              console.error(`[getChats DEBUG] Graph chats error for ${acc.email}:`, gErr.message);
+            }
           }
 
           let accountCompanyBadge = 'Microsoft Account';
