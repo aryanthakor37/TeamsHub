@@ -914,7 +914,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                       }}>
                         <SecureThumbnail 
                           file={file}
-                          accountId={currentAccountId}
+                          accountId={file.connectedAccountId || file.accountEmail || activeAccount?._id}
                           alt={file.name}
                           fallbackColor={meta.color}
                         />
