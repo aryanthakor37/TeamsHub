@@ -356,17 +356,20 @@ export default function ChatsPage({
 
     const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id) === selectedFilterAccount);
     if (targetAccount) {
-      const targetName = (targetAccount.displayName || targetAccount.company || targetAccount.email || '').toLowerCase().trim();
+      const targetId = (targetAccount._id || targetAccount.accountId || targetAccount.id || '').toString();
+      const targetName = (targetAccount.displayName || targetAccount.company || '').toLowerCase().trim();
+      const targetEmail = (targetAccount.email || '').toLowerCase().trim();
       const chatAccId = (chat.connectedAccountId || '').toString();
       const chatCompany = (chat.company || chat.accountBadge || '').toLowerCase().trim();
-      const targetEmailPrefix = targetAccount.email ? targetAccount.email.split('@')[0].toLowerCase() : '';
 
-      return (
-        chatAccId === selectedFilterAccount.toString() ||
-        chatCompany === targetName ||
-        (targetEmailPrefix && chatCompany.includes(targetEmailPrefix)) ||
-        (targetAccount.email && chat.participant?.toLowerCase().includes(targetEmailPrefix))
+      const matchesId = chatAccId === targetId || (targetAccount.accountId && chatAccId === targetAccount.accountId.toString());
+      const matchesCompany = targetName && (chatCompany === targetName || chatCompany.includes(targetName) || targetName.includes(chatCompany));
+      const matchesEmail = targetEmail && (
+        (chat.accountEmail && chat.accountEmail.toLowerCase() === targetEmail) ||
+        (targetEmail.split('@')[0] && chatCompany.includes(targetEmail.split('@')[0]))
       );
+
+      return matchesId || matchesCompany || matchesEmail;
     }
     return true;
   });
