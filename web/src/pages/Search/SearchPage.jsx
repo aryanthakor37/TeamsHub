@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, MessageSquare, FileText, User, ShieldCheck, Loader2 } from 'lucide-react';
 import { mockChats, mockMessages, mockFiles, mockAccounts } from '../../services/mockDataService';
 import { useAuth } from '../../hooks/useAuth';
+import { useChats } from '../../hooks/useChats';
 import DocumentPreviewModal from '../../components/DocumentPreviewModal';
 
 export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile }) {
