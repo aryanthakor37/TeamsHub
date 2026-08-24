@@ -7,8 +7,8 @@ import { PublicClientApplication, LogLevel } from '@azure/msal-browser';
  *   VITE_MICROSOFT_CLIENT_ID=<your-azure-app-client-id>
  *   VITE_MICROSOFT_TENANT_ID=common
  */
-const clientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || '00000000-0000-0000-0000-000000000000';
-const tenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
+const clientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'c0e59292-129d-4d40-8b90-c1b022e98deb';
+const tenantId = (import.meta.env.VITE_MICROSOFT_TENANT_ID && import.meta.env.VITE_MICROSOFT_TENANT_ID !== '41f9d7c7-4e78-4c29-b30d-423f638ea43e') ? import.meta.env.VITE_MICROSOFT_TENANT_ID : 'common';
 
 export const isRealMsalConfigured = () => {
   return clientId && clientId !== '00000000-0000-0000-0000-000000000000';
