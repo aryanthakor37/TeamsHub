@@ -476,16 +476,16 @@ export default function ChatsPage({
           {/* Account Filter Chips Bar */}
           <div style={{
             display: 'flex',
+            flexWrap: 'wrap',
             gap: '6px',
-            overflowX: 'auto',
-            paddingBottom: '2px',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            alignItems: 'center',
+            paddingBottom: '4px'
           }}>
             <button
               onClick={() => setSelectedFilterAccount('all')}
+              title="Show chats from all connected accounts"
               style={{
-                padding: '6px 12px',
+                padding: '5px 10px',
                 borderRadius: 'var(--radius-full)',
                 fontSize: '0.75rem',
                 fontWeight: selectedFilterAccount === 'all' ? '700' : '600',
@@ -494,10 +494,9 @@ export default function ChatsPage({
                 border: selectedFilterAccount === 'all' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
                 boxShadow: selectedFilterAccount === 'all' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 transition: 'all 0.18s ease'
               }}
             >
@@ -505,7 +504,7 @@ export default function ChatsPage({
               <span>All Accounts</span>
               <span style={{
                 backgroundColor: selectedFilterAccount === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-secondary)',
-                padding: '1px 6px',
+                padding: '1px 5px',
                 borderRadius: '10px',
                 fontSize: '0.7rem',
                 fontWeight: '700'
@@ -517,14 +516,16 @@ export default function ChatsPage({
             {connectedAccounts.map((acc) => {
               const accId = acc._id || acc.accountId || acc.id;
               const isSelected = selectedFilterAccount === accId;
-              const name = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
+              const rawName = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
+              const name = rawName.replace(/[`'"]/g, '').trim();
               const initial = (name[0] || 'A').toUpperCase();
               return (
                 <button
                   key={accId}
                   onClick={() => setSelectedFilterAccount(accId)}
+                  title={`${name} (${acc.email || ''})`}
                   style={{
-                    padding: '5px 12px 5px 6px',
+                    padding: '4px 10px 4px 6px',
                     borderRadius: 'var(--radius-full)',
                     fontSize: '0.75rem',
                     fontWeight: isSelected ? '700' : '600',
@@ -533,8 +534,7 @@ export default function ChatsPage({
                     border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
                     boxShadow: isSelected ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
                     transition: 'all 0.18s ease'
@@ -550,11 +550,19 @@ export default function ChatsPage({
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '0.65rem',
-                    fontWeight: '700'
+                    fontWeight: '700',
+                    flexShrink: 0
                   }}>
                     {initial}
                   </span>
-                  <span>{name}</span>
+                  <span style={{
+                    maxWidth: '130px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {name}
+                  </span>
                 </button>
               );
             })}
