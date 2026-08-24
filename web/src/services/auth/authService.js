@@ -9,12 +9,16 @@ export const getActiveMsalAccounts = async () => {
     const list = [];
     for (const acc of accounts) {
       const token = await acquireGraphToken(acc.homeAccountId || acc.username);
+      const envTenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID;
+      const isEnvTenantSpecific = envTenantId && envTenantId !== 'common' && envTenantId !== 'organizations' && envTenantId !== 'consumers';
+      const actualTenantId = isEnvTenantSpecific ? envTenantId : (acc.tenantId || acc.idTokenClaims?.tid || 'common');
+      
       list.push({
         _id: acc.homeAccountId || acc.localAccountId,
         accountId: acc.homeAccountId || acc.localAccountId,
         displayName: acc.name || acc.username.split('@')[0],
         email: acc.username,
-        tenantId: acc.tenantId || 'common',
+        tenantId: actualTenantId,
         accountType: 'Microsoft Work / Personal Account',
         status: 'connected',
         isDefault: activeAcc ? (acc.username === activeAcc.username) : true,
@@ -42,11 +46,15 @@ export const initializeMsal = async () => {
         localStorage.setItem(`teamshub_token_${account.username.toLowerCase()}`, response.accessToken);
         localStorage.setItem('teamshub_last_access_token', response.accessToken);
       }
+      const envTenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID;
+      const isEnvTenantSpecific = envTenantId && envTenantId !== 'common' && envTenantId !== 'organizations' && envTenantId !== 'consumers';
+      const actualTenantId = isEnvTenantSpecific ? envTenantId : (account.tenantId || account.idTokenClaims?.tid || 'common');
+      
       const accountPayload = {
         accountId: account.homeAccountId || account.localAccountId,
         displayName: account.name || account.username.split('@')[0],
         email: account.username,
-        tenantId: account.tenantId || 'common',
+        tenantId: actualTenantId,
         accountType: 'Microsoft Work / Personal Account',
         scopes: response.scopes || ['User.Read', 'Chat.Read'],
         accessToken: response.accessToken
@@ -222,9 +230,14 @@ export const acquireGraphToken = async (accountId) => {
       }
 
       if (targetAccount) {
-        const guestTenantId = targetAccount.tenantId || targetAccount.idTokenClaims?.tid;
-        const tenantAuthority = guestTenantId && guestTenantId !== 'common' && guestTenantId !== 'consumers'
-          ? `https://login.microsoftonline.com/${guestTenantId}`
+        // Prioritize explicit tenant ID from env if provided (to handle guest accounts logging into a specific company tenant)
+        const envTenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID;
+        const isEnvTenantSpecific = envTenantId && envTenantId !== 'common' && envTenantId !== 'organizations' && envTenantId !== 'consumers';
+        
+        const targetTenantId = isEnvTenantSpecific ? envTenantId : (targetAccount.tenantId || targetAccount.idTokenClaims?.tid);
+        
+        const tenantAuthority = targetTenantId && targetTenantId !== 'common' && targetTenantId !== 'consumers'
+          ? `https://login.microsoftonline.com/${targetTenantId}`
           : null;
 
         try {
@@ -239,7 +252,7 @@ export const acquireGraphToken = async (accountId) => {
               email: targetAccount.username,
               displayName: targetAccount.name || targetAccount.username,
               accessToken: result.accessToken,
-              tenantId: guestTenantId
+              tenantId: targetTenantId
             }).catch(() => { });
             return result.accessToken;
           }
@@ -255,7 +268,7 @@ export const acquireGraphToken = async (accountId) => {
                 email: targetAccount.username,
                 displayName: targetAccount.name || targetAccount.username,
                 accessToken: fallbackResult.accessToken,
-                tenantId: guestTenantId
+                tenantId: targetTenantId
               }).catch(() => { });
               return fallbackResult.accessToken;
             }
