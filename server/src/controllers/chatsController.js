@@ -111,10 +111,17 @@ const getChats = async (req, res) => {
           acc = await ConnectedAccount.findOne({ email: clientUserEmail }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
         if (acc) targetAccounts = [acc];
-      } else if (clientUserEmail) {
+      } else {
+        // Fetch ALL connected accounts so multi-account chats merge seamlessly in the unified sidebar
         targetAccounts = await ConnectedAccount.find({
-          email: clientUserEmail
+          status: { $ne: 'disconnected' }
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+
+        if (targetAccounts.length === 0 && clientUserEmail) {
+          targetAccounts = await ConnectedAccount.find({
+            email: clientUserEmail
+          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
       }
 
       if (targetAccounts.length === 0 && headerToken) {

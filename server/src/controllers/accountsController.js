@@ -87,20 +87,12 @@ const getAccounts = async (req, res) => {
     }
 
     const { email } = req.query;
-    const reqEmail = email || req.headers['x-user-email'] || (req.user?.email && req.user.email !== 'user@teamshub.app' ? req.user.email : null);
-
-    if (!reqEmail) {
-      return res.status(200).json({
-        success: true,
-        source: 'database',
-        count: 0,
-        activeAccountId: null,
-        defaultAccountId: null,
-        data: []
-      });
+    let query = {};
+    if (email && email !== 'all') {
+      query.email = email.toLowerCase();
     }
 
-    const accounts = await ConnectedAccount.find({ email: reqEmail.toLowerCase() });
+    const accounts = await ConnectedAccount.find(query);
 
     res.status(200).json({
       success: true,

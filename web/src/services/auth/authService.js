@@ -115,20 +115,10 @@ export const syncAccountToBackend = async (accountPayload) => {
 export const fetchConnectedAccountsFromBackend = async () => {
   try {
     const activeAccs = await getActiveMsalAccounts();
-    if (!activeAccs || activeAccs.length === 0) {
-      return {
-        success: true,
-        source: 'browser',
-        count: 0,
-        data: []
-      };
-    }
-    const activeMsalAccount = msalInstance.getActiveAccount() || activeAccs[0];
-    const userEmail = activeMsalAccount.username || activeMsalAccount.email || localStorage.getItem('teamshub_active_email') || '';
-    const response = await fetch(`${API_BASE_URL}/accounts?email=${encodeURIComponent(userEmail)}`, {
-      headers: {
-        'x-user-email': userEmail
-      }
+    const activeMsalAccount = msalInstance.getActiveAccount() || (activeAccs && activeAccs.length > 0 ? activeAccs[0] : null);
+    const userEmail = activeMsalAccount?.username || activeMsalAccount?.email || localStorage.getItem('teamshub_active_email') || '';
+    const response = await fetch(`${API_BASE_URL}/accounts`, {
+      headers: userEmail ? { 'x-user-email': userEmail } : {}
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
