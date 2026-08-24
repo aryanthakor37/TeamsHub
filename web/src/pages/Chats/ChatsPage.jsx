@@ -223,9 +223,11 @@ export default function ChatsPage({
     return () => window.removeEventListener('teamshub:open-chat', handleOpenChatEvent);
   }, [chats]);
 
-  // Set first chat as active on initial load
-  const selectedChatId = activeChatId || (chats.length > 0 ? (chats[0]._id || chats[0].microsoftChatId || chats[0].id) : null);
-  const activeChat = chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId));
+  const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
+
+  // Set first chat as active on initial load only when an account is connected
+  const selectedChatId = isAccountConnected ? (activeChatId || (chats.length > 0 ? (chats[0]._id || chats[0].microsoftChatId || chats[0].id) : null)) : null;
+  const activeChat = isAccountConnected ? chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) : null;
   const { messages, loading: messagesLoading, error: messagesError, sendMessage } = useMessages(selectedChatId, activeChat?.connectedAccountId);
   const rawMessages = Array.isArray(messages) ? messages : [];
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
@@ -430,8 +432,6 @@ export default function ChatsPage({
       loadSecureImages();
     }
   }, [messages, activeChat]);
-
-  const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
 
   return (
     <div className="chats-page-container" style={{ flex: 1, display: 'flex', overflow: 'hidden', height: '100%' }}>
@@ -680,7 +680,7 @@ export default function ChatsPage({
 
       {/* Main Conversation Thread View Pane */}
       <div className={`chats-active-pane ${!activeChatId ? 'mobile-hidden' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
-        {activeChat ? (
+        {isAccountConnected && activeChat ? (
           <>
             {/* Conversation Header */}
             <div style={{
