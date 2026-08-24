@@ -392,7 +392,7 @@ function WordDocumentViewer({ arrayBuffer, fileName, webUrl }) {
 }
 
 export default function FilesPage({ initialFile, onClearInitialFile }) {
-  const { activeAccount } = useAuth();
+  const { connectedAccounts, activeAccount } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // grid | list
