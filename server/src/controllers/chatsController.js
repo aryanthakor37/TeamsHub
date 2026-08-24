@@ -99,6 +99,11 @@ const getChats = async (req, res) => {
     const headerToken = req.microsoftAccessToken;
 
     if (dbAvailable) {
+      const userEmailsHeader = req.headers['x-user-emails'];
+      const activeEmailsList = userEmailsHeader
+        ? userEmailsHeader.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+        : (clientUserEmail ? [clientUserEmail] : []);
+
       if (connectedAccountId && connectedAccountId !== 'all') {
         let acc = null;
         if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
@@ -111,33 +116,30 @@ const getChats = async (req, res) => {
           acc = await ConnectedAccount.findOne({ email: clientUserEmail }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
         if (acc) targetAccounts = [acc];
-      } else {
-        // Fetch ALL connected accounts so multi-account chats merge seamlessly in the unified sidebar
+      } else if (activeEmailsList.length > 0) {
+        // Fetch ONLY the accounts that are actually connected in THIS browser session
         targetAccounts = await ConnectedAccount.find({
+          email: { $in: activeEmailsList },
           status: { $ne: 'disconnected' }
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-
-        if (targetAccounts.length === 0 && clientUserEmail) {
-          targetAccounts = await ConnectedAccount.find({
-            email: clientUserEmail
-          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
+      } else {
+        targetAccounts = [];
       }
 
-      if (targetAccounts.length === 0 && headerToken) {
+      if (targetAccounts.length === 0 && headerToken && clientUserEmail) {
         targetAccounts = [{
           _id: 'active-user-session',
           microsoftAccessToken: headerToken,
-          email: clientUserEmail || '',
-          displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft User'
+          email: clientUserEmail,
+          displayName: clientUserEmail.split('@')[0]
         }];
       }
-    } else if (headerToken) {
+    } else if (headerToken && clientUserEmail) {
       targetAccounts = [{
         _id: 'active-user-session',
         microsoftAccessToken: headerToken,
-        email: clientUserEmail || '',
-        displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft User'
+        email: clientUserEmail,
+        displayName: clientUserEmail.split('@')[0]
       }];
     }
 

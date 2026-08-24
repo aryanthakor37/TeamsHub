@@ -35,44 +35,46 @@ export const MicrosoftAuthProvider = ({ children }) => {
   const [authState, setAuthState] = useState('AUTHENTICATED');
   const [authError, setAuthError] = useState(null);
 
-  // Initialize & sync connected accounts from backend & MSAL session on mount
+  // Initialize & sync connected accounts from current browser MSAL session on mount
   useEffect(() => {
     const initAuth = async () => {
       setAuthState('LOADING');
       await initializeMsal();
       
-      const backendRes = await fetchConnectedAccountsFromBackend();
       const msalAccs = await getActiveMsalAccounts();
 
-      let mergedAccounts = backendRes && backendRes.data ? [...backendRes.data] : [];
-      
-      // Sync active MSAL logged-in accounts & fresh access tokens to backend DB
-      for (const msalAcc of msalAccs) {
-        await syncAccountToBackend(msalAcc).catch(() => {});
-        if (!mergedAccounts.some(a => a.email?.toLowerCase() === msalAcc.email?.toLowerCase())) {
-          mergedAccounts.push(msalAcc);
-        }
-      }
-
-      if (mergedAccounts.length > 0) {
-        setConnectedAccounts(mergedAccounts);
-        const activeId = backendRes?.activeAccountId;
-        const matchedActive = mergedAccounts.find(a => a._id === activeId || a.accountId === activeId);
-        const chosenActive = matchedActive || mergedAccounts[0];
-        setActiveAccountState(chosenActive);
-        if (chosenActive.email) {
-          localStorage.setItem('teamshub_active_email', chosenActive.email);
-        }
-        setDefaultAccountIdState(chosenActive._id || chosenActive.accountId);
-        setUser({
-          name: chosenActive.displayName || chosenActive.email.split('@')[0],
-          email: chosenActive.email,
-          avatar: chosenActive.avatar || ''
-        });
-      } else {
+      if (!msalAccs || msalAccs.length === 0) {
         setConnectedAccounts([]);
         setActiveAccountState(null);
+        setDefaultAccountIdState(null);
+        setUser(null);
+        localStorage.removeItem('teamshub_active_email');
+        localStorage.removeItem('teamshub_cached_chats');
+        setAuthState('AUTHENTICATED');
+        return;
       }
+
+      // Sync only the active MSAL accounts in this browser to backend DB and load them
+      const currentSessionAccounts = [];
+      for (const msalAcc of msalAccs) {
+        const synced = await syncAccountToBackend(msalAcc).catch(() => null);
+        currentSessionAccounts.push(synced?.data || msalAcc);
+      }
+
+      setConnectedAccounts(currentSessionAccounts);
+      const activeEmail = localStorage.getItem('teamshub_active_email');
+      const matchedActive = currentSessionAccounts.find(a => a.email?.toLowerCase() === activeEmail?.toLowerCase());
+      const chosenActive = matchedActive || currentSessionAccounts[0];
+      setActiveAccountState(chosenActive);
+      if (chosenActive?.email) {
+        localStorage.setItem('teamshub_active_email', chosenActive.email);
+      }
+      setDefaultAccountIdState(chosenActive?._id || chosenActive?.accountId);
+      setUser({
+        name: chosenActive?.displayName || chosenActive?.email?.split('@')[0],
+        email: chosenActive?.email,
+        avatar: chosenActive?.avatar || ''
+      });
       setAuthState('AUTHENTICATED');
     };
 
@@ -132,8 +134,16 @@ export const MicrosoftAuthProvider = ({ children }) => {
         setActiveAccountState(nextActive);
         if (nextActive) {
           localStorage.setItem('teamshub_active_email', nextActive.email);
+          setUser({
+            name: nextActive.displayName || nextActive.email.split('@')[0],
+            email: nextActive.email,
+            avatar: nextActive.avatar || ''
+          });
         } else {
           localStorage.removeItem('teamshub_active_email');
+          localStorage.removeItem('teamshub_cached_chats');
+          setUser(null);
+          setDefaultAccountIdState(null);
         }
       }
 

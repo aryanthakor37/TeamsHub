@@ -1,4 +1,5 @@
 import { acquireGraphToken } from './auth/authService';
+import { msalInstance } from './auth/msalConfig';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
   ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
@@ -17,6 +18,12 @@ const getAuthHeaders = async (accountId) => {
   if (activeEmail) {
     headers['x-user-email'] = activeEmail;
   }
+  try {
+    const allAccounts = msalInstance.getAllAccounts();
+    if (allAccounts && allAccounts.length > 0) {
+      headers['x-user-emails'] = allAccounts.map(a => (a.username || '').toLowerCase()).filter(Boolean).join(',');
+    }
+  } catch (e) {}
   return headers;
 };
 
