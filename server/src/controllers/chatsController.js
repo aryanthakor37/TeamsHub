@@ -203,19 +203,15 @@ const getChats = async (req, res) => {
             }
           }
 
-          let accountCompanyBadge = 'Microsoft Account';
-          const userEmailClean = (acc.email || currentUserInfo.email || clientUserEmail || '').toLowerCase();
-          if (userEmailClean.includes('thakoraryan') || userEmailClean.includes('gmail')) {
-            accountCompanyBadge = 'Aaryan Thakor';
-          } else if (userEmailClean.includes('aryankumar') || userEmailClean.includes('estatic')) {
-            accountCompanyBadge = 'Aryan Kumrecha';
-          } else {
-            accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email || 'Microsoft Account').trim();
-          }
+          // Dynamically use the real display name for the account badge (NO hardcoded names!)
+          let accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email?.split('@')[0] || 'Microsoft Account').trim();
 
-          let normalizedList = rawChats.map((gc) =>
-            normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo)
-          );
+          let normalizedList = rawChats.map((gc) => {
+            const normalized = normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo);
+            normalized.connectedAccountId = acc._id.toString();
+            normalized.accountEmail = (acc.email || currentUserInfo.email || '').toLowerCase();
+            return normalized;
+          });
 
           allUnifiedChats.push(...normalizedList);
         } catch (err) {

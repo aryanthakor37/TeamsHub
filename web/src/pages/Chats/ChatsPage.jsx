@@ -352,7 +352,7 @@ export default function ChatsPage({
     );
     if (!matchesSearch) return false;
 
-    if (!selectedFilterAccount || selectedFilterAccount === 'all' || connectedAccounts.length <= 1) return true;
+    if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id) === selectedFilterAccount);
     if (targetAccount) {
@@ -361,15 +361,14 @@ export default function ChatsPage({
       const targetEmail = (targetAccount.email || '').toLowerCase().trim();
       const chatAccId = (chat.connectedAccountId || '').toString();
       const chatCompany = (chat.company || chat.accountBadge || '').toLowerCase().trim();
+      const chatEmail = (chat.accountEmail || '').toLowerCase().trim();
 
-      const matchesId = chatAccId === targetId || (targetAccount.accountId && chatAccId === targetAccount.accountId.toString());
-      const matchesCompany = targetName && (chatCompany === targetName || chatCompany.includes(targetName) || targetName.includes(chatCompany));
-      const matchesEmail = targetEmail && (
-        (chat.accountEmail && chat.accountEmail.toLowerCase() === targetEmail) ||
-        (targetEmail.split('@')[0] && chatCompany.includes(targetEmail.split('@')[0]))
-      );
+      if (targetId && chatAccId && chatAccId === targetId) return true;
+      if (targetAccount.accountId && chatAccId === targetAccount.accountId.toString()) return true;
+      if (targetEmail && chatEmail && chatEmail === targetEmail) return true;
+      if (targetName && chatCompany && (chatCompany === targetName || chatCompany.includes(targetName) || targetName.includes(chatCompany))) return true;
 
-      return matchesId || matchesCompany || matchesEmail;
+      return false;
     }
     return true;
   });
