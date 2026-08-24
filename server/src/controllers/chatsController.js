@@ -754,10 +754,6 @@ const markChatRead = async (req, res) => {
     return sendGraphError(res, error);
   }
 };
-  } catch (error) {
-    return sendGraphError(res, error);
-  }
-};
 
 module.exports = {
   getChats,
