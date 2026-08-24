@@ -396,20 +396,23 @@ const getChatMessages = async (req, res) => {
       }
     }
 
-    // Fallback message stream for personal account chats or Graph API 403s
-    const demoMsgs = getDemoChatMessages(id);
-    if (demoMsgs && demoMsgs.length > 0) {
-      return res.status(200).json({
-        success: true,
-        source: 'fallback',
-        data: {
-          items: demoMsgs,
-          page: pageNum,
-          limit: limitNum,
-          total: demoMsgs.length,
-          hasMore: false
-        }
-      });
+    // Only return demo fallback messages if a connected account exists or mock mode is enabled
+    const hasConnectedAccount = dbAvailable && activeEmailHeader && (await ConnectedAccount.exists({ email: activeEmailHeader }));
+    if (hasConnectedAccount) {
+      const demoMsgs = getDemoChatMessages(id);
+      if (demoMsgs && demoMsgs.length > 0) {
+        return res.status(200).json({
+          success: true,
+          source: 'fallback',
+          data: {
+            items: demoMsgs,
+            page: pageNum,
+            limit: limitNum,
+            total: demoMsgs.length,
+            hasMore: false
+          }
+        });
+      }
     }
 
     return res.status(200).json({
