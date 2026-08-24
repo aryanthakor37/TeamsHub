@@ -7,7 +7,7 @@ export const getSocket = () => {
     const envUrl = import.meta.env.VITE_API_BASE_URL;
     const serverUrl = (envUrl && envUrl.trim())
       ? envUrl.trim().replace(/\/$/, '')
-      : (window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin);
+      : (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://teamshub-backend.onrender.com');
     
     socket = io(serverUrl, {
       transports: ['websocket', 'polling'],

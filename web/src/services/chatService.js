@@ -3,7 +3,7 @@ import { msalInstance } from './auth/msalConfig';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
   ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
-  : '/api';
+  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? 'https://teamshub-backend.onrender.com/api' : '/api');
 
 /**
  * Build auth headers — includes Microsoft access token if available for the specific account
