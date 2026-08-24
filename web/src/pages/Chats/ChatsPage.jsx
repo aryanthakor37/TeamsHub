@@ -227,8 +227,8 @@ export default function ChatsPage({
 
   // Set first chat as active on initial load only when an account is connected
   const selectedChatId = isAccountConnected ? (activeChatId || (chats.length > 0 ? (chats[0]._id || chats[0].microsoftChatId || chats[0].id) : null)) : null;
-  const activeChat = isAccountConnected ? chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) : null;
-  const { messages, loading: messagesLoading, error: messagesError, sendMessage } = useMessages(selectedChatId, activeChat?.connectedAccountId);
+  const chatOwner = activeChat?.accountEmail || activeChat?.connectedAccountId;
+  const { messages, loading: messagesLoading, error: messagesError, sendMessage } = useMessages(selectedChatId, chatOwner);
   const rawMessages = Array.isArray(messages) ? messages : [];
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
 

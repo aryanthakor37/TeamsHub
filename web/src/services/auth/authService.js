@@ -206,12 +206,22 @@ export const acquireGraphToken = async (accountId) => {
       if (!accounts || accounts.length === 0) return null;
 
       const activeEmail = localStorage.getItem('teamshub_active_email');
-      let targetAccount = msalInstance.getActiveAccount();
+      let targetAccount = null;
+
+      if (accountId) {
+        const cleanTarget = accountId.toString().toLowerCase().trim();
+        targetAccount = accounts.find(acc =>
+          (acc.username && acc.username.toLowerCase() === cleanTarget) ||
+          (acc.homeAccountId && acc.homeAccountId === accountId) ||
+          (acc.localAccountId && acc.localAccountId === accountId)
+        );
+      }
+
       if (!targetAccount && activeEmail) {
         targetAccount = accounts.find(acc => acc.username?.toLowerCase() === activeEmail.toLowerCase());
       }
-      if (accountId) {
-        targetAccount = accounts.find(acc => acc.homeAccountId === accountId || acc.username === accountId) || targetAccount;
+      if (!targetAccount) {
+        targetAccount = msalInstance.getActiveAccount();
       }
       if (!targetAccount && accounts.length > 0) {
         targetAccount = accounts[0];

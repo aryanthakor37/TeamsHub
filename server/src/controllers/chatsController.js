@@ -328,30 +328,36 @@ const getChatMessages = async (req, res) => {
     const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
     const { connectedAccountId } = req.query;
 
-    if (!accessToken && dbAvailable) {
+    if (dbAvailable) {
       let acc = null;
       if (connectedAccountId && connectedAccountId !== 'all') {
-        if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+        if (connectedAccountId.includes('@')) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc && mongoose.Types.ObjectId.isValid(connectedAccountId)) {
           acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
         if (!acc) {
           acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
       }
-      if (!acc && activeEmailHeader) {
-        acc = await ConnectedAccount.findOne({
-          email: activeEmailHeader,
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
-      if (!acc) {
-        acc = await ConnectedAccount.findOne({
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
-
       if (acc && acc.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
+      } else if (!accessToken) {
+        if (activeEmailHeader) {
+          acc = await ConnectedAccount.findOne({
+            email: activeEmailHeader,
+            microsoftAccessToken: { $exists: true, $ne: '' }
+          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc) {
+          acc = await ConnectedAccount.findOne({
+            microsoftAccessToken: { $exists: true, $ne: '' }
+          }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (acc && acc.microsoftAccessToken) {
+          accessToken = acc.microsoftAccessToken;
+        }
       }
     }
 
@@ -476,11 +482,39 @@ const sendMessage = async (req, res) => {
     // ── Real Mode ──
     const dbAvailable = Chat.db && Chat.db.readyState === 1;
     let accessToken = req.microsoftAccessToken;
+    const connectedAccountId = req.body?.connectedAccountId || req.query?.connectedAccountId;
+    const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
 
-    if (!accessToken && dbAvailable) {
-      const acc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).select('+microsoftAccessToken +tokenExpiresAt');
+    if (dbAvailable) {
+      let acc = null;
+      if (connectedAccountId && connectedAccountId !== 'all') {
+        if (connectedAccountId.includes('@')) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc && mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc) {
+          acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+      }
       if (acc && acc.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
+      } else if (!accessToken) {
+        if (activeEmailHeader) {
+          acc = await ConnectedAccount.findOne({
+            email: activeEmailHeader,
+            microsoftAccessToken: { $exists: true, $ne: '' }
+          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc) {
+          acc = await ConnectedAccount.findOne({
+            microsoftAccessToken: { $exists: true, $ne: '' }
+          }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (acc && acc.microsoftAccessToken) {
+          accessToken = acc.microsoftAccessToken;
+        }
       }
     }
 
