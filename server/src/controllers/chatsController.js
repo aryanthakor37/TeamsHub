@@ -160,9 +160,10 @@ const getChats = async (req, res) => {
           };
 
           let rawChats = [];
-          if (acc.microsoftAccessToken) {
+          const activeAccessToken = acc.microsoftAccessToken || headerToken;
+          if (activeAccessToken) {
             try {
-              const profile = await fetchGraphUserProfile(acc.microsoftAccessToken);
+              const profile = await fetchGraphUserProfile(activeAccessToken);
               if (profile) {
                 currentUserInfo = {
                   email: profile.mail || profile.userPrincipalName || acc.email,
@@ -173,7 +174,7 @@ const getChats = async (req, res) => {
             } catch (pErr) {}
 
             try {
-              const graphResponse = await fetchGraphChatsFromAPI(acc.microsoftAccessToken);
+              const graphResponse = await fetchGraphChatsFromAPI(activeAccessToken);
               rawChats = graphResponse.value || [];
             } catch (gErr) {}
           }
