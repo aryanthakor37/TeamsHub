@@ -192,10 +192,6 @@ const getChats = async (req, res) => {
             normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo)
           );
 
-          if (normalizedList.length === 0 && (userEmailClean.includes('thakoraryan') || userEmailClean.includes('gmail') || acc.email?.includes('gmail'))) {
-            normalizedList = getPersonalAccountChats(acc, currentUserInfo);
-          }
-
           allUnifiedChats.push(...normalizedList);
         } catch (err) {
           console.warn(`[getChats] Warning fetching chats for ${acc.displayName}:`, err.message);

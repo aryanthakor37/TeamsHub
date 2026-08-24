@@ -571,8 +571,14 @@ export default function ChatsPage({
               ) : (
                 <>
                   <MessageSquare size={32} style={{ marginBottom: '8px', opacity: 0.6 }} />
-                  <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>No conversations found</div>
-                  <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>Your Teams conversations will appear here.</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                    {activeAccount?.email?.includes('gmail') || activeAccount?.email?.includes('outlook') || activeAccount?.email?.includes('hotmail') ? 'Personal Account Connected' : 'No conversations found'}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: '1.4' }}>
+                    {activeAccount?.email?.includes('gmail') || activeAccount?.email?.includes('outlook') || activeAccount?.email?.includes('hotmail')
+                      ? 'Microsoft Graph Chat API is restricted by Microsoft for personal (@gmail / @outlook) accounts. Connect a Work/School Teams account to sync live organization chats.'
+                      : 'Your Teams conversations will appear here once active.'}
+                  </div>
                 </>
               )}
             </div>
