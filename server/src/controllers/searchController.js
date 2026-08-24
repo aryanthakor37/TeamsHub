@@ -91,44 +91,9 @@ const globalSearch = async (req, res) => {
       $or: [{ displayName: regex }, { email: regex }, { tenantId: regex }]
     });
 
-    // 2. Search Chats (People & Conversations)
-    const rawChats = await Chat.find({
-      $or: [{ participant: regex }, { lastMessagePreview: regex }, { company: regex }]
-    }).sort({ lastMessageTimestamp: -1 }).limit(30);
-
-    const userName = (req.user?.name || '').toLowerCase();
-
-    // Filter out cross-account chats (e.g. Hem Shah chats in Aryan's session)
-    const chats = rawChats.filter(c => {
-      if (c.company && c.company !== 'Microsoft Teams' && userName && !userName.includes(c.company.toLowerCase())) {
-        return false;
-      }
-      return true;
-    }).slice(0, 20);
-
-    // 3. Search Messages & Document Attachments
-    const messages = await Message.find({
-      $or: [{ content: regex }, { senderName: regex }, { senderEmail: regex }]
-    }).sort({ createdDateTime: -1 }).limit(30);
-
-    // Filter file attachments from messages
+    const chats = [];
+    const messages = [];
     const files = [];
-    messages.forEach((msg) => {
-      if (msg.attachments && msg.attachments.length > 0) {
-        msg.attachments.forEach((att) => {
-          if (regex.test(att.name) || regex.test(att.contentType)) {
-            files.push({
-              id: att.id,
-              name: att.name,
-              contentType: att.contentType,
-              sender: msg.senderName,
-              date: msg.createdDateTime,
-              contentUrl: att.contentUrl
-            });
-          }
-        });
-      }
-    });
 
     return res.status(200).json({
       success: true,

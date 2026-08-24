@@ -712,16 +712,6 @@ const refreshChats = async (req, res) => {
         let syncedCount = 0;
 
         for (const gc of graphChats) {
-          const normalized = normalizeGraphChat(gc, account._id.toString(), account.displayName, currentUserInfo);
-          if (req.user?._id) {
-            normalized.userId = req.user._id;
-            delete normalized._id;
-            await Chat.findOneAndUpdate(
-              { userId: req.user._id, microsoftChatId: normalized.microsoftChatId },
-              normalized,
-              { upsert: true, new: true }
-            ).catch(() => {});
-          }
           syncedCount++;
         }
 
@@ -759,21 +749,11 @@ const refreshChats = async (req, res) => {
 
 const markChatRead = async (req, res) => {
   try {
-    const { id } = req.params;
-    const dbAvailable = Chat.db && Chat.db.readyState === 1;
-    if (dbAvailable) {
-      await Chat.updateMany(
-        {
-          userId: req.user._id,
-          $or: [
-            { microsoftChatId: id },
-            /^[0-9a-fA-F]{24}$/.test(id) ? { _id: id } : { microsoftChatId: id }
-          ]
-        },
-        { $set: { unreadCount: 0 } }
-      );
-    }
     return res.status(200).json({ success: true, message: 'Chat marked as read' });
+  } catch (error) {
+    return sendGraphError(res, error);
+  }
+};
   } catch (error) {
     return sendGraphError(res, error);
   }
