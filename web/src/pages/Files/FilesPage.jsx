@@ -590,19 +590,32 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
 
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
-    const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id) === selectedFilterAccount);
+    const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id || a.homeAccountId || a.username) === selectedFilterAccount);
     if (targetAccount) {
-      const targetId = (targetAccount._id || targetAccount.accountId || targetAccount.id || '').toString();
-      const targetName = (targetAccount.displayName || targetAccount.company || '').toLowerCase().trim();
-      const targetEmail = (targetAccount.email || '').toLowerCase().trim();
-      const fileAccId = (file.connectedAccountId || '').toString();
-      const fileAcc = (file.account || '').toLowerCase().trim();
-      const fileEmail = (file.accountEmail || '').toLowerCase().trim();
+      const targetId = (targetAccount._id || targetAccount.accountId || targetAccount.id || targetAccount.homeAccountId || targetAccount.localAccountId || '').toString().toLowerCase().trim();
+      const targetEmail = (targetAccount.email || targetAccount.username || targetAccount.userPrincipalName || '').toLowerCase().trim();
+      const targetName = (targetAccount.displayName || targetAccount.name || targetAccount.company || '').replace(/[`'"]/g, '').toLowerCase().trim();
+      const targetFirstName = targetName ? targetName.split(' ')[0] : '';
 
-      if (targetId && fileAccId && fileAccId === targetId) return true;
-      if (targetAccount.accountId && fileAccId === targetAccount.accountId.toString()) return true;
-      if (targetEmail && fileEmail && fileEmail === targetEmail) return true;
-      if (targetName && fileAcc && (fileAcc === targetName || fileAcc.includes(targetName) || targetName.includes(fileAcc))) return true;
+      const fileAccId = (file.connectedAccountId || '').toString().toLowerCase().trim();
+      const fileEmail = (file.accountEmail || '').toLowerCase().trim();
+      const fileAccName = (file.account || '').replace(/[`'"]/g, '').toLowerCase().trim();
+      const fileSender = (file.sender || '').replace(/[`'"]/g, '').toLowerCase().trim();
+
+      // 1. Match by Email / Username
+      if (targetEmail && fileEmail && (fileEmail === targetEmail || targetEmail.includes(fileEmail) || fileEmail.includes(targetEmail))) return true;
+
+      // 2. Match by Account ID
+      if (targetId && fileAccId && (fileAccId === targetId || targetId.includes(fileAccId) || fileAccId.includes(targetId))) return true;
+
+      // 3. Match by Clean Account Display Name
+      if (targetName && fileAccName && (fileAccName === targetName || fileAccName.includes(targetName) || targetName.includes(fileAccName))) return true;
+
+      // 4. Match by First Name
+      if (targetFirstName && fileAccName && (fileAccName.includes(targetFirstName) || targetFirstName.includes(fileAccName))) return true;
+
+      // 5. Match by Sender name if it contains owner's name
+      if (targetFirstName && fileSender && fileSender.includes(targetFirstName)) return true;
 
       return false;
     }
@@ -729,7 +742,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             </button>
 
             {connectedAccounts.map((acc) => {
-              const accId = acc._id || acc.accountId || acc.id;
+              const accId = acc._id || acc.accountId || acc.id || acc.homeAccountId || acc.username;
               const isSelected = selectedFilterAccount === accId;
               const rawName = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
               const name = rawName.replace(/[`'"]/g, '').trim();
