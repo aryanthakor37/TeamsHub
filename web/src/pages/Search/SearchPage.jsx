@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MessageSquare, FileText, User, ShieldCheck, Loader2 } from 'lucide-react';
 import { mockChats, mockMessages, mockFiles, mockAccounts } from '../../services/mockDataService';
-import { useChats } from '../../hooks/useChats';
+import { useAuth } from '../../hooks/useAuth';
 import DocumentPreviewModal from '../../components/DocumentPreviewModal';
 
 export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile }) {
+  const { connectedAccounts } = useAuth();
+  const isConnected = connectedAccounts && connectedAccounts.length > 0;
   const { chats: realChats } = useChats('all');
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
@@ -35,7 +37,7 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
 
   // Debounced real API search + instant fallback logic
   useEffect(() => {
-    if (!query.trim()) {
+    if (!query.trim() || !isConnected) {
       setSearchResults({ chats: [], messages: [], files: [], accounts: [] });
       return;
     }
@@ -43,7 +45,7 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
     const qLower = query.toLowerCase().trim();
     const qClean = qLower.replace(/_/g, ' ');
 
-    const chatsToSearch = realChats && realChats.length > 0 ? realChats : mockChats;
+    const chatsToSearch = realChats && realChats.length > 0 ? realChats : [];
     const matchedChats = chatsToSearch.filter(
       (c) => c.participant?.toLowerCase().includes(qLower) ||
              (c.lastMessagePreview && c.lastMessagePreview.toLowerCase().includes(qLower)) ||

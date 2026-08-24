@@ -431,6 +431,8 @@ export default function ChatsPage({
     }
   }, [messages, activeChat]);
 
+  const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
+
   return (
     <div className="chats-page-container" style={{ flex: 1, display: 'flex', overflow: 'hidden', height: '100%' }}>
       {/* Sidebar Chat List Pane */}
@@ -547,9 +549,9 @@ export default function ChatsPage({
                 <div key={n} style={{ height: '64px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', opacity: 0.6 }} />
               ))}
             </div>
-          ) : chats.length === 0 ? (
+          ) : !isAccountConnected || chats.length === 0 ? (
             <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              {!localStorage.getItem('teamshub_active_email') ? (
+              {!isAccountConnected ? (
                 <>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--accent-light)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
                     <Lock size={24} />
@@ -1092,7 +1094,7 @@ export default function ChatsPage({
           </>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', padding: '24px', textAlign: 'center' }}>
-            {!localStorage.getItem('teamshub_active_email') ? (
+            {!isAccountConnected ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', maxWidth: '360px' }}>
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--accent-light)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ShieldCheck size={28} />

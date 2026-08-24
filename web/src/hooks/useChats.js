@@ -34,6 +34,8 @@ const isLegacyOrFakeChat = (c) => {
 
 const getStoredLocalChats = () => {
   try {
+    const activeEmail = localStorage.getItem('teamshub_active_email');
+    if (!activeEmail) return [];
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];

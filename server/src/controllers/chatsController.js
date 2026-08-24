@@ -117,18 +117,35 @@ const getChats = async (req, res) => {
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
 
-      if (targetAccounts.length === 0) {
-        targetAccounts = await ConnectedAccount.find({}).sort({ updatedAt: -1 }).limit(1).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      if (targetAccounts.length === 0 && headerToken) {
+        targetAccounts = [{
+          _id: 'active-user-session',
+          microsoftAccessToken: headerToken,
+          email: clientUserEmail || '',
+          displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft User'
+        }];
       }
+    } else if (headerToken) {
+      targetAccounts = [{
+        _id: 'active-user-session',
+        microsoftAccessToken: headerToken,
+        email: clientUserEmail || '',
+        displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft User'
+      }];
     }
 
     if (targetAccounts.length === 0) {
-      targetAccounts = [{
-        _id: 'active-user-session',
-        microsoftAccessToken: headerToken || '',
-        email: clientUserEmail || 'thakoraryan94@gmail.com',
-        displayName: (clientUserEmail && clientUserEmail.includes('estatic')) ? 'Aryan Kumrecha' : 'Aaryan Thakor'
-      }];
+      return res.status(200).json({
+        success: true,
+        source: 'graph',
+        data: {
+          items: [],
+          page: pageNum,
+          limit: limitNum,
+          total: 0,
+          hasMore: false
+        }
+      });
     }
 
     const allUnifiedChats = [];
