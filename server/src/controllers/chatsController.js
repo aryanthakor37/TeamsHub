@@ -117,29 +117,34 @@ const getChats = async (req, res) => {
         }
         if (acc) targetAccounts = [acc];
       } else if (activeEmailsList.length > 0) {
-        // Fetch ONLY the accounts that are actually connected in THIS browser session
         targetAccounts = await ConnectedAccount.find({
           email: { $in: activeEmailsList },
           status: { $ne: 'disconnected' }
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      } else {
-        targetAccounts = [];
       }
 
-      if (targetAccounts.length === 0 && headerToken && clientUserEmail) {
+      // Fallback: If no accounts matched by email header, find all active connected accounts in DB
+      if (targetAccounts.length === 0) {
+        targetAccounts = await ConnectedAccount.find({
+          status: { $ne: 'disconnected' },
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+
+      if (targetAccounts.length === 0 && headerToken) {
         targetAccounts = [{
           _id: 'active-user-session',
           microsoftAccessToken: headerToken,
-          email: clientUserEmail,
-          displayName: clientUserEmail.split('@')[0]
+          email: clientUserEmail || '',
+          displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft User'
         }];
       }
-    } else if (headerToken && clientUserEmail) {
+    } else if (headerToken) {
       targetAccounts = [{
         _id: 'active-user-session',
         microsoftAccessToken: headerToken,
-        email: clientUserEmail,
-        displayName: clientUserEmail.split('@')[0]
+        email: clientUserEmail || '',
+        displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft User'
       }];
     }
 
