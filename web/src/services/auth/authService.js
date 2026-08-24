@@ -222,16 +222,24 @@ export const acquireGraphToken = async (accountId) => {
       }
 
       if (targetAccount) {
+        const guestTenantId = targetAccount.tenantId || targetAccount.idTokenClaims?.tid;
+        const tenantAuthority = guestTenantId && guestTenantId !== 'common' && guestTenantId !== 'consumers'
+          ? `https://login.microsoftonline.com/${guestTenantId}`
+          : null;
+
         try {
-          const result = await msalInstance.acquireTokenSilent({
+          const reqObj = {
             ...graphTokenRequest,
-            account: targetAccount
-          });
+            account: targetAccount,
+            ...(tenantAuthority ? { authority: tenantAuthority } : {})
+          };
+          const result = await msalInstance.acquireTokenSilent(reqObj);
           if (result && result.accessToken) {
             syncAccountToBackend({
               email: targetAccount.username,
               displayName: targetAccount.name || targetAccount.username,
-              accessToken: result.accessToken
+              accessToken: result.accessToken,
+              tenantId: guestTenantId
             }).catch(() => { });
             return result.accessToken;
           }
@@ -239,13 +247,15 @@ export const acquireGraphToken = async (accountId) => {
           try {
             const fallbackResult = await msalInstance.acquireTokenSilent({
               scopes: ['User.Read', 'Chat.Read', 'Chat.ReadWrite', 'openid', 'profile'],
-              account: targetAccount
+              account: targetAccount,
+              ...(tenantAuthority ? { authority: tenantAuthority } : {})
             });
             if (fallbackResult && fallbackResult.accessToken) {
               syncAccountToBackend({
                 email: targetAccount.username,
                 displayName: targetAccount.name || targetAccount.username,
-                accessToken: fallbackResult.accessToken
+                accessToken: fallbackResult.accessToken,
+                tenantId: guestTenantId
               }).catch(() => { });
               return fallbackResult.accessToken;
             }
