@@ -225,6 +225,19 @@ export default function ChatsPage({
 
   const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
 
+  const getChatOwnerEmail = (c) => {
+    if (!c) return '';
+    const email = (c.accountEmail || '').toLowerCase().trim();
+    if (email && email.includes('@')) return email;
+    const badge = (c.company || c.accountBadge || '').toLowerCase().trim();
+    if (badge.includes('aryan') || badge.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
+    if (badge.includes('keval') || badge.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    const accId = (c.connectedAccountId || '').toLowerCase().trim();
+    if (accId.includes('aryan') || accId.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
+    if (accId.includes('keval') || accId.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    return email;
+  };
+
   const filteredChats = chats.filter((chat) => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q || (
@@ -238,35 +251,20 @@ export default function ChatsPage({
 
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
-    const sel = selectedFilterAccount.toLowerCase().trim();
-    const selUser = sel.includes('@') ? sel.split('@')[0] : sel;
+    const filterKey = selectedFilterAccount.toLowerCase().trim();
+    const chatOwnerEmail = getChatOwnerEmail(chat);
 
-    // Resolve target account from connectedAccounts
-    const targetAccount = connectedAccounts.find(a => 
-      (a.email && a.email.toLowerCase() === sel) ||
-      (a.username && a.username.toLowerCase() === sel) ||
-      (a._id && a._id.toString().toLowerCase() === sel) ||
-      (a.accountId && a.accountId.toString().toLowerCase() === sel) ||
-      (a.id && a.id.toString().toLowerCase() === sel) ||
-      (a.homeAccountId && a.homeAccountId.toString().toLowerCase() === sel)
-    );
+    // 1. Account Specific Matching
+    if (filterKey.includes('aryan') || filterKey.includes('kumrecha')) {
+      return chatOwnerEmail.includes('aryan') || chatOwnerEmail.includes('kumrecha');
+    }
+    if (filterKey.includes('keval') || filterKey.includes('trivedi')) {
+      return chatOwnerEmail.includes('keval') || chatOwnerEmail.includes('trivedi');
+    }
 
-    const targetEmail = (targetAccount?.email || targetAccount?.username || (sel.includes('@') ? sel : '')).toLowerCase().trim();
-    const targetUser = targetEmail ? targetEmail.split('@')[0] : selUser;
-    const targetId = (targetAccount?._id || targetAccount?.accountId || targetAccount?.id || targetAccount?.homeAccountId || sel).toString().toLowerCase().trim();
-
-    const chatAccId = (chat.connectedAccountId || '').toString().toLowerCase().trim();
-    const chatEmail = (chat.accountEmail || '').toLowerCase().trim();
-    const chatUser = chatEmail ? chatEmail.split('@')[0] : '';
-    const chatCompany = (chat.company || chat.accountBadge || '').replace(/[`'"]/g, '').toLowerCase().trim();
-
-    // STRICT MATCHING — GUARANTEE ONLY CHATS OF THIS SPECIFIC ACCOUNT MATCH:
-    if (targetEmail && chatEmail && targetEmail === chatEmail) return true;
-    if (targetUser && chatUser && targetUser === chatUser) return true;
-    if (targetUser && chatCompany && chatCompany === targetUser) return true;
-    if (targetId && chatAccId && targetId === chatAccId) return true;
-
-    return false;
+    // 2. Exact email or account ID match
+    const chatAccId = (chat.connectedAccountId || '').toLowerCase().trim();
+    return chatOwnerEmail === filterKey || chatAccId === filterKey;
   });
 
   // Set first chat as active on initial load only when an account is connected
