@@ -17,23 +17,45 @@ import { mockDashboardStats } from '../../services/mockDataService';
 import { useAuth } from '../../hooks/useAuth';
 import { useChats } from '../../hooks/useChats';
 import { fetchFilesFromBackend } from '../../services/fileService';
-import { getInitials, getAvatarColor } from '../../utils/avatarUtils';
+const sortFilesByDate = (list = []) => {
+  return [...list].sort((a, b) => {
+    const timeA = new Date(a.lastModifiedDateTime || a.createdDateTime || a.timestamp || a.date || a.createdAt || 0).getTime();
+    const timeB = new Date(b.lastModifiedDateTime || b.createdDateTime || b.timestamp || b.date || b.createdAt || 0).getTime();
+    return timeB - timeA;
+  });
+};
+
+const getStoredCachedFiles = () => {
+  try {
+    const raw = localStorage.getItem('teamshub_cached_files');
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? sortFilesByDate(parsed) : [];
+  } catch (e) {
+    return [];
+  }
+};
 
 export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile }) {
   const { connectedAccounts, activeAccount, user } = useAuth();
   const { chats } = useChats('all');
-  const [recentFiles, setRecentFiles] = useState([]);
-  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [recentFiles, setRecentFiles] = useState(() => getStoredCachedFiles());
+  const [loadingFiles, setLoadingFiles] = useState(() => getStoredCachedFiles().length === 0);
   const connectedCount = connectedAccounts ? connectedAccounts.length : 0;
   const activeAccName = activeAccount ? (activeAccount.displayName || activeAccount.email) : 'No Active Account';
   
   useEffect(() => {
     let active = true;
     if (connectedAccounts && connectedAccounts.length > 0) {
-      setLoadingFiles(true);
+      if (recentFiles.length === 0) {
+        setLoadingFiles(true);
+      }
       fetchFilesFromBackend('all').then((data) => {
-        if (active && Array.isArray(data)) {
-          setRecentFiles(data);
+        if (active && Array.isArray(data) && data.length > 0) {
+          const sorted = sortFilesByDate(data);
+          setRecentFiles(sorted);
+          try {
+            localStorage.setItem('teamshub_cached_files', JSON.stringify(sorted));
+          } catch (e) {}
         }
       }).catch(() => {}).finally(() => {
         if (active) setLoadingFiles(false);
