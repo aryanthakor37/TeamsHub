@@ -17,7 +17,8 @@ import {
   Maximize2,
   RefreshCw,
   Copy,
-  Check
+  Check,
+  Play
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchFilesFromBackend, fetchFileBlob, fetchFileArrayBuffer, fetchFileText } from '../../services/fileService';
