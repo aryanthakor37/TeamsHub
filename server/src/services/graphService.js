@@ -315,7 +315,7 @@ const fetchGraphRecentFiles = async (accessToken) => {
     const nameLower = name.toLowerCase();
 
     if (mime.includes('pdf') || nameLower.endsWith('.pdf')) category = 'PDF';
-    else if (mime.includes('image') || nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp|bmp|ico)$/)) category = 'Images';
+    else if (mime.includes('image') || nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp|bmp|ico)$/) || nameLower.startsWith('photo from') || nameLower.startsWith('image')) category = 'Images';
     else if (mime.includes('video') || nameLower.match(/\.(mp4|mov|avi|mkv|webm)$/)) category = 'Videos';
     else if (mime.includes('zip') || mime.includes('compressed') || nameLower.match(/\.(zip|rar|7z|tar|gz)$/)) category = 'ZIP';
     else if (mime.includes('excel') || mime.includes('spreadsheet') || nameLower.match(/\.(xls|xlsx|csv)$/)) category = 'Excel';

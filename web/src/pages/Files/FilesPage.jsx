@@ -968,19 +968,41 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     const name = (file.name || '').toLowerCase().trim();
     const ext = name.includes('.') ? name.split('.').pop() : '';
 
+    // 1. PDF
     if (ext === 'pdf' || name.endsWith('.pdf')) return 'PDF';
-    if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff'].includes(ext) || name.startsWith('photo from') || name.startsWith('image')) return 'Images';
+
+    // 2. Images (MUST include .jpg, .png, Photo from..., Image.jpg, Image, etc.)
+    if (
+      ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic'].includes(ext) ||
+      name.startsWith('photo from') ||
+      name.startsWith('image.') ||
+      name === 'image' ||
+      name.startsWith('img_') ||
+      name.startsWith('screenshot')
+    ) {
+      return 'Images';
+    }
+
+    // 3. Videos
     if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp'].includes(ext)) return 'Videos';
-    if (['xls', 'xlsx', 'csv', 'tsv', 'ods'].includes(ext)) return 'Excel';
+
+    // 4. Excel
+    if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm'].includes(ext)) return 'Excel';
+
+    // 5. ZIP
     if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext)) return 'ZIP';
-    if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'cshtml', 'html', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql', 'log'].includes(ext)) return 'Documents';
-    
-    const rawCat = (file.category || '').toLowerCase();
+
+    // 6. Documents
+    if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'cshtml', 'html', 'htm', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql', 'log', 'env'].includes(ext)) return 'Documents';
+
+    // Fallback check on raw file.category
+    const rawCat = (file.category || '').toLowerCase().trim();
     if (rawCat === 'pdf') return 'PDF';
     if (rawCat === 'images' || rawCat === 'image') return 'Images';
     if (rawCat === 'videos' || rawCat === 'video') return 'Videos';
-    if (rawCat === 'excel') return 'Excel';
+    if (rawCat === 'excel' || rawCat === 'spreadsheet') return 'Excel';
     if (rawCat === 'zip' || rawCat === 'archive') return 'ZIP';
+
     return 'Documents';
   };
 
