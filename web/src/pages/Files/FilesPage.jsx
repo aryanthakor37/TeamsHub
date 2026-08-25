@@ -26,6 +26,12 @@ import { getAvatarColor, getInitials } from '../../utils/avatarUtils';
 import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
 import { renderAsync } from 'docx-preview';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure PDF.js Worker for fast client-side 1st page canvas rendering
+try {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '3.11.174'}/pdf.worker.min.js`;
+} catch (e) {}
 
 // Secure Document & Image Thumbnail for Grid Gallery
 function SecureThumbnail({ file, accountId, alt, fallbackColor, fallbackIcon: FallbackIcon }) {
@@ -505,11 +511,352 @@ function TextCodeDocumentViewer({ textContent, fileName, webUrl }) {
   );
 }
 
+// Real PDF First Page Canvas Renderer
+function RealPdfCardHeader({ file, accountId, cleanTitle }) {
+  const canvasRef = React.useRef(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const targetUrl = file.previewUrl || file.downloadUrl || file.contentUrl || file.webUrl;
+    if (!targetUrl || targetUrl === '#') return;
+
+    fetchFileArrayBuffer(targetUrl, accountId).then(async (ab) => {
+      if (!active || !ab) return;
+      try {
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(ab) });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        if (!active || !canvasRef.current) return;
+
+        const viewport = page.getViewport({ scale: 1.0 });
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+
+        // Scale to fit card width (300px)
+        const scale = 300 / viewport.width;
+        const scaledViewport = page.getViewport({ scale });
+
+        canvas.height = scaledViewport.height;
+        canvas.width = scaledViewport.width;
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: scaledViewport
+        };
+        await page.render(renderContext).promise;
+        if (active) setLoaded(true);
+      } catch (err) {}
+    }).catch(() => {});
+
+    return () => { active = false; };
+  }, [file.id, file.previewUrl, accountId]);
+
+  return (
+    <div style={{
+      height: '140px',
+      width: '100%',
+      backgroundColor: '#ffffff',
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      borderBottom: '1px solid var(--border-color)'
+    }}>
+      <canvas 
+        ref={canvasRef} 
+        style={{ 
+          width: '100%', 
+          height: 'auto', 
+          display: loaded ? 'block' : 'none',
+          objectFit: 'cover'
+        }} 
+      />
+      {!loaded && (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          padding: '10px 12px',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          backgroundImage: 'linear-gradient(to bottom, #ffffff, #fafafa)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '2px solid #ef4444', paddingBottom: '3px' }}>
+            <FileText size={13} color="#ef4444" />
+            <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#991b1b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {cleanTitle}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '4px 0' }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: '700', color: '#334155' }}>
+              {cleanTitle}
+            </div>
+            <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '95%' }} />
+            <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
+            <span style={{ color: '#64748b' }}>PDF Document</span>
+            <span style={{ color: '#ef4444', fontWeight: '800', backgroundColor: '#fee2e2', padding: '1px 5px', borderRadius: '3px' }}>PDF • Page 1</span>
+          </div>
+        </div>
+      )}
+
+      <span style={{
+        position: 'absolute',
+        top: '6px',
+        right: '8px',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        backgroundColor: '#ef4444',
+        color: '#fff',
+        fontSize: '0.62rem',
+        fontWeight: '800',
+        boxShadow: '0 2px 4px rgba(239,68,68,0.25)',
+        zIndex: 2
+      }}>
+        PDF
+      </span>
+    </div>
+  );
+}
+
+// Real Excel Worksheet Cell Parser
+function RealExcelCardHeader({ file, accountId, cleanTitle }) {
+  const [sheetData, setSheetData] = useState(null);
+  const [sheetName, setSheetName] = useState('Sheet1');
+
+  useEffect(() => {
+    let active = true;
+    const targetUrl = file.previewUrl || file.downloadUrl;
+    if (!targetUrl || targetUrl === '#') return;
+
+    fetchFileArrayBuffer(targetUrl, accountId).then((ab) => {
+      if (!active || !ab) return;
+      try {
+        const wb = XLSX.read(ab, { type: 'array' });
+        const firstSheetName = wb.SheetNames[0] || 'Sheet1';
+        const ws = wb.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (active && rows && rows.length > 0) {
+          setSheetName(firstSheetName);
+          setSheetData(rows.slice(0, 4));
+        }
+      } catch (e) {}
+    });
+
+    return () => { active = false; };
+  }, [file.id, file.previewUrl, accountId]);
+
+  return (
+    <div style={{
+      height: '140px',
+      width: '100%',
+      backgroundColor: '#ffffff',
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      borderBottom: '1px solid var(--border-color)',
+      fontSize: '0.62rem'
+    }}>
+      {/* Excel Sheet Top Bar */}
+      <div style={{ backgroundColor: '#10b981', color: '#fff', padding: '4px 10px', fontSize: '0.66rem', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <FileSpreadsheet size={13} />
+          <span>{sheetName} • {cleanTitle}</span>
+        </div>
+        <span style={{ backgroundColor: '#059669', padding: '1px 5px', borderRadius: '3px', fontSize: '0.58rem', fontWeight: '700' }}>XLSX</span>
+      </div>
+
+      {/* Real Excel Cells */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff', overflow: 'hidden' }}>
+        {sheetData && sheetData.length > 0 ? (
+          sheetData.map((row, rIdx) => (
+            <div 
+              key={rIdx} 
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '20px 1.5fr 1fr 1fr', 
+                backgroundColor: rIdx === 0 ? '#f1f5f9' : '#fff',
+                borderBottom: '1px solid #f1f5f9',
+                fontWeight: rIdx === 0 ? '800' : '500',
+                color: rIdx === 0 ? '#475569' : '#1e293b',
+                textAlign: 'center',
+                padding: '2px 0',
+                fontSize: '0.58rem'
+              }}
+            >
+              <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>{rIdx === 0 ? '#' : rIdx}</div>
+              <div style={{ borderRight: '1px solid #f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>
+                {String(row[0] || '')}
+              </div>
+              <div style={{ borderRight: '1px solid #f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {String(row[1] || '')}
+              </div>
+              <div style={{ color: rIdx === 0 ? '#475569' : '#10b981', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {String(row[2] || '')}
+              </div>
+            </div>
+          ))
+        ) : (
+          /* Default Structured Grid */
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '20px 1.5fr 1fr 1fr', backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', fontWeight: '800', color: '#475569', textAlign: 'center', padding: '2px 0' }}>
+              <div>#</div><div>A</div><div>B</div><div>C</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '20px 1.5fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', color: '#334155', textAlign: 'center', padding: '2px 0', fontSize: '0.6rem' }}>
+              <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>1</div>
+              <div style={{ borderRight: '1px solid #f1f5f9', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>Data Row 1</div>
+              <div style={{ borderRight: '1px solid #f1f5f9' }}>Active</div>
+              <div style={{ color: '#10b981', fontWeight: '700' }}>100%</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '20px 1.5fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', color: '#334155', textAlign: 'center', padding: '2px 0', fontSize: '0.6rem' }}>
+              <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>2</div>
+              <div style={{ borderRight: '1px solid #f1f5f9', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>Data Row 2</div>
+              <div style={{ borderRight: '1px solid #f1f5f9' }}>Verified</div>
+              <div style={{ color: '#10b981', fontWeight: '700' }}>OK</div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #cbd5e1', padding: '2px 10px', fontSize: '0.58rem', display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+        <span>Ready • WorkSheet</span>
+        <span style={{ fontWeight: '700', color: '#059669' }}>Excel Grid • Page 1</span>
+      </div>
+    </div>
+  );
+}
+
+// Real Word / Document Text Parser
+function RealWordCardHeader({ file, accountId, cleanTitle, rawTitle, fileExt, isCodeDoc }) {
+  const [docSnippet, setDocSnippet] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    const targetUrl = file.previewUrl || file.downloadUrl;
+    if (!targetUrl || targetUrl === '#' || isCodeDoc) return;
+
+    fetchFileArrayBuffer(targetUrl, accountId).then(async (ab) => {
+      if (!active || !ab) return;
+      try {
+        const res = await mammoth.extractRawText({ arrayBuffer: ab });
+        if (active && res && res.value) {
+          const lines = res.value.split('\n').map(l => l.trim()).filter(Boolean);
+          if (lines.length > 0) {
+            setDocSnippet(lines.slice(0, 3));
+          }
+        }
+      } catch (e) {}
+    });
+
+    return () => { active = false; };
+  }, [file.id, file.previewUrl, accountId, isCodeDoc]);
+
+  return (
+    <div style={{
+      height: '140px',
+      width: '100%',
+      backgroundColor: isCodeDoc ? '#0f172a' : '#ffffff',
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      padding: '10px 12px',
+      boxSizing: 'border-box',
+      borderBottom: '1px solid var(--border-color)'
+    }}>
+      {isCodeDoc ? (
+        /* Full-Bleed Code / Template 1st Page Preview */
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#eab308' }} />
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
+              <span style={{ color: '#94a3b8', fontSize: '0.62rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                {rawTitle}
+              </span>
+            </div>
+            <span style={{ backgroundColor: '#38bdf8', color: '#0f172a', padding: '1px 5px', borderRadius: '3px', fontSize: '0.58rem', fontWeight: '800' }}>
+              .{fileExt}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '3px 0', fontFamily: 'monospace', fontSize: '0.6rem' }}>
+            <div><span style={{ color: '#64748b' }}>1 </span><span style={{ color: '#f43f5e' }}>@model</span> <span style={{ color: '#38bdf8' }}>CertificateViewModel</span></div>
+            <div><span style={{ color: '#64748b' }}>2 </span><span style={{ color: '#818cf8' }}>&lt;div</span> <span style={{ color: '#fbbf24' }}>class=</span><span style={{ color: '#34d399' }}>"cert-container"</span><span style={{ color: '#818cf8' }}>&gt;</span></div>
+            <div><span style={{ color: '#64748b' }}>3 </span>&nbsp;&nbsp;<span style={{ color: '#e2e8f0' }}>&lt;h1&gt;@Model.StudentName&lt;/h1&gt;</span></div>
+            <div><span style={{ color: '#64748b' }}>4 </span><span style={{ color: '#818cf8' }}>&lt;/div&gt;</span></div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.55rem', borderTop: '1px solid #1e293b', paddingTop: '2px' }}>
+            <span>UTF-8 • Code Template</span>
+            <span style={{ color: '#38bdf8', fontWeight: '700' }}>Code Editor • Page 1</span>
+          </div>
+        </>
+      ) : (
+        /* Full-Bleed Word Document with Real Extracted Text */
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '2px solid #3b82f6', paddingBottom: '3px' }}>
+            <FileText size={13} color="#3b82f6" />
+            <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#1d4ed8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {cleanTitle}
+            </span>
+          </div>
+
+          <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+            {docSnippet && docSnippet.length > 0 ? (
+              docSnippet.map((line, lIdx) => (
+                <div key={lIdx} style={{ fontSize: lIdx === 0 ? '0.66rem' : '0.58rem', fontWeight: lIdx === 0 ? '800' : '400', color: lIdx === 0 ? '#1e293b' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {line}
+                </div>
+              ))
+            ) : (
+              <>
+                <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#334155' }}>
+                  {cleanTitle}
+                </div>
+                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '95%' }} />
+                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
+            <span style={{ color: '#64748b' }}>Microsoft Word Doc</span>
+            <span style={{ color: '#3b82f6', fontWeight: '800', backgroundColor: '#eff6ff', padding: '1px 5px', borderRadius: '3px' }}>.{fileExt} • Page 1</span>
+          </div>
+        </>
+      )}
+
+      <span style={{
+        position: 'absolute',
+        top: '6px',
+        right: '8px',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        backgroundColor: '#3b82f6',
+        color: '#fff',
+        fontSize: '0.62rem',
+        fontWeight: '800',
+        boxShadow: '0 2px 4px rgba(59,130,246,0.25)'
+      }}>
+        {isCodeDoc ? fileExt.toUpperCase() : 'DOCX'}
+      </span>
+    </div>
+  );
+}
+
 // Realistic Visual Full-Bleed First Page Header Component for Gallery Cards
 function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount }) {
-  const fileName = (file.name || '').toLowerCase();
-  const rawTitle = file.name || 'DOCUMENT';
-  const cleanTitle = rawTitle.replace(/\.[^/.]+$/, '');
+  const cleanTitle = (file.name || 'DOCUMENT').replace(/\.[^/.]+$/, '');
+  const accountId = file.connectedAccountId || file.accountEmail || activeAccount?._id;
 
   if (actualCategory === 'Images') {
     return (
@@ -525,7 +872,7 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
       }}>
         <SecureThumbnail 
           file={file}
-          accountId={file.connectedAccountId || file.accountEmail || activeAccount?._id}
+          accountId={accountId}
           alt={file.name}
           fallbackColor={meta.color}
         />
@@ -549,186 +896,11 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
   }
 
   if (actualCategory === 'PDF') {
-    const isCert = fileName.includes('certificate') || fileName.includes('cert');
-    const isReceipt = fileName.includes('receipt') || fileName.includes('payment') || fileName.includes('invoice') || fileName.includes('bill');
-
-    return (
-      <div style={{
-        height: '140px',
-        width: '100%',
-        backgroundColor: '#ffffff',
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '10px 12px',
-        boxSizing: 'border-box',
-        borderBottom: '1px solid var(--border-color)',
-        backgroundImage: 'linear-gradient(to bottom, #ffffff, #fafafa)'
-      }}>
-        {isCert ? (
-          /* Full-Bleed Certificate 1st Page */
-          <>
-            <div style={{ borderBottom: '2px double #d97706', paddingBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: '900', color: '#b45309', letterSpacing: '0.04em' }}>★ CERTIFICATE OF EXCELLENCE ★</span>
-            </div>
-            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: '#1e293b', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {cleanTitle}
-              </div>
-              <div style={{ fontSize: '0.62rem', color: '#64748b', marginTop: '2px' }}>
-                Awarded for verified completion & compliance
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
-              <span style={{ color: '#16a34a', fontWeight: '700' }}>✔ Officially Verified</span>
-              <span style={{ color: '#ef4444', fontWeight: '800', backgroundColor: '#fee2e2', padding: '1px 5px', borderRadius: '3px' }}>PDF • Page 1</span>
-            </div>
-          </>
-        ) : isReceipt ? (
-          /* Full-Bleed Payment Receipt 1st Page */
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #ef4444', paddingBottom: '3px' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#991b1b' }}>RECEIPT / PAYMENT INVOICE</span>
-              <span style={{ fontSize: '0.58rem', backgroundColor: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '3px', fontWeight: '800' }}>PAID ✔</span>
-            </div>
-            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: '700', color: '#1e293b' }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{cleanTitle}</span>
-                <span style={{ color: '#15803d', fontWeight: '800' }}>$1,250.00</span>
-              </div>
-              <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                Payment Method: Online Transfer • Tax Invoice
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
-              <span style={{ color: '#64748b' }}>Ref: #84549869-PDF</span>
-              <span style={{ color: '#ef4444', fontWeight: '800', backgroundColor: '#fee2e2', padding: '1px 5px', borderRadius: '3px' }}>PDF • Page 1</span>
-            </div>
-          </>
-        ) : (
-          /* Full-Bleed Executive Project Proposal / Document 1st Page */
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '2px solid #ef4444', paddingBottom: '3px' }}>
-              <FileText size={13} color="#ef4444" />
-              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#991b1b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {cleanTitle}
-              </span>
-            </div>
-            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#334155' }}>
-                1. Executive Summary & Goals
-              </div>
-              <div style={{ fontSize: '0.6rem', color: '#64748b', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                This official specification document provides verified project milestones, scope, and implementation details.
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
-              <span style={{ color: '#64748b' }}>Version 1.0 • Final</span>
-              <span style={{ color: '#ef4444', fontWeight: '800', backgroundColor: '#fee2e2', padding: '1px 5px', borderRadius: '3px' }}>PDF • Page 1</span>
-            </div>
-          </>
-        )}
-
-        <span style={{
-          position: 'absolute',
-          top: '6px',
-          right: '8px',
-          padding: '2px 6px',
-          borderRadius: '4px',
-          backgroundColor: '#ef4444',
-          color: '#fff',
-          fontSize: '0.62rem',
-          fontWeight: '800',
-          boxShadow: '0 2px 4px rgba(239,68,68,0.25)'
-        }}>
-          PDF
-        </span>
-      </div>
-    );
+    return <RealPdfCardHeader file={file} accountId={accountId} cleanTitle={cleanTitle} />;
   }
 
   if (actualCategory === 'Excel') {
-    const isBook = fileName.includes('book');
-    const isSample = fileName.includes('sample');
-
-    return (
-      <div style={{
-        height: '140px',
-        width: '100%',
-        backgroundColor: '#ffffff',
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        borderBottom: '1px solid var(--border-color)',
-        fontSize: '0.62rem'
-      }}>
-        {/* Full-Bleed Excel Sheet Top Bar */}
-        <div style={{ backgroundColor: '#10b981', color: '#fff', padding: '4px 10px', fontSize: '0.66rem', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            <FileSpreadsheet size={13} />
-            <span>Sheet1 • {cleanTitle}</span>
-          </div>
-          <span style={{ backgroundColor: '#059669', padding: '1px 5px', borderRadius: '3px', fontSize: '0.58rem', fontWeight: '700' }}>XLSX</span>
-        </div>
-
-        {/* Real Structured Table Grid */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
-          {/* Header Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '24px 1.5fr 1fr 1fr', backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', fontWeight: '800', color: '#475569', textAlign: 'center', padding: '2px 0' }}>
-            <div>#</div>
-            <div>{isBook ? 'Book Title' : isSample ? 'Item Name' : 'Field'}</div>
-            <div>{isBook ? 'Author' : isSample ? 'Category' : 'Value'}</div>
-            <div>{isBook ? 'Status' : isSample ? 'Qty' : 'Status'}</div>
-          </div>
-
-          {/* Row 1 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '24px 1.5fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', color: '#334155', textAlign: 'center', padding: '2px 0', fontSize: '0.6rem' }}>
-            <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>1</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>
-              {isBook ? 'The Lean Startup' : isSample ? 'Product Sample 1' : 'Active Account'}
-            </div>
-            <div style={{ borderRight: '1px solid #f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {isBook ? 'Eric Ries' : isSample ? 'Hardware' : 'Verified'}
-            </div>
-            <div style={{ color: '#10b981', fontWeight: '700' }}>{isBook ? 'In Stock' : isSample ? '24' : '100%'}</div>
-          </div>
-
-          {/* Row 2 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '24px 1.5fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', color: '#334155', textAlign: 'center', padding: '2px 0', fontSize: '0.6rem' }}>
-            <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>2</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>
-              {isBook ? 'Clean Code' : isSample ? 'Product Sample 2' : 'Pending Tasks'}
-            </div>
-            <div style={{ borderRight: '1px solid #f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {isBook ? 'R. Martin' : isSample ? 'Software' : 'Completed'}
-            </div>
-            <div style={{ color: '#10b981', fontWeight: '700' }}>{isBook ? 'In Stock' : isSample ? '18' : 'OK'}</div>
-          </div>
-
-          {/* Row 3 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '24px 1.5fr 1fr 1fr', color: '#334155', textAlign: 'center', padding: '2px 0', fontSize: '0.6rem' }}>
-            <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>3</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>
-              {isBook ? 'Pragmatic Programmer' : isSample ? 'Product Sample 3' : 'Total Revenue'}
-            </div>
-            <div style={{ borderRight: '1px solid #f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {isBook ? 'A. Hunt' : isSample ? 'Cloud' : '$45,200'}
-            </div>
-            <div style={{ color: '#10b981', fontWeight: '700' }}>{isBook ? 'Available' : isSample ? '52' : 'Passed'}</div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #cbd5e1', padding: '2px 10px', fontSize: '0.58rem', display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-          <span>Ready • SUM: 100%</span>
-          <span style={{ fontWeight: '700', color: '#059669' }}>Excel Grid • Page 1</span>
-        </div>
-      </div>
-    );
+    return <RealExcelCardHeader file={file} accountId={accountId} cleanTitle={cleanTitle} />;
   }
 
   if (actualCategory === 'Videos') {
@@ -816,7 +988,6 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
           <span style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontSize: '0.58rem', fontWeight: '800' }}>ZIP</span>
         </div>
 
-        {/* Zipper Teeth Graphic */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '4px 0', fontSize: '0.62rem', color: '#92400e' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>📁 archive_contents/</span>
@@ -834,119 +1005,17 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
     );
   }
 
-  // Word & Other Documents (.docx, .cshtml, .html, .txt, etc.)
+  // Documents
   const isCodeDoc = ['cshtml', 'html', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql'].includes(fileExt.toLowerCase());
-  const isFormDoc = fileName.includes('form') || fileName.includes('feedback') || fileName.includes('survey');
-  const isRulesDoc = fileName.includes('rules') || fileName.includes('buttons') || fileName.includes('crm');
-
   return (
-    <div style={{
-      height: '140px',
-      width: '100%',
-      backgroundColor: isCodeDoc ? '#0f172a' : '#ffffff',
-      position: 'relative',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      padding: '10px 12px',
-      boxSizing: 'border-box',
-      borderBottom: '1px solid var(--border-color)'
-    }}>
-      {isCodeDoc ? (
-        /* Full-Bleed Code / Template 1st Page Preview */
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#eab308' }} />
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
-              <span style={{ color: '#94a3b8', fontSize: '0.62rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
-                {rawTitle}
-              </span>
-            </div>
-            <span style={{ backgroundColor: '#38bdf8', color: '#0f172a', padding: '1px 5px', borderRadius: '3px', fontSize: '0.58rem', fontWeight: '800' }}>
-              .{fileExt}
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '3px 0', fontFamily: 'monospace', fontSize: '0.6rem' }}>
-            <div><span style={{ color: '#64748b' }}>1 </span><span style={{ color: '#f43f5e' }}>@model</span> <span style={{ color: '#38bdf8' }}>CertificateViewModel</span></div>
-            <div><span style={{ color: '#64748b' }}>2 </span><span style={{ color: '#818cf8' }}>&lt;div</span> <span style={{ color: '#fbbf24' }}>class=</span><span style={{ color: '#34d399' }}>"cert-container"</span><span style={{ color: '#818cf8' }}>&gt;</span></div>
-            <div><span style={{ color: '#64748b' }}>3 </span>&nbsp;&nbsp;<span style={{ color: '#e2e8f0' }}>&lt;h1&gt;@Model.StudentName&lt;/h1&gt;</span></div>
-            <div><span style={{ color: '#64748b' }}>4 </span><span style={{ color: '#818cf8' }}>&lt;/div&gt;</span></div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.55rem', borderTop: '1px solid #1e293b', paddingTop: '2px' }}>
-            <span>UTF-8 • Razor Template</span>
-            <span style={{ color: '#38bdf8', fontWeight: '700' }}>Code Editor • Page 1</span>
-          </div>
-        </>
-      ) : (
-        /* Full-Bleed Word Document 1st Page */
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '2px solid #3b82f6', paddingBottom: '3px' }}>
-            <FileText size={13} color="#3b82f6" />
-            <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#1d4ed8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {cleanTitle}
-            </span>
-          </div>
-
-          {isFormDoc ? (
-            /* Feedback Form Document Lines */
-            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', fontWeight: '800', color: '#1e293b' }}>
-                <span>Customer Feedback & Review</span>
-                <span style={{ color: '#2563eb' }}>★★★★★</span>
-              </div>
-              <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                Evaluation: 100% Satisfaction • Deliverables approved on schedule.
-              </div>
-            </div>
-          ) : isRulesDoc ? (
-            /* CRM Rules Document Lines */
-            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#1e40af' }}>
-                1. Action Buttons & Business Rules
-              </div>
-              <div style={{ fontSize: '0.6rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span>✔ Button 1: Submit Inquiry (Role: Admin)</span>
-                <span>✔ Button 2: Export Data (Permission: Level 2)</span>
-              </div>
-            </div>
-          ) : (
-            /* Standard Document Paragraph Lines */
-            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#334155' }}>
-                Project Overview & Requirements
-              </div>
-              <div style={{ fontSize: '0.6rem', color: '#64748b', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                This document outlines the standard architecture, features, and core workflows for the platform.
-              </div>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
-            <span style={{ color: '#64748b' }}>Microsoft Word Doc</span>
-            <span style={{ color: '#3b82f6', fontWeight: '800', backgroundColor: '#eff6ff', padding: '1px 5px', borderRadius: '3px' }}>.{fileExt} • Page 1</span>
-          </div>
-        </>
-      )}
-
-      <span style={{
-        position: 'absolute',
-        top: '6px',
-        right: '8px',
-        padding: '2px 6px',
-        borderRadius: '4px',
-        backgroundColor: '#3b82f6',
-        color: '#fff',
-        fontSize: '0.62rem',
-        fontWeight: '800',
-        boxShadow: '0 2px 4px rgba(59,130,246,0.25)'
-      }}>
-        {meta.label}
-      </span>
-    </div>
+    <RealWordCardHeader 
+      file={file} 
+      accountId={accountId} 
+      cleanTitle={cleanTitle} 
+      rawTitle={file.name || 'DOCUMENT'} 
+      fileExt={fileExt} 
+      isCodeDoc={isCodeDoc} 
+    />
   );
 }
 
