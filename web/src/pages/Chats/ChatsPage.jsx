@@ -239,6 +239,20 @@ export default function ChatsPage({
   };
 
   const filteredChats = chats.filter((chat) => {
+    const chatOwnerEmail = getChatOwnerEmail(chat).toLowerCase().trim();
+    if (chatOwnerEmail && connectedAccounts && connectedAccounts.length > 0) {
+      const isOwnerConnected = connectedAccounts.some(acc => {
+        const accEmail = (acc.email || '').toLowerCase().trim();
+        const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
+        if (accEmail && chatOwnerEmail === accEmail) return true;
+        if (accName && chat.company && chat.company.toLowerCase().includes(accName)) return true;
+        if (accEmail.includes('aryan') && chatOwnerEmail.includes('aryan')) return true;
+        if (accEmail.includes('keval') && chatOwnerEmail.includes('keval')) return true;
+        return false;
+      });
+      if (!isOwnerConnected) return false;
+    }
+
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q || (
       chat.participant?.toLowerCase().includes(q) ||
@@ -252,7 +266,6 @@ export default function ChatsPage({
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const filterKey = selectedFilterAccount.toLowerCase().trim();
-    const chatOwnerEmail = getChatOwnerEmail(chat);
 
     // 1. Account Specific Matching
     if (filterKey.includes('aryan') || filterKey.includes('kumrecha')) {

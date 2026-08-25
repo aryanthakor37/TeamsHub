@@ -133,19 +133,51 @@ export const MicrosoftAuthProvider = ({ children }) => {
   };
 
   const handleDisconnectAccount = async (accId) => {
+    let targetEmail = null;
+    const currentAccounts = connectedAccounts || [];
+    const targetAcc = currentAccounts.find(
+      (a) => a._id === accId || a.accountId === accId || a.id === accId || (a.email && a.email.toLowerCase() === String(accId).toLowerCase())
+    );
+    if (targetAcc && targetAcc.email) {
+      targetEmail = targetAcc.email.toLowerCase().trim();
+    } else if (typeof accId === 'string' && accId.includes('@')) {
+      targetEmail = accId.toLowerCase().trim();
+    }
+
+    if (targetEmail) {
+      localStorage.removeItem(`teamshub_token_${targetEmail}`);
+
+      try {
+        const disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
+        if (!disconnectedList.includes(targetEmail)) {
+          disconnectedList.push(targetEmail);
+          localStorage.setItem('teamshub_disconnected_emails', JSON.stringify(disconnectedList));
+        }
+      } catch (e) {}
+
+      try {
+        const msalAcc = msalInstance.getAllAccounts().find(a => (a.username || '').toLowerCase() === targetEmail);
+        if (msalAcc) {
+          msalInstance.getTokenCache().removeAccount(msalAcc);
+        }
+      } catch (e) {}
+    }
+
     try {
-      await disconnectAccountFromBackend(accId);
+      await disconnectAccountFromBackend(targetEmail || accId);
     } catch (e) {}
 
     setConnectedAccounts((prev) => {
-      const targetAcc = prev.find((a) => a._id === accId || a.accountId === accId || a.id === accId);
-      if (targetAcc && targetAcc.email) {
-        localStorage.removeItem(`teamshub_token_${targetAcc.email.toLowerCase()}`);
-      }
+      const remaining = prev.filter((a) => {
+        const emailMatch = targetEmail && a.email && a.email.toLowerCase().trim() === targetEmail;
+        const idMatch = a._id === accId || a.accountId === accId || a.id === accId;
+        return !emailMatch && !idMatch;
+      });
 
-      const remaining = prev.filter((a) => a._id !== accId && a.accountId !== accId && a.id !== accId);
-
-      if (activeAccount && (activeAccount._id === accId || activeAccount.accountId === accId || activeAccount.id === accId)) {
+      if (activeAccount && (
+        (targetEmail && activeAccount.email && activeAccount.email.toLowerCase().trim() === targetEmail) ||
+        activeAccount._id === accId || activeAccount.accountId === accId || activeAccount.id === accId
+      )) {
         const nextActive = remaining.length > 0 ? remaining[0] : null;
         setActiveAccountState(nextActive);
         if (nextActive) {
@@ -165,6 +197,8 @@ export const MicrosoftAuthProvider = ({ children }) => {
 
       return remaining;
     });
+
+    window.dispatchEvent(new CustomEvent('teamshub:account-disconnected', { detail: { email: targetEmail, accId } }));
   };
 
   const loginWithMicrosoft = async () => {

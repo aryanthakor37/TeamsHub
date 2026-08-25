@@ -164,20 +164,24 @@ const getChats = async (req, res) => {
     // Include in-memory connected accounts (when MongoDB is offline)
     if (global.liveInMemoryAccounts) {
       global.liveInMemoryAccounts.forEach((memAcc, memEmail) => {
+        if (memAcc.status === 'disconnected') return;
+        if (activeEmailsList.length > 0 && !activeEmailsList.includes(memEmail.toLowerCase())) return;
         if (!targetAccounts.some(a => (a.email || '').toLowerCase() === memEmail.toLowerCase())) {
           targetAccounts.push(memAcc);
         }
       });
     }
 
-    // Ensure EVERY account with a live token from x-account-tokens is included in targetAccounts
+    // Ensure EVERY account with a live token from x-account-tokens is included in targetAccounts (if active)
     if (!connectedAccountId || connectedAccountId === 'all') {
       Object.entries(accountTokensMap).forEach(([email, token]) => {
-        if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === email.toLowerCase())) {
+        const cleanEmail = email.toLowerCase().trim();
+        if (activeEmailsList.length > 0 && !activeEmailsList.includes(cleanEmail)) return;
+        if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
           targetAccounts.push({
-            _id: `acc-token-${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
-            email: email.toLowerCase(),
-            displayName: email.split('@')[0],
+            _id: `acc-token-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+            email: cleanEmail,
+            displayName: cleanEmail.split('@')[0],
             microsoftAccessToken: token
           });
         }

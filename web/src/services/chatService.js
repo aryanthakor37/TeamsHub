@@ -16,11 +16,19 @@ const getAuthHeaders = async (accountId) => {
     allAccounts = msalInstance.getAllAccounts() || [];
   } catch (e) {}
 
+  let disconnectedList = [];
+  try {
+    disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
+  } catch (e) {}
+
+  // Filter out any disconnected accounts
+  allAccounts = allAccounts.filter(a => !disconnectedList.includes((a.username || '').toLowerCase().trim()));
+
   // Fast token map from localStorage (0ms!)
   const tokenMap = {};
   allAccounts.forEach(a => {
     const email = (a.username || '').toLowerCase().trim();
-    if (email) {
+    if (email && !disconnectedList.includes(email)) {
       const t = localStorage.getItem(`teamshub_token_${email}`);
       if (t) tokenMap[email] = t;
     }

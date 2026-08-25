@@ -11,7 +11,32 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
   const connectedCount = connectedAccounts ? connectedAccounts.length : 0;
   const activeAccName = activeAccount ? (activeAccount.displayName || activeAccount.email) : 'No Active Account';
   
-  const realUnreadCount = chats ? chats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0) : 0;
+  const getChatOwnerEmail = (c) => {
+    if (!c) return '';
+    const email = (c.accountEmail || '').toLowerCase().trim();
+    if (email && email.includes('@')) return email;
+    const badge = (c.company || c.accountBadge || '').toLowerCase().trim();
+    if (badge.includes('aryan') || badge.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
+    if (badge.includes('keval') || badge.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    return email;
+  };
+
+  const visibleChats = (chats || []).filter(chat => {
+    if (!connectedAccounts || connectedAccounts.length === 0) return false;
+    const chatOwnerEmail = getChatOwnerEmail(chat).toLowerCase().trim();
+    if (!chatOwnerEmail) return true;
+    return connectedAccounts.some(acc => {
+      const accEmail = (acc.email || '').toLowerCase().trim();
+      const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
+      if (accEmail && chatOwnerEmail === accEmail) return true;
+      if (accName && chat.company && chat.company.toLowerCase().includes(accName)) return true;
+      if (accEmail.includes('aryan') && chatOwnerEmail.includes('aryan')) return true;
+      if (accEmail.includes('keval') && chatOwnerEmail.includes('keval')) return true;
+      return false;
+    });
+  });
+
+  const realUnreadCount = visibleChats ? visibleChats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0) : 0;
   const isConnected = connectedCount > 0;
   
   return (
@@ -140,8 +165,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {isConnected && chats && chats.length > 0 ? (
-              chats.slice(0, 4).map((chat) => (
+            {isConnected && visibleChats && visibleChats.length > 0 ? (
+              visibleChats.slice(0, 4).map((chat) => (
                 <div
                   key={chat._id || chat.id}
                   onClick={() => {

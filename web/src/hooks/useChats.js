@@ -119,13 +119,34 @@ export const useChats = () => {
       loadChats(true);
     };
 
+    const handleAccountDisconnected = (e) => {
+      const { email } = e.detail || {};
+      if (email) {
+        const cleanEmail = email.toLowerCase().trim();
+        setChats((prev) => {
+          const filtered = prev.filter((c) => {
+            const owner = (c.accountEmail || c.company || c.accountBadge || '').toLowerCase().trim();
+            if (owner === cleanEmail) return false;
+            if (cleanEmail.includes('keval') && owner.includes('keval')) return false;
+            if (cleanEmail.includes('aryan') && owner.includes('aryan')) return false;
+            return true;
+          });
+          saveStoredLocalChats(filtered);
+          return filtered;
+        });
+      }
+      setTimeout(() => loadChats(true), 300);
+    };
+
     window.addEventListener('teamshub:chat-marked-read', handleReadEvent);
     window.addEventListener('teamshub:logout', handleLogoutEvent);
     window.addEventListener('teamshub:account-switched', handleAccountSwitched);
+    window.addEventListener('teamshub:account-disconnected', handleAccountDisconnected);
     return () => {
       window.removeEventListener('teamshub:chat-marked-read', handleReadEvent);
       window.removeEventListener('teamshub:logout', handleLogoutEvent);
       window.removeEventListener('teamshub:account-switched', handleAccountSwitched);
+      window.removeEventListener('teamshub:account-disconnected', handleAccountDisconnected);
     };
   }, []);
 

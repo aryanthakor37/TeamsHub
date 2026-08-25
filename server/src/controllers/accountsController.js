@@ -449,24 +449,50 @@ const reconnectAccount = async (req, res) => {
 const disconnectAccount = async (req, res) => {
   try {
     const { id } = req.params;
+    const queryEmail = (req.query.email || req.body?.email || '').toLowerCase().trim();
 
     if (isMockMode()) {
-      const idx = inMemoryAccounts.findIndex((acc) => acc._id === id || acc.accountId === id);
+      const idx = inMemoryAccounts.findIndex((acc) => 
+        acc._id === id || acc.accountId === id || (acc.email && acc.email.toLowerCase() === id.toLowerCase())
+      );
       if (idx >= 0) {
         inMemoryAccounts[idx].status = 'disconnected';
       }
       return res.status(200).json({ success: true, source: 'mock' });
     }
 
-    // Real mode — also clear stored tokens
+    // Real mode — also delete from in-memory accounts map
+    if (global.liveInMemoryAccounts) {
+      for (const [memEmail, acc] of global.liveInMemoryAccounts.entries()) {
+        const matchId = acc._id === id || acc.accountId === id;
+        const matchEmail = memEmail === id.toLowerCase() || (queryEmail && memEmail === queryEmail);
+        if (matchId || matchEmail) {
+          global.liveInMemoryAccounts.delete(memEmail);
+        }
+      }
+    }
+
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     if (dbAvailable) {
-      await ConnectedAccount.findByIdAndUpdate(id, {
-        status: 'disconnected',
-        microsoftAccessToken: '',
-        microsoftRefreshToken: '',
-        tokenExpiresAt: null
-      });
+      const orQueries = [];
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        orQueries.push({ _id: id });
+      }
+      orQueries.push({ accountId: id });
+      orQueries.push({ email: id.toLowerCase() });
+      if (queryEmail) {
+        orQueries.push({ email: queryEmail });
+      }
+
+      await ConnectedAccount.updateMany(
+        { $or: orQueries },
+        {
+          status: 'disconnected',
+          microsoftAccessToken: '',
+          microsoftRefreshToken: '',
+          tokenExpiresAt: null
+        }
+      );
     }
 
     res.status(200).json({
