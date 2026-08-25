@@ -307,25 +307,34 @@ h1, h2, h3, h4, h5, h6 {
   word-break: break-all;
 }
 
-/* Teams Inline Chat Photo & Screenshot Styling */
+/* Teams Inline Chat Photo & Screenshot Styling (Clean 1:1 match with Microsoft Teams) */
 .teams-chat-html-content img,
 .message-html-content img {
-  max-width: 100%;
-  max-height: 380px;
-  border-radius: 12px;
-  margin: 6px 0;
+  max-width: 440px;
+  max-height: 320px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  margin: 4px 0;
   display: block;
-  object-fit: cover;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  object-fit: contain;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--bg-tertiary);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+[data-theme='dark'] .teams-chat-html-content img,
+[data-theme='dark'] .message-html-content img {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .teams-chat-html-content img:hover,
 .message-html-content img:hover {
   transform: scale(1.015);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
 }
 
 /* Microsoft Teams Reply / Quote block formatting */
