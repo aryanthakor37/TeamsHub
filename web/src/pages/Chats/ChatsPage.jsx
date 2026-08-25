@@ -239,38 +239,36 @@ export default function ChatsPage({
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const targetAccount = connectedAccounts.find(a => 
-      (a._id || a.accountId || a.id || a.homeAccountId || a.localAccountId || a.username) === selectedFilterAccount
+      (a._id && a._id === selectedFilterAccount) ||
+      (a.accountId && a.accountId === selectedFilterAccount) ||
+      (a.id && a.id === selectedFilterAccount) ||
+      (a.homeAccountId && a.homeAccountId === selectedFilterAccount) ||
+      (a.email && a.email.toLowerCase() === selectedFilterAccount.toLowerCase()) ||
+      (a.username && a.username.toLowerCase() === selectedFilterAccount.toLowerCase())
     );
-    if (!targetAccount) return true;
 
-    const targetId = (targetAccount._id || targetAccount.accountId || targetAccount.id || targetAccount.homeAccountId || targetAccount.localAccountId || '').toString().toLowerCase().trim();
-    const targetEmail = (targetAccount.email || targetAccount.username || targetAccount.userPrincipalName || '').toLowerCase().trim();
-    const targetUser = targetEmail ? targetEmail.split('@')[0] : '';
-    const targetName = (targetAccount.displayName || targetAccount.name || targetAccount.company || '').replace(/[`'"]/g, '').toLowerCase().trim();
-    const targetFirstName = targetName ? targetName.split(' ')[0] : '';
+    const sel = selectedFilterAccount.toLowerCase().trim();
+    const targetId = targetAccount ? (targetAccount._id || targetAccount.accountId || targetAccount.id || targetAccount.homeAccountId || '').toString().toLowerCase().trim() : sel;
+    const targetEmail = targetAccount ? (targetAccount.email || targetAccount.username || targetAccount.userPrincipalName || '').toLowerCase().trim() : (sel.includes('@') ? sel : '');
+    const targetUser = targetEmail ? targetEmail.split('@')[0] : sel;
 
     const chatAccId = (chat.connectedAccountId || '').toString().toLowerCase().trim();
     const chatEmail = (chat.accountEmail || '').toLowerCase().trim();
     const chatUser = chatEmail ? chatEmail.split('@')[0] : '';
     const chatCompany = (chat.company || chat.accountBadge || '').replace(/[`'"]/g, '').toLowerCase().trim();
-    const chatCompanyClean = chatCompany.replace(/[^a-z0-9]/g, '');
-    const targetNameClean = targetName.replace(/[^a-z0-9]/g, '');
 
-    // 1. Match by Email / Username
-    if (targetEmail && chatEmail && (chatEmail === targetEmail || targetEmail.includes(chatEmail) || chatEmail.includes(targetEmail))) return true;
-    if (targetUser && (chatEmail.includes(targetUser) || chatUser.includes(targetUser))) return true;
+    // STRICT EXACT MATCHING — DO NOT USE .includes() ON EMAIL/DOMAIN
+    // 1. Exact Email match
+    if (targetEmail && chatEmail && targetEmail === chatEmail) return true;
 
-    // 2. Match by Account ID
-    if (targetId && chatAccId && (chatAccId === targetId || targetId.includes(chatAccId) || chatAccId.includes(targetId))) return true;
-    if (targetAccount.accountId && chatAccId === targetAccount.accountId.toString().toLowerCase()) return true;
+    // 2. Exact Username match (e.g. "keval.trivedi" === "keval.trivedi")
+    if (targetUser && chatUser && targetUser === chatUser) return true;
 
-    // 3. Match by Company / Account Badge / Username
-    if (targetUser && chatCompany && (chatCompany.includes(targetUser) || targetUser.includes(chatCompany))) return true;
-    if (targetEmail && chatCompany && (targetEmail.includes(chatCompany) || chatCompany.includes(targetEmail))) return true;
+    // 3. Exact Account ID match
+    if (targetId && chatAccId && targetId === chatAccId) return true;
 
-    // 4. Match by Clean Display Name & First Name
-    if (targetNameClean && chatCompanyClean && (targetNameClean.includes(chatCompanyClean) || chatCompanyClean.includes(targetNameClean))) return true;
-    if (targetFirstName && chatCompany && (chatCompany.includes(targetFirstName) || targetFirstName.includes(chatCompany))) return true;
+    // 4. Exact Company/Badge username match
+    if (targetUser && chatCompany && (chatCompany === targetUser || chatCompany === targetEmail)) return true;
 
     return false;
   });
