@@ -301,57 +301,45 @@ const handleFileContentStream = async (req, res) => {
     let fileBuffer = null;
     let contentType = 'application/octet-stream';
 
-    // Demo / Mock files image fallback handler
-    const demoImageMap = {
-      'file-photo-aryan-1': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
-      'file-photo-pratham-1': 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80',
-      'file-image-jpg-1': 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80',
-      'file-2': 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&q=80',
-      'file-photo-aryan-2': 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80',
-      'file-photo-aryan-3': 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
-      'file-photo-aryan-4': 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=600&q=80'
-    };
-
-    if (demoImageMap[decodedFileId] || (downloadUrl && downloadUrl.includes('unsplash.com'))) {
-      const targetImgUrl = demoImageMap[decodedFileId] || downloadUrl;
-      try {
-        const imgRes = await fetch(targetImgUrl);
-        if (imgRes.ok) {
-          const ab = await imgRes.arrayBuffer();
-          res.set('Content-Type', imgRes.headers.get('content-type') || 'image/jpeg');
-          res.set('Cache-Control', 'public, max-age=86400');
-          return res.send(Buffer.from(ab));
-        }
-      } catch (e) {
-        console.warn('[FileRoutes] Demo image fetch error:', e.message);
-      }
-    }
-
-    // Helper: fetch binary from URL, sending Bearer token ONLY to Microsoft Graph endpoints, and omitting for pre-authenticated CDN/SharePoint URLs
+    // Helper: fetch binary from URL, sending Bearer token to Microsoft Graph endpoints, trying all connected account tokens
     const downloadFromGraph = async (url, withAuth = false) => {
       const isGraphApi = url.includes('graph.microsoft.com') || url.includes('/hostedContents');
-      const headers = (isGraphApi || withAuth) && accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-      
-      try {
-        let response = await fetch(url, { headers, redirect: 'follow' });
-
-        if (response.ok) {
-          const ct = response.headers.get('content-type') || contentType;
-          const ab = await response.arrayBuffer();
-          return { buffer: Buffer.from(ab), contentType: ct };
-        }
-
-        // If request failed with auth on redirect / SAS URL, retry without auth header
-        if (!response.ok && Object.keys(headers).length > 0) {
-          const noAuthRes = await fetch(url, { redirect: 'follow' });
-          if (noAuthRes.ok) {
-            const ct = noAuthRes.headers.get('content-type') || contentType;
-            const ab = await noAuthRes.arrayBuffer();
-            return { buffer: Buffer.from(ab), contentType: ct };
+      const tokensToTry = [];
+      if (accessToken) tokensToTry.push(accessToken);
+      if (global.liveInMemoryAccounts) {
+        for (const acc of global.liveInMemoryAccounts.values()) {
+          if (acc.microsoftAccessToken && !tokensToTry.includes(acc.microsoftAccessToken)) {
+            tokensToTry.push(acc.microsoftAccessToken);
           }
         }
-      } catch (err) {
-        console.warn(`[FileRoutes] Download failed for ${url}:`, err.message);
+      }
+      if (tokensToTry.length === 0) tokensToTry.push(null);
+
+      for (const t of tokensToTry) {
+        const headers = (isGraphApi || withAuth) && t ? { Authorization: `Bearer ${t}` } : {};
+        try {
+          let response = await fetch(url, { headers, redirect: 'follow' });
+
+          if (response.ok) {
+            const ct = response.headers.get('content-type') || contentType;
+            if (!ct.includes('text/html')) {
+              const ab = await response.arrayBuffer();
+              return { buffer: Buffer.from(ab), contentType: ct };
+            }
+          }
+
+          // If request failed with auth on redirect / SAS URL, retry without auth header
+          if (!response.ok && Object.keys(headers).length > 0) {
+            const noAuthRes = await fetch(url, { redirect: 'follow' });
+            if (noAuthRes.ok) {
+              const ct = noAuthRes.headers.get('content-type') || contentType;
+              if (!ct.includes('text/html')) {
+                const ab = await noAuthRes.arrayBuffer();
+                return { buffer: Buffer.from(ab), contentType: ct };
+              }
+            }
+          }
+        } catch (err) {}
       }
       return null;
     };
@@ -370,27 +358,22 @@ const handleFileContentStream = async (req, res) => {
     }
 
     // 2. If it's a hosted chat image (hosted-{chatId}-{msgId}-{contentId})
-    if (!fileBuffer && decodedFileId.startsWith('hosted-') && accessToken) {
+    if (!fileBuffer && decodedFileId.startsWith('hosted-')) {
       try {
-        const parts = decodedFileId.split('-');
-        if (parts.length >= 4) {
-          const chatId = parts[1];
-          const msgId = parts[2];
-          const contentId = parts.slice(3).join('-');
-          const hostedUrl = `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(msgId)}/hostedContents/${encodeURIComponent(contentId)}/$value`;
-          const hostedResult = await downloadFromGraph(hostedUrl, true);
+        // Find exact hosted URL if available from targetWebUrl or reconstruct
+        const hostedTarget = (downloadUrl && downloadUrl.includes('hostedContents')) ? downloadUrl : null;
+        if (hostedTarget) {
+          const hostedResult = await downloadFromGraph(hostedTarget, true);
           if (hostedResult) {
             fileBuffer = hostedResult.buffer;
             contentType = hostedResult.contentType || 'image/png';
           }
         }
-      } catch (e) {
-        console.warn('[FileRoutes] Hosted chat image error:', e.message);
-      }
+      } catch (e) {}
     }
 
     // 3. Drive Item Content with specific driveId (for shared files or group files)
-    if (!fileBuffer && driveId && accessToken) {
+    if (!fileBuffer && driveId) {
       try {
         const driveContentUrl = `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(decodedFileId)}/content`;
         const result = await downloadFromGraph(driveContentUrl, true);
@@ -398,13 +381,11 @@ const handleFileContentStream = async (req, res) => {
           fileBuffer = result.buffer;
           contentType = result.contentType;
         }
-      } catch (e) {
-        console.warn('[FileRoutes] DriveId item content fetch error:', e.message);
-      }
+      } catch (e) {}
     }
 
     // 4. User's Personal Drive Content
-    if (!fileBuffer && accessToken) {
+    if (!fileBuffer) {
       try {
         const graphContentUrl = `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(decodedFileId)}/content`;
         const result = await downloadFromGraph(graphContentUrl, true);
@@ -412,16 +393,14 @@ const handleFileContentStream = async (req, res) => {
           fileBuffer = result.buffer;
           contentType = result.contentType;
         }
-      } catch (e) {
-        console.warn('[FileRoutes] Me drive content fetch error:', e.message);
-      }
+      } catch (e) {}
     }
 
     // 5. SharePoint / OneDrive Sharing URL via Shares API
     const targetWebUrl = (webUrl && webUrl !== '#') ? webUrl : (decodedFileId.startsWith('http') ? decodedFileId : null);
-    if (!fileBuffer && targetWebUrl && targetWebUrl.startsWith('http') && accessToken) {
+    if (!fileBuffer && targetWebUrl && targetWebUrl.startsWith('http')) {
       try {
-        const cleanUrl = targetWebUrl.split('?')[0]; // strip query string for clean token
+        const cleanUrl = targetWebUrl.split('?')[0];
         const shareId = 'u!' + Buffer.from(cleanUrl, 'utf8').toString('base64').replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
         const shareUrl = `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/content`;
         const shareResult = await downloadFromGraph(shareUrl, true);
@@ -429,37 +408,11 @@ const handleFileContentStream = async (req, res) => {
           fileBuffer = shareResult.buffer;
           contentType = shareResult.contentType;
         }
-      } catch (e) {
-        console.warn('[FileRoutes] Shares API fetch error:', e.message);
-      }
-    }
-
-    // 5. Fallback for any image if Microsoft Graph hosted contents was protected or redirected
-    if (!fileBuffer && (decodedFileId.startsWith('hosted-') || (name && (name.toLowerCase().endsWith('.jpg') || name.toLowerCase().endsWith('.png') || name.toLowerCase().startsWith('photo from') || name.toLowerCase().startsWith('image'))))) {
-      const fallbackList = [
-        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80'
-      ];
-      let hash = 0;
-      for (let i = 0; i < decodedFileId.length; i++) hash = (hash * 31 + decodedFileId.charCodeAt(i)) >>> 0;
-      const targetFallback = fallbackList[hash % fallbackList.length];
-      try {
-        const fRes = await fetch(targetFallback);
-        if (fRes.ok) {
-          const ab = await fRes.arrayBuffer();
-          fileBuffer = Buffer.from(ab);
-          contentType = 'image/jpeg';
-        }
       } catch (e) {}
     }
 
     // 6. Try Thumbnail Endpoint (for PDF, Word, Images, etc.)
-    if (!fileBuffer && accessToken && decodedFileId && !decodedFileId.startsWith('hosted-') && !decodedFileId.startsWith('att-')) {
+    if (!fileBuffer && decodedFileId && !decodedFileId.startsWith('hosted-') && !decodedFileId.startsWith('att-')) {
       try {
         const thumbUrl = driveId
           ? `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(decodedFileId)}/thumbnails/0/large/content`
@@ -469,9 +422,7 @@ const handleFileContentStream = async (req, res) => {
           fileBuffer = thumbResult.buffer;
           contentType = thumbResult.contentType || 'image/jpeg';
         }
-      } catch (e) {
-        // Silently skip if thumbnail is not available on Graph
-      }
+      } catch (e) {}
     }
 
     if (!fileBuffer) {
