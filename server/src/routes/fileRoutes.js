@@ -49,7 +49,6 @@ router.get('/', async (req, res) => {
       } else if (activeEmailsList.length > 0) {
         targetAccounts = await ConnectedAccount.find({
           email: { $in: activeEmailsList },
-          status: { $ne: 'disconnected' },
           microsoftAccessToken: { $exists: true, $ne: '' }
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }

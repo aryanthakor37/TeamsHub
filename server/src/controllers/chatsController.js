@@ -131,8 +131,7 @@ const getChats = async (req, res) => {
         if (acc) targetAccounts = [acc];
       } else if (activeEmailsList.length > 0) {
         targetAccounts = await ConnectedAccount.find({
-          email: { $in: activeEmailsList },
-          status: { $ne: 'disconnected' }
+          email: { $in: activeEmailsList }
         }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
       }
 
