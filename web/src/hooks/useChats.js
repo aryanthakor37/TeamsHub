@@ -57,15 +57,15 @@ const mergeMultiAccountChats = (freshItems = [], existingItems = []) => {
   // 1. Seed with existing cached chats
   existingItems.forEach((c) => {
     if (!c) return;
-    const key = `${(c.accountEmail || c.connectedAccountId || '').toLowerCase()}-${c.microsoftChatId || c._id || c.id}`;
-    map.set(key, c);
+    const key = (c.microsoftChatId || c._id || c.id || '').toString();
+    if (key) map.set(key, c);
   });
 
-  // 2. Overlay with fresh items
+  // 2. Fresh items take priority and update existing items
   freshItems.forEach((c) => {
     if (!c) return;
-    const key = `${(c.accountEmail || c.connectedAccountId || '').toLowerCase()}-${c.microsoftChatId || c._id || c.id}`;
-    map.set(key, c);
+    const key = (c.microsoftChatId || c._id || c.id || '').toString();
+    if (key) map.set(key, c);
   });
 
   return Array.from(map.values());
