@@ -685,6 +685,161 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
     );
   }
 
+  if (actualCategory === 'Videos') {
+    return (
+      <div style={{
+        height: '140px',
+        width: '100%',
+        backgroundColor: '#0f172a',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '12px',
+        boxSizing: 'border-box'
+      }}>
+        {/* Realistic Mini Video Player Frame */}
+        <div style={{
+          width: '88%',
+          height: '100%',
+          backgroundColor: '#1e293b',
+          borderRadius: '6px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+          border: '1px solid #334155',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Subtle Grid Background */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: 'radial-gradient(rgba(99,102,241,0.2) 1px, transparent 1px)',
+            backgroundSize: '12px 12px',
+            opacity: 0.6
+          }} />
+
+          {/* Central Translucent Play Button */}
+          <div style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(99,102,241,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            boxShadow: '0 0 16px rgba(99,102,241,0.7)',
+            zIndex: 1
+          }}>
+            <Play size={18} fill="#ffffff" style={{ marginLeft: '2px' }} />
+          </div>
+
+          {/* Video Timeline Bar at Bottom */}
+          <div style={{
+            position: 'absolute',
+            bottom: '6px',
+            left: '8px',
+            right: '8px',
+            height: '3px',
+            backgroundColor: '#475569',
+            borderRadius: '2px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ width: '45%', height: '100%', backgroundColor: '#6366f1' }} />
+          </div>
+        </div>
+
+        <span style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          padding: '3px 8px',
+          borderRadius: '6px',
+          backgroundColor: '#6366f1',
+          color: '#fff',
+          fontSize: '0.68rem',
+          fontWeight: '700',
+          boxShadow: '0 2px 6px rgba(99,102,241,0.4)'
+        }}>
+          Video
+        </span>
+      </div>
+    );
+  }
+
+  if (actualCategory === 'ZIP') {
+    return (
+      <div style={{
+        height: '140px',
+        width: '100%',
+        backgroundColor: '#fffbeb',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '12px',
+        boxSizing: 'border-box'
+      }}>
+        {/* Realistic Mini Archive / Folder Preview */}
+        <div style={{
+          width: '82%',
+          height: '100%',
+          backgroundColor: '#ffffff',
+          borderRadius: '6px',
+          boxShadow: '0 4px 12px rgba(245,158,11,0.18)',
+          border: '1.5px dashed #fcd34d',
+          padding: '8px 10px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', borderBottom: '1px solid #fef3c7', paddingBottom: '4px' }}>
+            <Archive size={14} color="#d97706" />
+            <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#b45309', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
+              {file.name || 'ARCHIVE.ZIP'}
+            </span>
+          </div>
+
+          {/* Zipper Teeth Graphic */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', margin: '4px 0' }}>
+            <div style={{ width: '8px', height: '6px', backgroundColor: '#f59e0b', borderRadius: '1px' }} />
+            <div style={{ width: '8px', height: '6px', backgroundColor: '#d97706', borderRadius: '1px' }} />
+            <div style={{ width: '8px', height: '6px', backgroundColor: '#f59e0b', borderRadius: '1px' }} />
+            <div style={{ width: '8px', height: '6px', backgroundColor: '#d97706', borderRadius: '1px' }} />
+            <div style={{ width: '8px', height: '6px', backgroundColor: '#f59e0b', borderRadius: '1px' }} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.55rem', color: '#92400e', fontWeight: '600' }}>Compressed</span>
+            <span style={{ fontSize: '0.55rem', color: '#d97706', fontWeight: '700' }}>.ZIP</span>
+          </div>
+        </div>
+
+        <span style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          padding: '3px 8px',
+          borderRadius: '6px',
+          backgroundColor: '#f59e0b',
+          color: '#fff',
+          fontSize: '0.68rem',
+          fontWeight: '700',
+          boxShadow: '0 2px 6px rgba(245,158,11,0.3)'
+        }}>
+          Archive
+        </span>
+      </div>
+    );
+  }
+
   // Word & Other Documents (.docx, .cshtml, .html, .txt, etc.)
   return (
     <div style={{
