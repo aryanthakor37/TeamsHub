@@ -78,11 +78,12 @@ const getAccounts = async (req, res) => {
     // ── Real Mode ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     if (!dbAvailable) {
+      const memoryList = global.liveInMemoryAccounts ? Array.from(global.liveInMemoryAccounts.values()) : [];
       return res.status(200).json({
         success: true,
-        source: 'database',
-        count: 0,
-        data: []
+        source: 'memory',
+        count: memoryList.length,
+        data: memoryList
       });
     }
 
@@ -176,12 +177,51 @@ const connectMicrosoftAccount = async (req, res) => {
       });
     }
 
-    // ── Real Mode ──
+    // ── Live In-Memory Accounts Store (Fallback when MongoDB is offline) ──
+    if (!global.liveInMemoryAccounts) {
+      global.liveInMemoryAccounts = new Map();
+    }
+
+    const resolvedEmail = (
+      cleanEmail ||
+      req.user?.email ||
+      ''
+    ).toLowerCase().trim();
+
+    if (!resolvedEmail) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_EMAIL', message: 'Valid email address is required.' }
+      });
+    }
+
+    const accountData = {
+      _id: `acc-${resolvedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      userId: req.user?._id || 'user-default',
+      provider: 'microsoft',
+      accountId: accountId || `ms-oid-${Date.now()}`,
+      microsoftUserId: accountId || '',
+      displayName: displayName || resolvedEmail.split('@')[0] || 'User',
+      email: resolvedEmail,
+      tenantId: tenantId || 'common',
+      accountType: accountType || 'Microsoft Account',
+      status: 'connected',
+      isDefault: false,
+      scopes: scopes || ['User.Read', 'Chat.Read'],
+      microsoftAccessToken: accessToken || '',
+      lastAuthenticatedAt: new Date()
+    };
+
+    global.liveInMemoryAccounts.set(resolvedEmail, accountData);
+
+    // ── Real Database Mode (if MongoDB connected) ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     if (!dbAvailable) {
-      return res.status(503).json({
-        success: false,
-        error: { code: 'CONFIGURATION_REQUIRED', message: 'Database is required for real account management.' }
+      return res.status(200).json({
+        success: true,
+        source: 'memory',
+        message: 'Account connected successfully',
+        data: accountData
       });
     }
 

@@ -161,6 +161,15 @@ const getChats = async (req, res) => {
       }];
     }
 
+    // Include in-memory connected accounts (when MongoDB is offline)
+    if (global.liveInMemoryAccounts) {
+      global.liveInMemoryAccounts.forEach((memAcc, memEmail) => {
+        if (!targetAccounts.some(a => (a.email || '').toLowerCase() === memEmail.toLowerCase())) {
+          targetAccounts.push(memAcc);
+        }
+      });
+    }
+
     // Ensure EVERY account with a live token from x-account-tokens is included in targetAccounts
     if (!connectedAccountId || connectedAccountId === 'all') {
       Object.entries(accountTokensMap).forEach(([email, token]) => {
