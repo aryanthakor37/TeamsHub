@@ -511,36 +511,23 @@ function TextCodeDocumentViewer({ textContent, fileName, webUrl }) {
   );
 }
 
-// Real PDF First Page Renderer (Canvas + Native Embed)
+// Real PDF First Page Renderer
 function RealPdfCardHeader({ file, accountId, cleanTitle }) {
   const canvasRef = React.useRef(null);
   const [loaded, setLoaded] = useState(false);
-  const [pdfBlob, setPdfBlob] = useState(null);
 
   useEffect(() => {
     let active = true;
-    let createdUrl = null;
     const targetUrl = file.previewUrl || file.downloadUrl || file.contentUrl || file.webUrl;
     if (!targetUrl || targetUrl === '#') return;
 
-    fetchFileBlob(targetUrl, accountId).then(async (url) => {
-      if (!active || !url) return;
-      createdUrl = url;
-      setPdfBlob(url);
-
+    fetchFileArrayBuffer(targetUrl, accountId).then(async (ab) => {
+      if (!active || !ab) return;
       try {
-        const ab = await fetchFileArrayBuffer(targetUrl, accountId);
-        if (!active || !ab) {
-          if (active) setLoaded(true);
-          return;
-        }
-        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(ab), isEvalSupported: false });
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(ab) });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
-        if (!active || !canvasRef.current) {
-          if (active) setLoaded(true);
-          return;
-        }
+        if (!active || !canvasRef.current) return;
 
         const viewport = page.getViewport({ scale: 1.0 });
         const canvas = canvasRef.current;
@@ -557,17 +544,10 @@ function RealPdfCardHeader({ file, accountId, cleanTitle }) {
           viewport: scaledViewport
         }).promise;
         if (active) setLoaded(true);
-      } catch (err) {
-        if (active) setLoaded(true);
-      }
-    }).catch(() => {
-      if (active) setLoaded(true);
-    });
+      } catch (err) {}
+    }).catch(() => {});
 
-    return () => { 
-      active = false;
-      if (createdUrl) URL.revokeObjectURL(createdUrl);
-    };
+    return () => { active = false; };
   }, [file.id, file.previewUrl, accountId]);
 
   return (
@@ -592,21 +572,7 @@ function RealPdfCardHeader({ file, accountId, cleanTitle }) {
         }} 
       />
 
-      {!loaded && pdfBlob && (
-        <iframe 
-          src={`${pdfBlob}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
-          title="pdf-preview"
-          style={{
-            width: '100%',
-            height: '140px',
-            border: 'none',
-            pointerEvents: 'none',
-            overflow: 'hidden'
-          }}
-        />
-      )}
-
-      {!loaded && !pdfBlob && (
+      {!loaded && (
         <div style={{
           width: '100%',
           height: '100%',
@@ -623,9 +589,13 @@ function RealPdfCardHeader({ file, accountId, cleanTitle }) {
               {cleanTitle}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '6px', color: '#64748b', fontSize: '0.65rem' }}>
-            <Loader2 className="spinner" size={14} />
-            <span>Loading Real First Page...</span>
+          <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#334155' }}>
+              Project Overview & Specification
+            </div>
+            <div style={{ fontSize: '0.6rem', color: '#64748b', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+              {cleanTitle} • Verified document scope, architecture, and project deliverables.
+            </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
             <span style={{ color: '#64748b' }}>PDF Document</span>
