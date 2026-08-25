@@ -182,49 +182,6 @@ const connectMicrosoftAccount = async (req, res) => {
       global.liveInMemoryAccounts = new Map();
     }
 
-    const resolvedEmail = (
-      cleanEmail ||
-      req.user?.email ||
-      ''
-    ).toLowerCase().trim();
-
-    if (!resolvedEmail) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'INVALID_EMAIL', message: 'Valid email address is required.' }
-      });
-    }
-
-    const accountData = {
-      _id: `acc-${resolvedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-      userId: req.user?._id || 'user-default',
-      provider: 'microsoft',
-      accountId: accountId || `ms-oid-${Date.now()}`,
-      microsoftUserId: accountId || '',
-      displayName: displayName || resolvedEmail.split('@')[0] || 'User',
-      email: resolvedEmail,
-      tenantId: tenantId || 'common',
-      accountType: accountType || 'Microsoft Account',
-      status: 'connected',
-      isDefault: false,
-      scopes: scopes || ['User.Read', 'Chat.Read'],
-      microsoftAccessToken: accessToken || '',
-      lastAuthenticatedAt: new Date()
-    };
-
-    global.liveInMemoryAccounts.set(resolvedEmail, accountData);
-
-    // ── Real Database Mode (if MongoDB connected) ──
-    const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
-    if (!dbAvailable) {
-      return res.status(200).json({
-        success: true,
-        source: 'memory',
-        message: 'Account connected successfully',
-        data: accountData
-      });
-    }
-
     // Verify the access token by calling Graph /me
     let graphProfile = null;
     if (accessToken) {
@@ -251,10 +208,11 @@ const connectMicrosoftAccount = async (req, res) => {
     }
 
     const accountData = {
-      userId: req.user?._id,
+      _id: `acc-${resolvedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      userId: req.user?._id || 'user-default',
       provider: 'microsoft',
       accountId: graphProfile?.id || accountId || `ms-oid-${Date.now()}`,
-      microsoftUserId: graphProfile?.id || '',
+      microsoftUserId: graphProfile?.id || accountId || '',
       displayName: graphProfile?.displayName || displayName || resolvedEmail.split('@')[0] || 'User',
       email: resolvedEmail,
       tenantId: tenantId || 'common',
@@ -262,8 +220,22 @@ const connectMicrosoftAccount = async (req, res) => {
       status: 'connected',
       isDefault: false,
       scopes: scopes || ['User.Read', 'Chat.Read'],
+      microsoftAccessToken: accessToken || '',
       lastAuthenticatedAt: new Date()
     };
+
+    global.liveInMemoryAccounts.set(resolvedEmail, accountData);
+
+    // ── Real Database Mode (if MongoDB connected) ──
+    const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
+    if (!dbAvailable) {
+      return res.status(200).json({
+        success: true,
+        source: 'memory',
+        message: 'Account connected successfully',
+        data: accountData
+      });
+    }
 
     // Store token securely (only accessible via explicit +select)
     const tokenFields = {};
