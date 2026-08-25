@@ -718,14 +718,23 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
 
   const getFileCategory = (file) => {
     if (!file) return 'Documents';
-    const nameLower = (file.name || '').toLowerCase().trim();
-    if (nameLower.endsWith('.pdf')) return 'PDF';
-    if (nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp|bmp|ico|tif|tiff)$/) || nameLower.startsWith('photo from') || nameLower.startsWith('image')) return 'Images';
-    if (nameLower.match(/\.(mp4|mov|avi|mkv|webm|wmv|flv|m4v)$/)) return 'Videos';
-    if (nameLower.match(/\.(xls|xlsx|csv|tsv|ods)$/)) return 'Excel';
-    if (nameLower.match(/\.(zip|rar|7z|tar|gz|bz2|xz)$/)) return 'ZIP';
-    if (nameLower.match(/\.(docx|doc|txt|pptx|ppt|rtf|odt|pages|md)$/)) return 'Documents';
-    return file.category || 'Documents';
+    const name = (file.name || '').toLowerCase().trim();
+    const ext = name.includes('.') ? name.split('.').pop() : '';
+
+    if (ext === 'pdf' || name.endsWith('.pdf')) return 'PDF';
+    if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff'].includes(ext) || name.startsWith('photo from') || name.startsWith('image')) return 'Images';
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp'].includes(ext)) return 'Videos';
+    if (['xls', 'xlsx', 'csv', 'tsv', 'ods'].includes(ext)) return 'Excel';
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext)) return 'ZIP';
+    if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'cshtml', 'html', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql', 'log'].includes(ext)) return 'Documents';
+    
+    const rawCat = (file.category || '').toLowerCase();
+    if (rawCat === 'pdf') return 'PDF';
+    if (rawCat === 'images' || rawCat === 'image') return 'Images';
+    if (rawCat === 'videos' || rawCat === 'video') return 'Videos';
+    if (rawCat === 'excel') return 'Excel';
+    if (rawCat === 'zip' || rawCat === 'archive') return 'ZIP';
+    return 'Documents';
   };
 
   const getFileOwnerEmail = (f) => {
