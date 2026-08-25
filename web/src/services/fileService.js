@@ -16,6 +16,7 @@ const getAuthHeaders = async (accountId) => {
     allAccounts = msalInstance.getAllAccounts() || [];
   } catch (e) {}
 
+  // Fast token map from localStorage
   const tokenMap = {};
   allAccounts.forEach(a => {
     const email = (a.username || '').toLowerCase().trim();
@@ -24,6 +25,22 @@ const getAuthHeaders = async (accountId) => {
       if (t) tokenMap[email] = t;
     }
   });
+
+  // Ensure tokens are acquired for all accounts if not in localStorage
+  if (!accountId || accountId === 'all') {
+    await Promise.all(allAccounts.map(async (a) => {
+      const email = (a.username || '').toLowerCase().trim();
+      if (email && !tokenMap[email]) {
+        try {
+          const t = await acquireGraphToken(a.homeAccountId || a.username);
+          if (t) {
+            tokenMap[email] = t;
+            localStorage.setItem(`teamshub_token_${email}`, t);
+          }
+        } catch (e) {}
+      }
+    }));
+  }
 
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
 
