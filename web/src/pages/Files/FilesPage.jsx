@@ -36,7 +36,7 @@ function SecureThumbnail({ file, accountId, alt, fallbackColor, fallbackIcon: Fa
     let active = true;
     let createdUrl = null;
 
-    const targetUrl = file.thumbnailUrl || file.previewUrl || file.contentUrl || file.downloadUrl;
+    const targetUrl = file.previewUrl || file.thumbnailUrl || file.contentUrl || file.downloadUrl;
     if (!targetUrl || targetUrl === '#') {
       if (active) {
         setLoading(false);

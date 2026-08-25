@@ -159,6 +159,7 @@ router.get('/', async (req, res) => {
           const normalizedFilesWithProxy = rawFiles.map(f => {
             const params = new URLSearchParams();
             params.append('connectedAccountId', accId);
+            params.append('fileId', f.id || '');
             if (f.name) params.append('name', f.name);
             if (f.driveId) params.append('driveId', f.driveId);
             if (f.downloadUrl && f.downloadUrl !== '#') params.append('downloadUrl', f.downloadUrl);
@@ -167,14 +168,14 @@ router.get('/', async (req, res) => {
             const qs = params.toString();
             return {
               ...f,
-              previewUrl: `/api/files/${encodeURIComponent(f.id)}/content?${qs}`,
-              thumbnailUrl: f.thumbnailUrl || `/api/files/${encodeURIComponent(f.id)}/content?${qs}`
+              previewUrl: `/api/files/content?${qs}`,
+              thumbnailUrl: `/api/files/content?${qs}`
             };
           });
 
           allUnifiedFiles.push(...normalizedFilesWithProxy);
-        } catch (gErr) {
-          console.warn(`[FileRoutes] Graph files error for ${acc.displayName || acc.email}:`, gErr.message);
+        } catch (accErr) {
+          console.warn(`[FileRoutes] Failed to fetch files for account ${accId}:`, accErr.message);
         }
       })
     );
@@ -207,12 +208,11 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * GET /api/files/:fileId/content
- * Stream the raw file/image/PDF content directly from Microsoft Graph
+ * Common handler for streaming file/image/PDF content directly from Microsoft Graph
  */
-router.get('/:fileId/content', async (req, res) => {
+const handleFileContentStream = async (req, res) => {
   try {
-    const { fileId } = req.params;
+    const fileId = req.params.fileId || req.query.fileId || req.query.id || '';
     const { connectedAccountId, driveId, downloadUrl, webUrl, name } = req.query;
 
     let accessToken = null;
@@ -474,6 +474,9 @@ router.get('/:fileId/content', async (req, res) => {
     console.error('[FileRoutes] Error streaming file:', error.message);
     return res.status(500).send('Failed to stream file');
   }
-});
+};
+
+router.get('/content', handleFileContentStream);
+router.get('/:fileId/content', handleFileContentStream);
 
 module.exports = router;
