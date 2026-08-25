@@ -511,45 +511,63 @@ function TextCodeDocumentViewer({ textContent, fileName, webUrl }) {
   );
 }
 
-// Real PDF First Page Canvas Renderer
+// Real PDF First Page Renderer (Canvas + Native Embed)
 function RealPdfCardHeader({ file, accountId, cleanTitle }) {
   const canvasRef = React.useRef(null);
   const [loaded, setLoaded] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState(null);
 
   useEffect(() => {
     let active = true;
+    let createdUrl = null;
     const targetUrl = file.previewUrl || file.downloadUrl || file.contentUrl || file.webUrl;
     if (!targetUrl || targetUrl === '#') return;
 
-    fetchFileArrayBuffer(targetUrl, accountId).then(async (ab) => {
-      if (!active || !ab) return;
+    fetchFileBlob(targetUrl, accountId).then(async (url) => {
+      if (!active || !url) return;
+      createdUrl = url;
+      setPdfBlob(url);
+
       try {
-        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(ab) });
+        const ab = await fetchFileArrayBuffer(targetUrl, accountId);
+        if (!active || !ab) {
+          if (active) setLoaded(true);
+          return;
+        }
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(ab), isEvalSupported: false });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
-        if (!active || !canvasRef.current) return;
+        if (!active || !canvasRef.current) {
+          if (active) setLoaded(true);
+          return;
+        }
 
         const viewport = page.getViewport({ scale: 1.0 });
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
 
-        // Scale to fit card width (300px)
-        const scale = 300 / viewport.width;
+        const scale = 280 / viewport.width;
         const scaledViewport = page.getViewport({ scale });
 
         canvas.height = scaledViewport.height;
         canvas.width = scaledViewport.width;
 
-        const renderContext = {
+        await page.render({
           canvasContext: context,
           viewport: scaledViewport
-        };
-        await page.render(renderContext).promise;
+        }).promise;
         if (active) setLoaded(true);
-      } catch (err) {}
-    }).catch(() => {});
+      } catch (err) {
+        if (active) setLoaded(true);
+      }
+    }).catch(() => {
+      if (active) setLoaded(true);
+    });
 
-    return () => { active = false; };
+    return () => { 
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
   }, [file.id, file.previewUrl, accountId]);
 
   return (
@@ -573,7 +591,22 @@ function RealPdfCardHeader({ file, accountId, cleanTitle }) {
           objectFit: 'cover'
         }} 
       />
-      {!loaded && (
+
+      {!loaded && pdfBlob && (
+        <iframe 
+          src={`${pdfBlob}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
+          title="pdf-preview"
+          style={{
+            width: '100%',
+            height: '140px',
+            border: 'none',
+            pointerEvents: 'none',
+            overflow: 'hidden'
+          }}
+        />
+      )}
+
+      {!loaded && !pdfBlob && (
         <div style={{
           width: '100%',
           height: '100%',
@@ -590,12 +623,9 @@ function RealPdfCardHeader({ file, accountId, cleanTitle }) {
               {cleanTitle}
             </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '4px 0' }}>
-            <div style={{ fontSize: '0.62rem', fontWeight: '700', color: '#334155' }}>
-              {cleanTitle}
-            </div>
-            <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '95%' }} />
-            <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '6px', color: '#64748b', fontSize: '0.65rem' }}>
+            <Loader2 className="spinner" size={14} />
+            <span>Loading Real First Page...</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
             <span style={{ color: '#64748b' }}>PDF Document</span>

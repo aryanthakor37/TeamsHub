@@ -121,10 +121,11 @@ router.get('/', async (req, res) => {
             const nameLower = (file.name || '').toLowerCase();
             
             if (mime.includes('pdf') || nameLower.endsWith('.pdf')) category = 'PDF';
-            else if (mime.includes('image') || nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp)$/)) category = 'Images';
-            else if (mime.includes('video') || nameLower.match(/\.(mp4|mov|avi|mkv)$/)) category = 'Videos';
-            else if (mime.includes('zip') || mime.includes('compressed') || nameLower.match(/\.(zip|rar|7z)$/)) category = 'ZIP';
-            else if (mime.includes('excel') || mime.includes('spreadsheet') || nameLower.match(/\.(xls|xlsx|csv)$/)) category = 'Excel';
+            else if (mime.includes('image') || nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp|bmp|ico|tif|tiff|heic)$/) || nameLower.startsWith('photo from') || nameLower.startsWith('image')) category = 'Images';
+            else if (mime.includes('video') || nameLower.match(/\.(mp4|mov|avi|mkv|webm|wmv|flv)$/)) category = 'Videos';
+            else if (mime.includes('zip') || mime.includes('compressed') || nameLower.match(/\.(zip|rar|7z|tar|gz)$/)) category = 'ZIP';
+            else if (mime.includes('excel') || mime.includes('spreadsheet') || nameLower.match(/\.(xls|xlsx|csv|tsv|ods)$/)) category = 'Excel';
+            else category = 'Documents';
 
             const sizeBytes = file.size || 0;
             let sizeStr = typeof file.size === 'string' ? file.size : `${sizeBytes} B`;
