@@ -238,37 +238,33 @@ export default function ChatsPage({
 
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
+    const sel = selectedFilterAccount.toLowerCase().trim();
+    const selUser = sel.includes('@') ? sel.split('@')[0] : sel;
+
+    // Resolve target account from connectedAccounts
     const targetAccount = connectedAccounts.find(a => 
-      (a._id && a._id === selectedFilterAccount) ||
-      (a.accountId && a.accountId === selectedFilterAccount) ||
-      (a.id && a.id === selectedFilterAccount) ||
-      (a.homeAccountId && a.homeAccountId === selectedFilterAccount) ||
-      (a.email && a.email.toLowerCase() === selectedFilterAccount.toLowerCase()) ||
-      (a.username && a.username.toLowerCase() === selectedFilterAccount.toLowerCase())
+      (a.email && a.email.toLowerCase() === sel) ||
+      (a.username && a.username.toLowerCase() === sel) ||
+      (a._id && a._id.toString().toLowerCase() === sel) ||
+      (a.accountId && a.accountId.toString().toLowerCase() === sel) ||
+      (a.id && a.id.toString().toLowerCase() === sel) ||
+      (a.homeAccountId && a.homeAccountId.toString().toLowerCase() === sel)
     );
 
-    const sel = selectedFilterAccount.toLowerCase().trim();
-    const targetId = targetAccount ? (targetAccount._id || targetAccount.accountId || targetAccount.id || targetAccount.homeAccountId || '').toString().toLowerCase().trim() : sel;
-    const targetEmail = targetAccount ? (targetAccount.email || targetAccount.username || targetAccount.userPrincipalName || '').toLowerCase().trim() : (sel.includes('@') ? sel : '');
-    const targetUser = targetEmail ? targetEmail.split('@')[0] : sel;
+    const targetEmail = (targetAccount?.email || targetAccount?.username || (sel.includes('@') ? sel : '')).toLowerCase().trim();
+    const targetUser = targetEmail ? targetEmail.split('@')[0] : selUser;
+    const targetId = (targetAccount?._id || targetAccount?.accountId || targetAccount?.id || targetAccount?.homeAccountId || sel).toString().toLowerCase().trim();
 
     const chatAccId = (chat.connectedAccountId || '').toString().toLowerCase().trim();
     const chatEmail = (chat.accountEmail || '').toLowerCase().trim();
     const chatUser = chatEmail ? chatEmail.split('@')[0] : '';
     const chatCompany = (chat.company || chat.accountBadge || '').replace(/[`'"]/g, '').toLowerCase().trim();
 
-    // STRICT EXACT MATCHING — DO NOT USE .includes() ON EMAIL/DOMAIN
-    // 1. Exact Email match
+    // STRICT MATCHING — GUARANTEE ONLY CHATS OF THIS SPECIFIC ACCOUNT MATCH:
     if (targetEmail && chatEmail && targetEmail === chatEmail) return true;
-
-    // 2. Exact Username match (e.g. "keval.trivedi" === "keval.trivedi")
     if (targetUser && chatUser && targetUser === chatUser) return true;
-
-    // 3. Exact Account ID match
+    if (targetUser && chatCompany && chatCompany === targetUser) return true;
     if (targetId && chatAccId && targetId === chatAccId) return true;
-
-    // 4. Exact Company/Badge username match
-    if (targetUser && chatCompany && (chatCompany === targetUser || chatCompany === targetEmail)) return true;
 
     return false;
   });
@@ -539,16 +535,21 @@ export default function ChatsPage({
             </button>
 
             {connectedAccounts.map((acc) => {
-              const accId = acc._id || acc.accountId || acc.id;
-              const isSelected = selectedFilterAccount === accId;
+              const accEmailKey = (acc.email || acc.username || acc._id || acc.accountId || acc.id || '').toLowerCase().trim();
+              const isSelected = selectedFilterAccount === accEmailKey || (selectedFilterAccount && (
+                selectedFilterAccount === (acc._id || '').toString() ||
+                selectedFilterAccount === (acc.accountId || '').toString() ||
+                selectedFilterAccount === (acc.email || '').toLowerCase() ||
+                selectedFilterAccount === (acc.username || '').toLowerCase()
+              ));
               const rawName = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
               const name = rawName.replace(/[`'"]/g, '').trim();
               const initial = (name[0] || 'A').toUpperCase();
               return (
                 <button
-                  key={accId}
+                  key={acc._id || acc.email || acc.accountId}
                   onClick={() => {
-                    setSelectedFilterAccount(accId);
+                    setSelectedFilterAccount(accEmailKey);
                     setActiveAccount(acc);
                     setActiveChatId(null);
                   }}
