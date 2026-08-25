@@ -3,24 +3,54 @@ import { fetchMessagesFromBackend, sendMessageToBackend } from '../services/chat
 import { playTeamsNotificationSound } from '../utils/notificationUtils';
 import { joinChatRoom, leaveChatRoom, getSocket, emitChatMessage } from '../services/socketService';
 
+const messageMemoryCache = new Map();
+
 export const useMessages = (chatId, accountId) => {
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState(() => {
+    if (!chatId) return [];
+    if (messageMemoryCache.has(chatId)) return messageMemoryCache.get(chatId);
+    try {
+      const stored = localStorage.getItem(`teamshub_msgs_${chatId}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [loading, setLoading] = useState(() => {
+    if (!chatId) return false;
+    return !messageMemoryCache.has(chatId);
+  });
   const [error, setError] = useState(null);
 
   const loadMessages = useCallback(async () => {
     if (!chatId) {
       setMessages([]);
+      setLoading(false);
       return;
     }
-    setLoading(true);
+
+    const cached = messageMemoryCache.get(chatId);
+    if (!cached || cached.length === 0) {
+      setLoading(true);
+    } else {
+      setMessages(cached);
+    }
     setError(null);
+
     try {
       const data = await fetchMessagesFromBackend(chatId, accountId);
-      setMessages(data?.items || []);
+      const items = data?.items || [];
+      setMessages(items);
+      messageMemoryCache.set(chatId, items);
+      try {
+        localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(items.slice(-50)));
+      } catch (e) {}
     } catch (err) {
-      setError(err.message || 'Failed to load conversation messages.');
-      setMessages([]);
+      if (!cached || cached.length === 0) {
+        setError(err.message || 'Failed to load conversation messages.');
+        setMessages([]);
+      }
     } finally {
       setLoading(false);
     }

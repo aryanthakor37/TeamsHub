@@ -149,7 +149,7 @@ export default function ChatsPage({
 }) {
   const { connectedAccounts, activeAccount } = useAuth();
   const [selectedFilterAccount, setSelectedFilterAccount] = useState('all');
-  const { chats, loading: chatsLoading, refreshing, refresh, bumpChatToTop, markChatAsRead } = useChats(selectedFilterAccount);
+  const { chats, loading: chatsLoading, refreshing, refresh, bumpChatToTop, markChatAsRead } = useChats();
   const [activeChatId, setActiveChatId] = useState(initialChatId || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [previewDocModal, setPreviewDocModal] = useState(null);

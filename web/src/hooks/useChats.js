@@ -52,7 +52,7 @@ const saveStoredLocalChats = (items) => {
   } catch (e) {}
 };
 
-export const useChats = (selectedAccountId = 'all') => {
+export const useChats = () => {
   const [chats, setChats] = useState(() => {
     const cached = getStoredLocalChats();
     return cached.length > 0 ? sortChatsByDate(cached) : [];
@@ -121,11 +121,13 @@ export const useChats = (selectedAccountId = 'all') => {
     });
   };
 
-  const loadChats = useCallback(async () => {
-    setLoading(true);
+  const loadChats = useCallback(async (isUserRefresh = false) => {
+    if (isUserRefresh || chats.length === 0) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const data = await fetchChatsFromBackend(selectedAccountId);
+      const data = await fetchChatsFromBackend('all');
       const rawItems = Array.isArray(data)
         ? data
         : (data?.items || data?.chats || data?.value || []);
@@ -144,16 +146,17 @@ export const useChats = (selectedAccountId = 'all') => {
       isInitialLoad.current = false;
     } catch (err) {
       console.warn('[useChats] load error:', err.message);
-      setError(err.message || 'Failed to load Microsoft Graph chats.');
+      if (chats.length === 0) {
+        setError(err.message || 'Failed to load Microsoft Graph chats.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [selectedAccountId]);
+  }, [chats.length]);
 
   const loadChatsSilently = useCallback(async () => {
-
     try {
-      const data = await fetchChatsFromBackend(selectedAccountId);
+      const data = await fetchChatsFromBackend('all');
       const rawItems = data.items || [];
       const withRead = applyReadStatus(rawItems);
       const sorted = sortChatsByDate(withRead);
@@ -203,7 +206,7 @@ export const useChats = (selectedAccountId = 'all') => {
     } catch (err) {
       console.warn('Silent chat list sync failed:', err.message);
     }
-  }, [selectedAccountId]);
+  }, []);
 
   // Immediately mark a chat as read (zeroes unreadCount and persists)
   const markChatAsRead = useCallback((chatId, accountId = null) => {
