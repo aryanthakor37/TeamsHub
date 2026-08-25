@@ -15,10 +15,12 @@ import {
   AlertCircle,
   X,
   Maximize2,
-  RefreshCw
+  RefreshCw,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { fetchFilesFromBackend, fetchFileBlob, fetchFileArrayBuffer } from '../../services/fileService';
+import { fetchFilesFromBackend, fetchFileBlob, fetchFileArrayBuffer, fetchFileText } from '../../services/fileService';
 import { getAvatarColor, getInitials } from '../../utils/avatarUtils';
 import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
@@ -392,6 +394,115 @@ function WordDocumentViewer({ arrayBuffer, fileName, webUrl }) {
   );
 }
 
+// In-App Text / Code / CSHTML / HTML / JSON Document Viewer
+function TextCodeDocumentViewer({ textContent, fileName, webUrl }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const lines = (textContent || '').split('\n');
+  const lineCount = lines.length;
+  const wordCount = (textContent || '').trim().split(/\s+/).filter(Boolean).length;
+  const ext = fileName?.includes('.') ? fileName.split('.').pop().toUpperCase() : 'TEXT';
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(textContent || '');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#1e1e2e', color: '#cdd6f4', overflow: 'hidden' }}>
+      {/* Top Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 18px', borderBottom: '1px solid rgba(255,255,255,0.1)', backgroundColor: '#181825' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <FileText size={18} color="#89b4fa" />
+          <span style={{ fontWeight: '600', fontSize: '0.9rem', color: '#cdd6f4' }}>{fileName}</span>
+          <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(137, 180, 250, 0.15)', color: '#89b4fa', fontWeight: '700' }}>
+            {ext} • {lineCount} lines • {wordCount} words
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ position: 'relative', width: '180px' }}>
+            <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#6c7086' }} />
+            <input
+              type="text"
+              placeholder="Find in file..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '5px 8px 5px 28px',
+                borderRadius: '6px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: '#11111b',
+                color: '#cdd6f4',
+                fontSize: '0.8rem',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <button
+            onClick={handleCopy}
+            title="Copy content"
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: copied ? '#a6e3a1' : 'rgba(255,255,255,0.08)',
+              color: copied ? '#11111b' : '#cdd6f4',
+              fontSize: '0.78rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Code / Text Body with Line Numbers */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '16px', fontFamily: '"Fira Code", "Cascadia Code", Consolas, Monaco, monospace', fontSize: '0.88rem', lineHeight: '1.6' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <tbody>
+            {lines.map((line, idx) => {
+              const isMatch = searchTerm && line.toLowerCase().includes(searchTerm.toLowerCase());
+              return (
+                <tr key={idx} style={{ backgroundColor: isMatch ? 'rgba(249, 226, 175, 0.18)' : 'transparent' }}>
+                  <td style={{
+                    width: '45px',
+                    paddingRight: '16px',
+                    textAlign: 'right',
+                    color: '#585b70',
+                    userSelect: 'none',
+                    verticalAlign: 'top',
+                    fontSize: '0.8rem'
+                  }}>
+                    {idx + 1}
+                  </td>
+                  <td style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    color: line.trim().startsWith('//') || line.trim().startsWith('<!--') || line.trim().startsWith('/*') || line.trim().startsWith('*') ? '#6c7086' : (line.includes('<') && line.includes('>')) ? '#89dceb' : '#cdd6f4'
+                  }}>
+                    {line || ' '}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function FilesPage({ initialFile, onClearInitialFile }) {
   const { connectedAccounts, activeAccount } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -404,6 +515,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
   const [targetFile, setTargetFile] = useState(initialFile || null);
   const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
   const [previewArrayBuffer, setPreviewArrayBuffer] = useState(null);
+  const [previewTextContent, setPreviewTextContent] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewLoadError, setPreviewLoadError] = useState(false);
 
@@ -519,6 +631,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       if (!previewFile) {
         setPreviewBlobUrl(null);
         setPreviewArrayBuffer(null);
+        setPreviewTextContent(null);
         setPreviewLoading(false);
         setPreviewLoadError(false);
         return;
@@ -528,6 +641,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       setPreviewLoadError(false);
       setPreviewBlobUrl(null);
       setPreviewArrayBuffer(null);
+      setPreviewTextContent(null);
 
       const targetUrl = previewFile.previewUrl || previewFile.thumbnailUrl || previewFile.downloadUrl;
       if (!targetUrl || targetUrl === '#') {
@@ -541,6 +655,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       const fileNameLower = (previewFile.name || '').toLowerCase();
       const isExcel = previewFile.category === 'Excel' || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.csv');
       const isWord = fileNameLower.endsWith('.docx') || fileNameLower.endsWith('.doc');
+      const isTextOrCode = fileNameLower.match(/\.(cshtml|html|htm|txt|json|xml|css|js|jsx|ts|tsx|md|cs|sql|log|env|yml|yaml|py|java|cpp|c|sh|bat|ps1|config|ini|svg|rtf)$/i) || (!isExcel && !isWord && previewFile.category === 'Documents');
       const previewAccId = previewFile.connectedAccountId || previewFile.accountEmail;
 
       try {
@@ -551,6 +666,22 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
               setPreviewArrayBuffer(ab);
             } else {
               setPreviewLoadError(true);
+            }
+            setPreviewLoading(false);
+          }
+        } else if (isTextOrCode) {
+          const text = await fetchFileText(targetUrl, previewAccId);
+          if (active) {
+            if (text !== null && text !== undefined) {
+              setPreviewTextContent(text);
+            } else {
+              const objUrl = await fetchFileBlob(targetUrl, previewAccId);
+              if (objUrl) {
+                createdUrl = objUrl;
+                setPreviewBlobUrl(objUrl);
+              } else {
+                setPreviewLoadError(true);
+              }
             }
             setPreviewLoading(false);
           }
@@ -1514,7 +1645,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                   </div>
                 )}
               </div>
-            ) : (previewFile.name || '').toLowerCase().endsWith('.docx') ? (
+            ) : ((previewFile.name || '').toLowerCase().match(/\.(docx|doc)$/)) ? (
               <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 {previewLoading ? (
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', color: 'var(--text-muted)' }}>
@@ -1554,36 +1685,47 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                   </div>
                 )}
               </div>
+            ) : previewTextContent !== null ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <TextCodeDocumentViewer textContent={previewTextContent} fileName={previewFile.name} webUrl={previewFile.webUrl} />
+              </div>
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' }}>
-                  <FileText size={64} color={getCategoryMeta(previewFile.category).color} style={{ marginBottom: '18px', opacity: 0.8 }} />
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>{previewFile.name}</h3>
-                  <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginBottom: '24px', fontSize: '0.9rem' }}>
-                    {previewFile.category} document from {previewFile.account}.
-                  </p>
-                  {previewFile.webUrl && previewFile.webUrl !== '#' && (
-                    <a
-                      href={previewFile.webUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        background: 'var(--accent-primary)',
-                        borderRadius: '8px',
-                        padding: '10px 24px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: '#fff',
-                        textDecoration: 'none',
-                        fontWeight: '600'
-                      }}
-                    >
-                      <ExternalLink size={18} />
-                      <span>Open in Microsoft 365</span>
-                    </a>
-                  )}
-                </div>
+                {previewLoading ? (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', color: 'var(--text-muted)' }}>
+                    <Loader2 size={44} className="animate-spin" style={{ color: getCategoryMeta(previewFile.category).color }} />
+                    <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Loading document content...</span>
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', textAlign: 'center' }}>
+                    <FileText size={64} color={getCategoryMeta(previewFile.category).color} style={{ marginBottom: '18px', opacity: 0.8 }} />
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '8px' }}>{previewFile.name}</h3>
+                    <p style={{ color: 'var(--text-muted)', maxWidth: '420px', marginBottom: '24px', fontSize: '0.9rem' }}>
+                      {previewFile.category} document from {previewFile.account}.
+                    </p>
+                    {previewFile.webUrl && previewFile.webUrl !== '#' && (
+                      <a
+                        href={previewFile.webUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          background: 'var(--accent-primary)',
+                          borderRadius: '8px',
+                          padding: '10px 24px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          color: '#fff',
+                          textDecoration: 'none',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <ExternalLink size={18} />
+                        <span>Open in Microsoft 365</span>
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

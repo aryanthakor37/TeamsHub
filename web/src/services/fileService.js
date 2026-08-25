@@ -191,3 +191,39 @@ export const fetchFileArrayBuffer = async (url, accountId) => {
     return null;
   }
 };
+
+/**
+ * Fetch raw text content securely with Graph Authorization headers (for code, cshtml, txt, html, json)
+ */
+export const fetchFileText = async (url, accountId) => {
+  if (!url || url === '#') return null;
+
+  let fullUrl = url;
+  if (fullUrl.startsWith('/api') || fullUrl.startsWith('api/')) {
+    const backendBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
+      ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
+      : '';
+    fullUrl = `${backendBase}${fullUrl.startsWith('/') ? '' : '/'}${fullUrl}`;
+  }
+
+  try {
+    const isGraphOrApi = fullUrl.includes('graph.microsoft.com') || fullUrl.includes('/api/') || fullUrl.includes('onrender.com');
+    const headers = {};
+    
+    if (isGraphOrApi && accountId) {
+      const token = await acquireGraphToken(accountId);
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
+    const res = await fetch(fullUrl, { headers });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    return await res.text();
+  } catch (err) {
+    console.warn('[TeamsHub File Text Fetch Error]:', err.message);
+    return null;
+  }
+};
