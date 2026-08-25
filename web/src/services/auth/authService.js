@@ -269,7 +269,7 @@ export const acquireGraphToken = async (accountId) => {
       }
 
       if (targetAccount) {
-        const emailLower = (targetAccount.username || '').toLowerCase();
+        const emailLower = (targetAccount.username || '').toLowerCase().trim();
         
         // 1. Try standard acquireTokenSilent with targetAccount
         try {
@@ -298,13 +298,14 @@ export const acquireGraphToken = async (accountId) => {
           } catch (fErr) {}
         }
 
-        // 3. Fallback to localStorage stored token for this account
-        const storedToken = localStorage.getItem(`teamshub_token_${emailLower}`) || (activeEmail?.toLowerCase() === emailLower ? localStorage.getItem('teamshub_last_access_token') : null);
+        // 3. Fallback strictly to stored token for THIS account only
+        const storedToken = localStorage.getItem(`teamshub_token_${emailLower}`);
         if (storedToken) return storedToken;
       }
 
-      if (activeEmail) {
-        return localStorage.getItem(`teamshub_token_${activeEmail.toLowerCase()}`) || localStorage.getItem('teamshub_last_access_token');
+      // Only return activeEmail token if no specific accountId was requested
+      if (!accountId && activeEmail) {
+        return localStorage.getItem(`teamshub_token_${activeEmail.toLowerCase()}`) || null;
       }
 
       return null;
@@ -313,12 +314,12 @@ export const acquireGraphToken = async (accountId) => {
     const timeoutPromise = new Promise(resolve => setTimeout(() => {
       if (accountId) {
         const cleanTarget = accountId.toString().toLowerCase().trim();
-        const stored = localStorage.getItem(`teamshub_token_${cleanTarget}`) || localStorage.getItem('teamshub_last_access_token');
+        const stored = localStorage.getItem(`teamshub_token_${cleanTarget}`);
         resolve(stored || null);
       } else {
         resolve(null);
       }
-    }, 6000));
+    }, 4000));
 
     return await Promise.race([tokenPromise, timeoutPromise]);
   } catch (error) {
