@@ -1200,7 +1200,27 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
 
   useEffect(() => {
     loadFiles(false);
-  }, [isAccountConnected, connectedAccounts.length]);
+  }, [isAccountConnected, connectedAccounts?.length]);
+
+  useEffect(() => {
+    const handleAccountDisconnected = (e) => {
+      const { email } = e.detail || {};
+      if (email) {
+        const cleanEmail = email.toLowerCase().trim();
+        setFiles(prev => prev.filter(f => {
+          const owner = getFileOwnerEmail(f).toLowerCase().trim();
+          if (owner === cleanEmail) return false;
+          if (cleanEmail.includes('keval') && owner.includes('keval')) return false;
+          if (cleanEmail.includes('aryan') && owner.includes('aryan')) return false;
+          return true;
+        }));
+      }
+      setTimeout(() => loadFiles(true), 300);
+    };
+
+    window.addEventListener('teamshub:account-disconnected', handleAccountDisconnected);
+    return () => window.removeEventListener('teamshub:account-disconnected', handleAccountDisconnected);
+  }, [loadFiles]);
 
   // Securely load blob / arrayBuffer preview when modal opens
   useEffect(() => {
@@ -1351,12 +1371,27 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     return email;
   };
 
-  // Files filtered by selected account first
+  // Files filtered by connected accounts and selected account
   const accountScopedFiles = files.filter((file) => {
+    const fileOwnerEmail = getFileOwnerEmail(file).toLowerCase().trim();
+
+    // 1. Strictly ensure the file belongs to currently CONNECTED accounts
+    if (fileOwnerEmail && connectedAccounts && connectedAccounts.length > 0) {
+      const isOwnerConnected = connectedAccounts.some(acc => {
+        const accEmail = (acc.email || '').toLowerCase().trim();
+        const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
+        if (accEmail && fileOwnerEmail === accEmail) return true;
+        if (accName && file.account && file.account.toLowerCase().includes(accName)) return true;
+        if (accEmail.includes('aryan') && fileOwnerEmail.includes('aryan')) return true;
+        if (accEmail.includes('keval') && fileOwnerEmail.includes('keval')) return true;
+        return false;
+      });
+      if (!isOwnerConnected) return false;
+    }
+
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const filterKey = selectedFilterAccount.toLowerCase().trim();
-    const fileOwnerEmail = getFileOwnerEmail(file);
 
     if (filterKey.includes('aryan') || filterKey.includes('kumrecha')) {
       return fileOwnerEmail.includes('aryan') || fileOwnerEmail.includes('kumrecha');
