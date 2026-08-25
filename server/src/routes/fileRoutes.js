@@ -15,6 +15,13 @@ router.get('/', async (req, res) => {
     let targetAccounts = [];
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
 
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
+
     const userEmailsHeader = req.headers['x-user-emails'];
     const activeEmailsList = userEmailsHeader
       ? userEmailsHeader.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
@@ -55,14 +62,38 @@ router.get('/', async (req, res) => {
       }
     }
 
+    // Include in-memory connected accounts (when MongoDB is offline)
+    if (global.liveInMemoryAccounts) {
+      global.liveInMemoryAccounts.forEach((memAcc, memEmail) => {
+        if (!targetAccounts.some(a => (a.email || '').toLowerCase() === memEmail.toLowerCase())) {
+          targetAccounts.push(memAcc);
+        }
+      });
+    }
+
+    // Ensure EVERY account with a live token from x-account-tokens is included in targetAccounts
+    if (!connectedAccountId || connectedAccountId === 'all') {
+      Object.entries(accountTokensMap).forEach(([email, token]) => {
+        if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === email.toLowerCase())) {
+          targetAccounts.push({
+            _id: `acc-token-${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+            email: email.toLowerCase(),
+            displayName: email.split('@')[0],
+            microsoftAccessToken: token
+          });
+        }
+      });
+    }
+
     // Header token fallback
     const authHeader = req.headers.authorization;
     if (targetAccounts.length === 0 && authHeader && authHeader.startsWith('Bearer ')) {
+      const clientUserEmail = (req.headers['x-user-email'] || '').toLowerCase().trim();
       targetAccounts = [{
         _id: 'active-user-session',
         microsoftAccessToken: authHeader.substring(7),
-        displayName: 'Microsoft Account',
-        email: ''
+        displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft Account',
+        email: clientUserEmail
       }];
     }
 

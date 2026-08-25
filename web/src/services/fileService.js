@@ -1,4 +1,5 @@
 import { acquireGraphToken } from './auth/authService';
+import { msalInstance } from './auth/msalConfig';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
   ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
@@ -9,10 +10,47 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_
  */
 const getAuthHeaders = async (accountId) => {
   const headers = { 'Content-Type': 'application/json' };
-  const token = await acquireGraphToken(accountId);
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  
+  let allAccounts = [];
+  try {
+    allAccounts = msalInstance.getAllAccounts() || [];
+  } catch (e) {}
+
+  const tokenMap = {};
+  allAccounts.forEach(a => {
+    const email = (a.username || '').toLowerCase().trim();
+    if (email) {
+      const t = localStorage.getItem(`teamshub_token_${email}`);
+      if (t) tokenMap[email] = t;
+    }
+  });
+
+  const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+
+  if (accountId && accountId !== 'all') {
+    const cleanAcc = accountId.toString().toLowerCase().trim();
+    let token = tokenMap[cleanAcc] || localStorage.getItem(`teamshub_token_${cleanAcc}`) || (activeEmail === cleanAcc ? localStorage.getItem('teamshub_last_access_token') : null);
+    if (!token) {
+      token = await acquireGraphToken(accountId);
+    }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    headers['x-user-email'] = cleanAcc;
+  } else {
+    // Send all tokens for multi-account simultaneous fetch
+    if (Object.keys(tokenMap).length > 0) {
+      headers['x-account-tokens'] = JSON.stringify(tokenMap);
+    }
+    const token = await acquireGraphToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (activeEmail) {
+      headers['x-user-email'] = activeEmail;
+    }
   }
+
   return headers;
 };
 

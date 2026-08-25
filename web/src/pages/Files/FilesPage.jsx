@@ -578,6 +578,19 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     };
   }, [previewFile]);
 
+  const getFileOwnerEmail = (f) => {
+    if (!f) return '';
+    const email = (f.accountEmail || '').toLowerCase().trim();
+    if (email && email.includes('@')) return email;
+    const badge = (f.account || f.accountBadge || '').toLowerCase().trim();
+    if (badge.includes('aryan') || badge.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
+    if (badge.includes('keval') || badge.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    const accId = (f.connectedAccountId || '').toLowerCase().trim();
+    if (accId.includes('aryan') || accId.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
+    if (accId.includes('keval') || accId.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    return email;
+  };
+
   const filteredFiles = files.filter((file) => {
     const matchesCategory = selectedCategory === 'All' || file.category.toLowerCase() === selectedCategory.toLowerCase();
     const q = searchQuery.toLowerCase().trim();
@@ -590,36 +603,20 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
 
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
-    const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id || a.homeAccountId || a.username) === selectedFilterAccount);
-    if (targetAccount) {
-      const targetId = (targetAccount._id || targetAccount.accountId || targetAccount.id || targetAccount.homeAccountId || targetAccount.localAccountId || '').toString().toLowerCase().trim();
-      const targetEmail = (targetAccount.email || targetAccount.username || targetAccount.userPrincipalName || '').toLowerCase().trim();
-      const targetName = (targetAccount.displayName || targetAccount.name || targetAccount.company || '').replace(/[`'"]/g, '').toLowerCase().trim();
-      const targetFirstName = targetName ? targetName.split(' ')[0] : '';
+    const filterKey = selectedFilterAccount.toLowerCase().trim();
+    const fileOwnerEmail = getFileOwnerEmail(file);
 
-      const fileAccId = (file.connectedAccountId || '').toString().toLowerCase().trim();
-      const fileEmail = (file.accountEmail || '').toLowerCase().trim();
-      const fileAccName = (file.account || '').replace(/[`'"]/g, '').toLowerCase().trim();
-      const fileSender = (file.sender || '').replace(/[`'"]/g, '').toLowerCase().trim();
-
-      // 1. Match by Email / Username
-      if (targetEmail && fileEmail && (fileEmail === targetEmail || targetEmail.includes(fileEmail) || fileEmail.includes(targetEmail))) return true;
-
-      // 2. Match by Account ID
-      if (targetId && fileAccId && (fileAccId === targetId || targetId.includes(fileAccId) || fileAccId.includes(targetId))) return true;
-
-      // 3. Match by Clean Account Display Name
-      if (targetName && fileAccName && (fileAccName === targetName || fileAccName.includes(targetName) || targetName.includes(fileAccName))) return true;
-
-      // 4. Match by First Name
-      if (targetFirstName && fileAccName && (fileAccName.includes(targetFirstName) || targetFirstName.includes(fileAccName))) return true;
-
-      // 5. Match by Sender name if it contains owner's name
-      if (targetFirstName && fileSender && fileSender.includes(targetFirstName)) return true;
-
-      return false;
+    // 1. Account Specific Matching
+    if (filterKey.includes('aryan') || filterKey.includes('kumrecha')) {
+      return fileOwnerEmail.includes('aryan') || fileOwnerEmail.includes('kumrecha');
     }
-    return true;
+    if (filterKey.includes('keval') || filterKey.includes('trivedi')) {
+      return fileOwnerEmail.includes('keval') || fileOwnerEmail.includes('trivedi');
+    }
+
+    // 2. Exact email or account ID match
+    const fileAccId = (file.connectedAccountId || '').toLowerCase().trim();
+    return fileOwnerEmail === filterKey || fileAccId === filterKey;
   });
 
   const getCategoryMeta = (category) => {
@@ -742,15 +739,20 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             </button>
 
             {connectedAccounts.map((acc) => {
-              const accId = acc._id || acc.accountId || acc.id || acc.homeAccountId || acc.username;
-              const isSelected = selectedFilterAccount === accId;
+              const accEmailKey = (acc.email || acc.username || acc._id || acc.accountId || acc.id || '').toLowerCase().trim();
+              const isSelected = selectedFilterAccount === accEmailKey || (selectedFilterAccount && (
+                selectedFilterAccount === (acc._id || '').toString() ||
+                selectedFilterAccount === (acc.accountId || '').toString() ||
+                selectedFilterAccount === (acc.email || '').toLowerCase() ||
+                selectedFilterAccount === (acc.username || '').toLowerCase()
+              ));
               const rawName = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
               const name = rawName.replace(/[`'"]/g, '').trim();
               const initial = (name[0] || 'A').toUpperCase();
               return (
                 <button
-                  key={accId}
-                  onClick={() => setSelectedFilterAccount(accId)}
+                  key={acc._id || acc.email || acc.accountId}
+                  onClick={() => setSelectedFilterAccount(accEmailKey)}
                   title={`${name} (${acc.email || ''})`}
                   style={{
                     padding: '4px 12px 4px 6px',
