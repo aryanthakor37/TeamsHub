@@ -329,36 +329,26 @@ router.get('/:fileId/content', async (req, res) => {
 
     // Helper: fetch binary from URL, sending Bearer token ONLY to Microsoft Graph endpoints, and omitting for pre-authenticated CDN/SharePoint URLs
     const downloadFromGraph = async (url, withAuth = false) => {
-      const isGraphApi = url.includes('graph.microsoft.com');
+      const isGraphApi = url.includes('graph.microsoft.com') || url.includes('/hostedContents');
       const headers = (isGraphApi || withAuth) && accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
       
       try {
-        let response = await fetch(url, { headers, redirect: 'manual' });
+        let response = await fetch(url, { headers, redirect: 'follow' });
 
-        // If Graph redirects with 302/301/307 (pre-authenticated SAS / SharePoint download URL)
-        if (response.status === 302 || response.status === 301 || response.status === 303 || response.status === 307) {
-          const locationUrl = response.headers.get('location');
-          if (locationUrl) {
-            // Fetch from location WITHOUT Authorization header (it is pre-authenticated with query token)
-            const directRes = await fetch(locationUrl);
-            if (directRes.ok) {
-              const ct = directRes.headers.get('content-type') || contentType;
-              const ab = await directRes.arrayBuffer();
-              return { buffer: Buffer.from(ab), contentType: ct };
-            }
-          }
-        } else if (response.status === 401 && !withAuth && accessToken) {
-          // Retry with auth header if unauthenticated request failed
-          const authRes = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-          if (authRes.ok) {
-            const ct = authRes.headers.get('content-type') || contentType;
-            const ab = await authRes.arrayBuffer();
-            return { buffer: Buffer.from(ab), contentType: ct };
-          }
-        } else if (response.ok) {
+        if (response.ok) {
           const ct = response.headers.get('content-type') || contentType;
           const ab = await response.arrayBuffer();
           return { buffer: Buffer.from(ab), contentType: ct };
+        }
+
+        // If request failed with auth on redirect / SAS URL, retry without auth header
+        if (!response.ok && Object.keys(headers).length > 0) {
+          const noAuthRes = await fetch(url, { redirect: 'follow' });
+          if (noAuthRes.ok) {
+            const ct = noAuthRes.headers.get('content-type') || contentType;
+            const ab = await noAuthRes.arrayBuffer();
+            return { buffer: Buffer.from(ab), contentType: ct };
+          }
         }
       } catch (err) {
         console.warn(`[FileRoutes] Download failed for ${url}:`, err.message);
@@ -369,7 +359,7 @@ router.get('/:fileId/content', async (req, res) => {
     // 1. If downloadUrl was provided (could be graph.microsoft.com hostedContent or direct SharePoint SAS URL)
     if (downloadUrl && downloadUrl.startsWith('http') && downloadUrl !== '#') {
       try {
-        const directResult = await downloadFromGraph(downloadUrl);
+        const directResult = await downloadFromGraph(downloadUrl, true);
         if (directResult) {
           fileBuffer = directResult.buffer;
           contentType = directResult.contentType;
