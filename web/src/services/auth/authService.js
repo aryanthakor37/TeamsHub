@@ -6,9 +6,17 @@ export const getActiveMsalAccounts = async () => {
     await msalInstance.initialize();
     const accounts = msalInstance.getAllAccounts();
     const activeAcc = msalInstance.getActiveAccount();
+    
+    let disconnectedList = [];
+    try {
+      disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
+    } catch (e) {}
+
     const list = [];
     for (const acc of accounts) {
       const email = (acc.username || '').toLowerCase().trim();
+      if (!email || disconnectedList.includes(email)) continue; // Never restore disconnected accounts on refresh!
+
       const token = await acquireGraphToken(acc.homeAccountId || acc.username);
       const actualTenantId = acc.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
       
@@ -45,6 +53,17 @@ export const initializeMsal = async () => {
         localStorage.setItem(`teamshub_token_${account.username.toLowerCase()}`, response.accessToken);
         localStorage.setItem('teamshub_last_access_token', response.accessToken);
       }
+
+      // Re-enable account if it was previously disconnected
+      const loggedInEmail = (account.username || '').toLowerCase().trim();
+      if (loggedInEmail) {
+        try {
+          let disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
+          disconnectedList = disconnectedList.filter(e => e.toLowerCase() !== loggedInEmail);
+          localStorage.setItem('teamshub_disconnected_emails', JSON.stringify(disconnectedList));
+        } catch (e) {}
+      }
+
       // HARDCODE ESTATIC INFOTECH Tenant ID to guarantee guest accounts get the correct token
       const actualTenantId = '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
       
@@ -59,7 +78,7 @@ export const initializeMsal = async () => {
       };
       await syncAccountToBackend(accountPayload);
     } else {
-      // Sync any existing logged in MSAL accounts
+      // Sync only the active NON-disconnected MSAL accounts
       const activeMsalAccs = await getActiveMsalAccounts();
       for (const acc of activeMsalAccs) {
         await syncAccountToBackend(acc);
@@ -201,12 +220,17 @@ export const syncAllAccountsTokens = async () => {
   try {
     await msalInstance.initialize();
     const accounts = msalInstance.getAllAccounts();
+    let disconnectedList = [];
+    try {
+      disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
+    } catch (e) {}
+
     const tokenMap = {};
     await Promise.all(
       accounts.map(async (acc) => {
         try {
           const email = (acc.username || '').toLowerCase().trim();
-          if (!email) return;
+          if (!email || disconnectedList.includes(email)) return;
           const token = await acquireGraphToken(acc.homeAccountId || acc.username);
           if (token) {
             tokenMap[email] = token;
