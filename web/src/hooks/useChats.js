@@ -116,7 +116,7 @@ export const useChats = () => {
     };
 
     const handleAccountSwitched = () => {
-      loadChats(true);
+      loadChats(false);
     };
 
     const handleAccountDisconnected = (e) => {

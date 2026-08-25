@@ -280,8 +280,11 @@ export default function ChatsPage({
     return chatOwnerEmail === filterKey || chatAccId === filterKey;
   });
 
-  // Set first chat as active on initial load only when an account is connected
-  const selectedChatId = isAccountConnected ? (activeChatId || (filteredChats.length > 0 ? (filteredChats[0]._id || filteredChats[0].microsoftChatId || filteredChats[0].id) : (chats.length > 0 ? (chats[0]._id || chats[0].microsoftChatId || chats[0].id) : null))) : null;
+  // Set active chat instantaneously based on current filtered view
+  const isSelectedChatInFiltered = filteredChats.some(c => (c._id === activeChatId || c.microsoftChatId === activeChatId || c.id === activeChatId));
+  const selectedChatId = isAccountConnected 
+    ? (isSelectedChatInFiltered ? activeChatId : (filteredChats.length > 0 ? (filteredChats[0]._id || filteredChats[0].microsoftChatId || filteredChats[0].id) : null))
+    : null;
   const activeChat = isAccountConnected ? chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) : null;
   const chatOwner = activeChat?.accountEmail || activeChat?.connectedAccountId;
   const { messages, loading: messagesLoading, error: messagesError, sendMessage } = useMessages(selectedChatId, chatOwner);
@@ -561,8 +564,6 @@ export default function ChatsPage({
                   key={acc._id || acc.email || acc.accountId}
                   onClick={() => {
                     setSelectedFilterAccount(accEmailKey);
-                    setActiveAccount(acc);
-                    setActiveChatId(null);
                   }}
                   title={`${name} (${acc.email || ''})`}
                   style={{
@@ -638,7 +639,7 @@ export default function ChatsPage({
 
         {/* Unified Chat List */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-          {chatsLoading ? (
+          {chatsLoading && chats.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px' }}>
               {[1, 2, 3, 4].map((n) => (
                 <div key={n} style={{ height: '64px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', opacity: 0.6 }} />
