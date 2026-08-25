@@ -564,12 +564,23 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     // Keep HTML content, but if we have images hosted by Graph, rewrite their URLs to our proxy.
     content = graphMessage.body.content || '';
     if (graphMessage.body.contentType === 'html') {
-      // Rewrite hosted image URLs extracting real Graph chatId and msgId
+      // Rewrite hosted image URLs extracting real Graph chatId, msgId, and contentId
       content = content.replace(
-        /src=["']?(?:https?:\/\/[^"'\s]+?)?(?:\/chats\/([^"'\s\/]+))?\/messages\/([^"'\s\/]+)\/hostedContents\/([^"'\s\/]+)(?:\/\$value)?["']?/gi,
-        (match, rawChatId, rawMsgId, cid) => {
-          const finalChatId = (rawChatId && rawChatId.startsWith('19:')) ? rawChatId : chatId;
-          const finalMsgId = rawMsgId || graphMessage.id;
+        /src=["']?(https?:\/\/[^"'\s>]+hostedContents\/[^"'\s>]+|[^"'\s>]*hostedContents\/[^"'\s>]+)["']?/gi,
+        (match, fullUrl) => {
+          // Extract contentId
+          const cidMatch = fullUrl.match(/hostedContents(?:\/|\(')([^"'\s\/'\)]+)/i);
+          const cid = cidMatch ? cidMatch[1] : null;
+          if (!cid) return match;
+
+          // Extract chatId if present in URL (e.g. chats/19:xxx)
+          const chatMatch = fullUrl.match(/chats(?:\/|\(')(19:[^"'\s\/'\)]+)/i);
+          const finalChatId = (chatMatch && chatMatch[1]) ? decodeURIComponent(chatMatch[1]) : chatId;
+
+          // Extract msgId if present in URL
+          const msgMatch = fullUrl.match(/messages(?:\/|\(')([^"'\s\/'\)]+)/i);
+          const finalMsgId = (msgMatch && msgMatch[1]) ? decodeURIComponent(msgMatch[1]) : (graphMessage.id || 'msg');
+
           const emailParam = userEmail ? `?email=${encodeURIComponent(userEmail)}` : '';
           return `src="/api/chats/${encodeURIComponent(finalChatId)}/messages/${encodeURIComponent(finalMsgId)}/hostedContents/${encodeURIComponent(cid)}${emailParam}"`;
         }

@@ -1,4 +1,4 @@
-import { acquireGraphToken } from './auth/authService';
+import { acquireGraphToken, syncAllAccountsTokens } from './auth/authService';
 import { msalInstance } from './auth/msalConfig';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
@@ -10,14 +10,41 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_
  */
 const getAuthHeaders = async (accountId) => {
   const headers = { 'Content-Type': 'application/json' };
-  const token = await acquireGraphToken(accountId);
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  
+  if (accountId && accountId !== 'all') {
+    const token = await acquireGraphToken(accountId);
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    try {
+      const allAccounts = msalInstance.getAllAccounts();
+      const cleanAcc = accountId.toString().toLowerCase().trim();
+      const target = allAccounts.find(a => 
+        (a.username && a.username.toLowerCase() === cleanAcc) ||
+        (a.homeAccountId && a.homeAccountId.toLowerCase() === cleanAcc) ||
+        (a.localAccountId && a.localAccountId.toLowerCase() === cleanAcc) ||
+        (a.username && (a.username.toLowerCase().includes(cleanAcc) || cleanAcc.includes(a.username.toLowerCase())))
+      );
+      if (target?.username) {
+        headers['x-user-email'] = target.username;
+      }
+    } catch (e) {}
+  } else {
+    // When requesting all accounts, gather and send live tokens for all accounts!
+    const tokenMap = await syncAllAccountsTokens();
+    if (tokenMap && Object.keys(tokenMap).length > 0) {
+      headers['x-account-tokens'] = JSON.stringify(tokenMap);
+    }
+    const activeEmail = localStorage.getItem('teamshub_active_email');
+    const token = await acquireGraphToken(activeEmail);
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (activeEmail) {
+      headers['x-user-email'] = activeEmail;
+    }
   }
-  const activeEmail = localStorage.getItem('teamshub_active_email');
-  if (activeEmail) {
-    headers['x-user-email'] = activeEmail;
-  }
+
   try {
     const allAccounts = msalInstance.getAllAccounts();
     if (allAccounts && allAccounts.length > 0) {

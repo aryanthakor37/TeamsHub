@@ -194,6 +194,29 @@ export const disconnectAccountFromBackend = async (accountId) => {
 };
 
 /**
+ * Acquire fresh Microsoft Graph access tokens for all active MSAL accounts
+ */
+export const syncAllAccountsTokens = async () => {
+  if (!isRealMsalConfigured()) return {};
+  try {
+    await msalInstance.initialize();
+    const accounts = msalInstance.getAllAccounts();
+    const tokenMap = {};
+    for (const acc of accounts) {
+      try {
+        const token = await acquireGraphToken(acc.homeAccountId || acc.username);
+        if (token) {
+          tokenMap[acc.username.toLowerCase()] = token;
+        }
+      } catch (err) {}
+    }
+    return tokenMap;
+  } catch (e) {
+    return {};
+  }
+};
+
+/**
  * Acquire Microsoft Graph access token silently for an already-authenticated account.
  * Returns the access token string or null if silent acquisition fails.
  */
@@ -212,8 +235,10 @@ export const acquireGraphToken = async (accountId) => {
         const cleanTarget = accountId.toString().toLowerCase().trim();
         targetAccount = accounts.find(acc =>
           (acc.username && acc.username.toLowerCase() === cleanTarget) ||
-          (acc.homeAccountId && acc.homeAccountId === accountId) ||
-          (acc.localAccountId && acc.localAccountId === accountId)
+          (acc.homeAccountId && acc.homeAccountId.toLowerCase() === cleanTarget) ||
+          (acc.localAccountId && acc.localAccountId.toLowerCase() === cleanTarget) ||
+          (acc.name && acc.name.toLowerCase() === cleanTarget) ||
+          (acc.username && (acc.username.toLowerCase().includes(cleanTarget) || cleanTarget.includes(acc.username.toLowerCase())))
         );
       }
 

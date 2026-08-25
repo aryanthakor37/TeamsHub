@@ -357,16 +357,16 @@ export default function ChatsPage({
 
     const targetAccount = connectedAccounts.find(a => (a._id || a.accountId || a.id) === selectedFilterAccount);
     if (targetAccount) {
-      const targetId = (targetAccount._id || targetAccount.accountId || targetAccount.id || '').toString();
-      const targetName = (targetAccount.displayName || targetAccount.company || '').toLowerCase().trim();
+      const targetId = (targetAccount._id || targetAccount.accountId || targetAccount.id || '').toString().toLowerCase();
+      const targetName = (targetAccount.displayName || targetAccount.company || '').toLowerCase().replace(/[`'"]/g, '').trim();
       const targetEmail = (targetAccount.email || '').toLowerCase().trim();
-      const chatAccId = (chat.connectedAccountId || '').toString();
-      const chatCompany = (chat.company || chat.accountBadge || '').toLowerCase().trim();
+      const chatAccId = (chat.connectedAccountId || '').toString().toLowerCase();
+      const chatCompany = (chat.company || chat.accountBadge || '').toLowerCase().replace(/[`'"]/g, '').trim();
       const chatEmail = (chat.accountEmail || '').toLowerCase().trim();
 
       if (targetId && chatAccId && chatAccId === targetId) return true;
-      if (targetAccount.accountId && chatAccId === targetAccount.accountId.toString()) return true;
-      if (targetEmail && chatEmail && chatEmail === targetEmail) return true;
+      if (targetAccount.accountId && chatAccId === targetAccount.accountId.toString().toLowerCase()) return true;
+      if (targetEmail && chatEmail && (chatEmail === targetEmail || targetEmail.includes(chatEmail) || chatEmail.includes(targetEmail))) return true;
       if (targetName && chatCompany && (chatCompany === targetName || chatCompany.includes(targetName) || targetName.includes(chatCompany))) return true;
 
       return false;
@@ -403,17 +403,18 @@ export default function ChatsPage({
       const imgElements = document.querySelectorAll('.message-html-content img');
       if (imgElements.length === 0) return;
       
-      const token = await acquireGraphToken(activeChat?.connectedAccountId);
+      const token = await acquireGraphToken(activeChat?.connectedAccountId || activeChat?.userEmail || activeChat?.email);
 
       imgElements.forEach(async (img) => {
         const src = img.getAttribute('src');
         // Only process unresolved proxy URLs
-        if (src && src.startsWith('/api/chats/') && !img.dataset.loaded) {
+        if (src && (src.startsWith('/api/chats/') || src.includes('/api/chats/')) && !img.dataset.loaded) {
           img.dataset.loaded = 'true'; 
           try {
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             const res = await fetch(src, { headers });
             if (res.ok) {
+              const contentType = res.headers.get('content-type') || 'image/jpeg';
               const blob = await res.blob();
               const objectUrl = URL.createObjectURL(blob);
               img.src = objectUrl;
@@ -422,7 +423,15 @@ export default function ChatsPage({
               img.style.borderRadius = '8px';
               img.style.marginTop = '6px';
               img.title = 'Click to preview';
-              img.onclick = () => setPreviewImage(objectUrl);
+              img.onclick = () => {
+                setPreviewDocModal({
+                  name: 'Teams Photo Attachment',
+                  contentType: contentType,
+                  previewUrl: objectUrl,
+                  webUrl: objectUrl,
+                  category: 'Images'
+                });
+              };
             }
           } catch (e) {
             console.error('Failed to load secure image', e);

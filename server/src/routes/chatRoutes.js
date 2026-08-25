@@ -18,5 +18,6 @@ router.post('/:id/read', protect, markChatRead);
 router.get('/:id/messages', protect, getChatMessages);
 router.post('/:id/messages', protect, sendMessage);
 router.get('/:id/messages/:msgId/hostedContents/:contentId', protect, getMessageImage);
+router.get('/:id/messages/:msgId/hostedContents/:contentId/\\$value', protect, getMessageImage);
 
 module.exports = router;

@@ -98,6 +98,13 @@ const getChats = async (req, res) => {
     let targetAccounts = [];
     const headerToken = req.microsoftAccessToken;
 
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
+
     if (dbAvailable) {
       const userEmailsHeader = req.headers['x-user-emails'];
       const activeEmailsList = userEmailsHeader
@@ -106,11 +113,17 @@ const getChats = async (req, res) => {
 
       if (connectedAccountId && connectedAccountId !== 'all') {
         let acc = null;
-        if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+        if (connectedAccountId.includes('@')) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase().trim() }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc && mongoose.Types.ObjectId.isValid(connectedAccountId)) {
           acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
         if (!acc) {
           acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        }
+        if (!acc) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase().trim() }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
         }
         if (!acc && clientUserEmail) {
           acc = await ConnectedAccount.findOne({ email: clientUserEmail }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
@@ -167,19 +180,23 @@ const getChats = async (req, res) => {
     await Promise.all(
       targetAccounts.map(async (acc) => {
         try {
+          const accEmail = (acc.email || '').toLowerCase().trim();
           let currentUserInfo = {
-            email: acc.email || '',
+            email: accEmail,
             displayName: acc.displayName || 'Microsoft User',
             id: ''
           };
 
           let rawChats = [];
-          const activeAccessToken = acc.microsoftAccessToken || headerToken;
-          console.log(`[getChats DEBUG] Account: ${acc.email || acc.displayName}, hasDBToken: ${!!acc.microsoftAccessToken}, hasHeaderToken: ${!!headerToken}, usingToken: ${activeAccessToken ? activeAccessToken.substring(0, 20) + '...' : 'NONE'}`);
+          const tokenFromHeader = accountTokensMap[accEmail];
+          let activeAccessToken = tokenFromHeader || acc.microsoftAccessToken;
+          if (!activeAccessToken && headerToken && (!clientUserEmail || clientUserEmail === accEmail)) {
+            activeAccessToken = headerToken;
+          }
+
           if (activeAccessToken) {
             try {
               const profile = await fetchGraphUserProfile(activeAccessToken);
-              console.log(`[getChats DEBUG] Profile result for ${acc.email}:`, profile ? `OK - ${profile.displayName} (${profile.mail || profile.userPrincipalName})` : 'NULL/FAILED');
               if (profile) {
                 currentUserInfo = {
                   email: profile.mail || profile.userPrincipalName || acc.email,
@@ -188,22 +205,17 @@ const getChats = async (req, res) => {
                 };
               }
             } catch (pErr) {
-              console.error(`[getChats DEBUG] Profile error for ${acc.email}:`, pErr.message);
+              console.error(`[getChats] Profile error for ${acc.email}:`, pErr.message);
             }
 
             try {
               const graphResponse = await fetchGraphChatsFromAPI(activeAccessToken);
               rawChats = graphResponse?.value || [];
-              console.log(`[getChats DEBUG] Graph chats result for ${acc.email}: ${rawChats.length} chats found. Full response keys: ${graphResponse ? Object.keys(graphResponse).join(',') : 'null'}`);
-              if (rawChats.length === 0) {
-                console.log(`[getChats DEBUG] ZERO CHATS for ${acc.email}. graphResponse:`, JSON.stringify(graphResponse)?.substring(0, 500));
-              }
             } catch (gErr) {
-              console.error(`[getChats DEBUG] Graph chats error for ${acc.email}:`, gErr.message);
+              console.error(`[getChats] Graph chats error for ${acc.email}:`, gErr.message);
             }
           }
 
-          // Dynamically use the real display name for the account badge (NO hardcoded names!)
           let accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email?.split('@')[0] || 'Microsoft Account').trim();
 
           let normalizedList = rawChats.map((gc) => {
@@ -220,10 +232,10 @@ const getChats = async (req, res) => {
       })
     );
 
-    // Deduplicate combined multi-account chats by microsoftChatId
+    // Deduplicate combined multi-account chats by unique account + microsoftChatId
     const uniqueMap = new Map();
     allUnifiedChats.forEach((c) => {
-      const key = c.microsoftChatId || c._id;
+      const key = `${c.accountEmail || c.connectedAccountId}-${c.microsoftChatId || c._id}`;
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, c);
       }
@@ -408,7 +420,7 @@ const getChatMessages = async (req, res) => {
         const graphResponse = await fetchGraphChatMessages(accessToken, cleanChatId);
         const rawMessages = graphResponse.value || [];
         const messages = rawMessages.map((m) =>
-          normalizeGraphMessage(m, id, connectedAccountId || 'default', msEmail, msDisplayName)
+          normalizeGraphMessage(m, cleanChatId, connectedAccountId || 'default', msEmail, msDisplayName)
         );
         messages.reverse(); // chronological order: oldest first, newest last
 
@@ -601,38 +613,68 @@ const getMessageImage = async (req, res) => {
     const rawId = decodeURIComponent(id);
     let microsoftChatId = rawId;
     const dbAvailable = Chat.db && Chat.db.readyState === 1;
+    let targetAccount = null;
 
-    if (!accessToken && dbAvailable) {
-      let userAccount = null;
-      if (clientEmail) {
-        userAccount = await ConnectedAccount.findOne({
-          email: clientEmail,
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken');
+    if (dbAvailable) {
+      let chatDoc = null;
+      if (/^[0-9a-fA-F]{24}$/.test(rawId)) {
+        chatDoc = await Chat.findById(rawId);
       }
-      if (!userAccount && /^[0-9a-fA-F]{24}$/.test(rawId)) {
-        const chat = await Chat.findById(rawId);
-        if (chat && chat.connectedAccountId && /^[0-9a-fA-F]{24}$/.test(chat.connectedAccountId)) {
-          userAccount = await ConnectedAccount.findById(chat.connectedAccountId).select('+microsoftAccessToken');
+      if (!chatDoc) {
+        chatDoc = await Chat.findOne({
+          $or: [
+            { chatId: rawId },
+            { microsoftChatId: rawId }
+          ]
+        });
+      }
+
+      if (chatDoc) {
+        if (chatDoc.microsoftChatId) {
+          microsoftChatId = chatDoc.microsoftChatId;
+        } else if (chatDoc.chatId && chatDoc.chatId.startsWith('19:')) {
+          microsoftChatId = chatDoc.chatId;
         }
-      }
-      if (!userAccount && req.user?._id) {
-        userAccount = await ConnectedAccount.findOne({
-          userId: req.user._id,
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken');
-      }
-      if (!userAccount) {
-        userAccount = await ConnectedAccount.findOne({
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken');
-      }
-      if (userAccount && userAccount.microsoftAccessToken) {
-        accessToken = userAccount.microsoftAccessToken;
+
+        if (chatDoc.connectedAccountId) {
+          if (/^[0-9a-fA-F]{24}$/.test(chatDoc.connectedAccountId)) {
+            targetAccount = await ConnectedAccount.findById(chatDoc.connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+          } else {
+            targetAccount = await ConnectedAccount.findOne({
+              $or: [
+                { accountId: chatDoc.connectedAccountId },
+                { email: chatDoc.connectedAccountId.toLowerCase() }
+              ]
+            }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+          }
+        }
       }
     }
 
-    if (accessToken) {
+    if (!accessToken && dbAvailable) {
+      if (!targetAccount && clientEmail) {
+        targetAccount = await ConnectedAccount.findOne({
+          email: clientEmail,
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+      if (!targetAccount && req.user?._id) {
+        targetAccount = await ConnectedAccount.findOne({
+          userId: req.user._id,
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+      if (!targetAccount) {
+        targetAccount = await ConnectedAccount.findOne({
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      }
+      if (targetAccount && targetAccount.microsoftAccessToken) {
+        accessToken = targetAccount.microsoftAccessToken;
+      }
+    }
+
+    if (accessToken && microsoftChatId) {
       try {
         const decodedContentId = decodeURIComponent(contentId);
         const { buffer, contentType } = await fetchGraphMessageImage(
