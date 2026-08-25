@@ -109,10 +109,15 @@ router.get('/', async (req, res) => {
         if (!token) return;
 
         try {
+          const cleanAccName = (acc.displayName || acc.email?.split('@')[0] || 'Microsoft Teams').replace(/[`'"]/g, '').trim();
+          const accEmail = (acc.email || '').toLowerCase().trim();
+          const accId = (acc._id || acc.accountId || acc.id || '').toString();
+
           const graphFiles = await graphService.fetchGraphRecentFiles(token);
-          const rawFiles = graphFiles.isNormalized ? graphFiles.value : (graphFiles?.value || []).map(file => {
-            let category = 'Documents';
-            const mime = file.file?.mimeType || '';
+          const rawList = Array.isArray(graphFiles) ? graphFiles : (graphFiles?.value || []);
+          const rawFiles = rawList.map(file => {
+            let category = file.category || 'Documents';
+            const mime = file.file?.mimeType || file.contentType || '';
             const nameLower = (file.name || '').toLowerCase();
             
             if (mime.includes('pdf') || nameLower.endsWith('.pdf')) category = 'PDF';
@@ -122,34 +127,38 @@ router.get('/', async (req, res) => {
             else if (mime.includes('excel') || mime.includes('spreadsheet') || nameLower.match(/\.(xls|xlsx|csv)$/)) category = 'Excel';
 
             const sizeBytes = file.size || 0;
-            let sizeStr = `${sizeBytes} B`;
-            if (sizeBytes > 1024 * 1024) sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
-            else if (sizeBytes > 1024) sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
+            let sizeStr = typeof file.size === 'string' ? file.size : `${sizeBytes} B`;
+            if (typeof file.size === 'number') {
+              if (sizeBytes > 1024 * 1024) sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+              else if (sizeBytes > 1024) sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
+            }
 
             const date = new Date(file.lastModifiedDateTime || file.createdDateTime || Date.now());
-            const dateStr = isNaN(date.getTime())
+            const dateStr = file.date || (isNaN(date.getTime())
               ? 'Recent'
-              : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-            const cleanAccName = (acc.displayName || acc.email?.split('@')[0] || 'Microsoft Teams').replace(/[`'"]/g, '').trim();
+              : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
 
             return {
+              ...file,
               id: file.id || `file-${Math.random().toString(36).substring(2, 9)}`,
               name: file.name || 'Untitled File',
               category: category,
-              size: sizeStr,
+              size: sizeStr || (category === 'Images' ? 'Image' : 'File'),
               account: cleanAccName,
-              accountEmail: (acc.email || '').toLowerCase(),
-              connectedAccountId: acc._id.toString(),
-              sender: file.lastModifiedBy?.user?.displayName || file.createdBy?.user?.displayName || 'Unknown',
+              accountEmail: accEmail,
+              accountBadge: cleanAccName,
+              connectedAccountId: accId,
+              sender: file.sender || file.lastModifiedBy?.user?.displayName || file.createdBy?.user?.displayName || cleanAccName,
               date: dateStr,
-              webUrl: file.webUrl || '#'
+              webUrl: file.webUrl || '#',
+              downloadUrl: file.downloadUrl || file.webUrl || '#',
+              thumbnailUrl: file.thumbnailUrl || null
             };
           });
 
           const normalizedFilesWithProxy = rawFiles.map(f => {
             const params = new URLSearchParams();
-            params.append('connectedAccountId', acc._id.toString());
+            params.append('connectedAccountId', accId);
             if (f.name) params.append('name', f.name);
             if (f.driveId) params.append('driveId', f.driveId);
             if (f.downloadUrl && f.downloadUrl !== '#') params.append('downloadUrl', f.downloadUrl);
@@ -159,7 +168,7 @@ router.get('/', async (req, res) => {
             return {
               ...f,
               previewUrl: `/api/files/${encodeURIComponent(f.id)}/content?${qs}`,
-              thumbnailUrl: `/api/files/${encodeURIComponent(f.id)}/content?${qs}`
+              thumbnailUrl: f.thumbnailUrl || `/api/files/${encodeURIComponent(f.id)}/content?${qs}`
             };
           });
 
