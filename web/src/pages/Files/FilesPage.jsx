@@ -584,6 +584,18 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     };
   }, [previewFile]);
 
+  const getFileCategory = (file) => {
+    if (!file) return 'Documents';
+    const nameLower = (file.name || '').toLowerCase().trim();
+    if (nameLower.endsWith('.pdf')) return 'PDF';
+    if (nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp|bmp|ico|tif|tiff)$/) || nameLower.startsWith('photo from') || nameLower.startsWith('image')) return 'Images';
+    if (nameLower.match(/\.(mp4|mov|avi|mkv|webm|wmv|flv|m4v)$/)) return 'Videos';
+    if (nameLower.match(/\.(xls|xlsx|csv|tsv|ods)$/)) return 'Excel';
+    if (nameLower.match(/\.(zip|rar|7z|tar|gz|bz2|xz)$/)) return 'ZIP';
+    if (nameLower.match(/\.(docx|doc|txt|pptx|ppt|rtf|odt|pages|md)$/)) return 'Documents';
+    return file.category || 'Documents';
+  };
+
   const getFileOwnerEmail = (f) => {
     if (!f) return '';
     const email = (f.accountEmail || '').toLowerCase().trim();
@@ -597,22 +609,13 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     return email;
   };
 
-  const filteredFiles = files.filter((file) => {
-    const matchesCategory = selectedCategory === 'All' || file.category.toLowerCase() === selectedCategory.toLowerCase();
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q || (
-      file.name?.toLowerCase().includes(q) ||
-      file.sender?.toLowerCase().includes(q) ||
-      file.account?.toLowerCase().includes(q)
-    );
-    if (!matchesCategory || !matchesSearch) return false;
-
+  // Files filtered by selected account first
+  const accountScopedFiles = files.filter((file) => {
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const filterKey = selectedFilterAccount.toLowerCase().trim();
     const fileOwnerEmail = getFileOwnerEmail(file);
 
-    // 1. Account Specific Matching
     if (filterKey.includes('aryan') || filterKey.includes('kumrecha')) {
       return fileOwnerEmail.includes('aryan') || fileOwnerEmail.includes('kumrecha');
     }
@@ -620,9 +623,20 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       return fileOwnerEmail.includes('keval') || fileOwnerEmail.includes('trivedi');
     }
 
-    // 2. Exact email or account ID match
     const fileAccId = (file.connectedAccountId || '').toLowerCase().trim();
     return fileOwnerEmail === filterKey || fileAccId === filterKey;
+  });
+
+  const filteredFiles = accountScopedFiles.filter((file) => {
+    const actualCategory = getFileCategory(file);
+    const matchesCategory = selectedCategory === 'All' || actualCategory.toLowerCase() === selectedCategory.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q || (
+      file.name?.toLowerCase().includes(q) ||
+      file.sender?.toLowerCase().includes(q) ||
+      file.account?.toLowerCase().includes(q)
+    );
+    return matchesCategory && matchesSearch;
   });
 
   const getCategoryMeta = (category) => {
@@ -660,7 +674,9 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = selectedCategory === cat.name;
-          const count = cat.name === 'All' ? files.length : files.filter(f => f.category.toLowerCase() === cat.name.toLowerCase()).length;
+          const count = cat.name === 'All' 
+            ? accountScopedFiles.length 
+            : accountScopedFiles.filter(f => getFileCategory(f).toLowerCase() === cat.name.toLowerCase()).length;
 
           return (
             <button
