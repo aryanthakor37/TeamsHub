@@ -458,19 +458,19 @@ const handleFileContentStream = async (req, res) => {
       } catch (e) {}
     }
 
-    // 6. Try Thumbnail Endpoint (for images)
-    if (!fileBuffer && accessToken) {
+    // 6. Try Thumbnail Endpoint (for PDF, Word, Images, etc.)
+    if (!fileBuffer && accessToken && decodedFileId && !decodedFileId.startsWith('hosted-') && !decodedFileId.startsWith('att-')) {
       try {
         const thumbUrl = driveId
           ? `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(decodedFileId)}/thumbnails/0/large/content`
           : `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(decodedFileId)}/thumbnails/0/large/content`;
         const thumbResult = await downloadFromGraph(thumbUrl, true);
-        if (thumbResult) {
+        if (thumbResult && thumbResult.contentType && !thumbResult.contentType.includes('text/html')) {
           fileBuffer = thumbResult.buffer;
           contentType = thumbResult.contentType || 'image/jpeg';
         }
       } catch (e) {
-        console.warn('[FileRoutes] Thumbnail fetch error:', e.message);
+        // Silently skip if thumbnail is not available on Graph
       }
     }
 
