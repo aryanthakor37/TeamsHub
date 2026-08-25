@@ -76,6 +76,10 @@ const getChats = async (req, res) => {
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
     let clientUserEmail = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+    const userEmailsHeader = req.headers['x-user-emails'];
+    const activeEmailsList = userEmailsHeader
+      ? userEmailsHeader.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+      : (clientUserEmail ? [clientUserEmail] : []);
 
     // ── Mock Mode ──
     if (isMockMode()) {
@@ -106,11 +110,6 @@ const getChats = async (req, res) => {
     }
 
     if (dbAvailable) {
-      const userEmailsHeader = req.headers['x-user-emails'];
-      const activeEmailsList = userEmailsHeader
-        ? userEmailsHeader.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-        : (clientUserEmail ? [clientUserEmail] : []);
-
       if (connectedAccountId && connectedAccountId !== 'all') {
         let acc = null;
         if (connectedAccountId.includes('@')) {
