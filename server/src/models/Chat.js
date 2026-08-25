@@ -12,6 +12,13 @@ const ChatSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    accountEmail: {
+      type: String,
+      default: '',
+      index: true,
+      lowercase: true,
+      trim: true
+    },
     microsoftChatId: {
       type: String,
       required: true,

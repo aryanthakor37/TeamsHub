@@ -10,6 +10,7 @@ import {
   getActiveMsalAccounts,
   syncAccountToBackend
 } from '../../services/auth/authService';
+import { msalInstance } from '../../services/auth/msalConfig';
 
 export const AuthContext = createContext({
   user: null,
@@ -92,7 +93,22 @@ export const MicrosoftAuthProvider = ({ children }) => {
       setActiveAccountState(targetAcc);
       if (targetAcc.email) {
         localStorage.setItem('teamshub_active_email', targetAcc.email);
+        setUser({
+          name: targetAcc.displayName || targetAcc.email.split('@')[0],
+          email: targetAcc.email,
+          avatar: targetAcc.avatar || ''
+        });
       }
+      try {
+        const allMsal = msalInstance.getAllAccounts();
+        const cleanTarget = (targetAcc.email || targetAcc.username || '').toLowerCase().trim();
+        const msalAcc = allMsal.find(a => (a.username || '').toLowerCase() === cleanTarget || (a.homeAccountId && a.homeAccountId === targetAcc.accountId));
+        if (msalAcc) {
+          msalInstance.setActiveAccount(msalAcc);
+        }
+      } catch (e) {}
+
+      window.dispatchEvent(new CustomEvent('teamshub:account-switched', { detail: { account: targetAcc } }));
       await setActiveAccountOnBackend(targetAcc._id || targetAcc.accountId || targetAcc.id);
     }
   };

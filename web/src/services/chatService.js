@@ -3,54 +3,74 @@ import { msalInstance } from './auth/msalConfig';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
   ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
-  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? 'https://teamshub-backend.onrender.com/api' : '/api');
+  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? 'https://teamshub-api.onrender.com/api' : '/api');
 
 /**
- * Build auth headers — includes Microsoft access token if available for the specific account
+ * Build auth headers — instant zero-latency token resolution with background refresh
  */
 const getAuthHeaders = async (accountId) => {
   const headers = { 'Content-Type': 'application/json' };
   
+  let allAccounts = [];
+  try {
+    allAccounts = msalInstance.getAllAccounts() || [];
+  } catch (e) {}
+
+  // Fast token map from localStorage (0ms!)
+  const tokenMap = {};
+  allAccounts.forEach(a => {
+    const email = (a.username || '').toLowerCase().trim();
+    if (email) {
+      const t = localStorage.getItem(`teamshub_token_${email}`);
+      if (t) tokenMap[email] = t;
+    }
+  });
+
+  const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+
   if (accountId && accountId !== 'all') {
-    const token = await acquireGraphToken(accountId);
+    const cleanAcc = accountId.toString().toLowerCase().trim();
+    let token = tokenMap[cleanAcc] || localStorage.getItem(`teamshub_token_${cleanAcc}`) || (activeEmail === cleanAcc ? localStorage.getItem('teamshub_last_access_token') : null);
+    if (!token) {
+      token = await acquireGraphToken(accountId);
+    }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    try {
-      const allAccounts = msalInstance.getAllAccounts();
-      const cleanAcc = accountId.toString().toLowerCase().trim();
-      const target = allAccounts.find(a => 
-        (a.username && a.username.toLowerCase() === cleanAcc) ||
-        (a.homeAccountId && a.homeAccountId.toLowerCase() === cleanAcc) ||
-        (a.localAccountId && a.localAccountId.toLowerCase() === cleanAcc) ||
-        (a.username && (a.username.toLowerCase().includes(cleanAcc) || cleanAcc.includes(a.username.toLowerCase())))
-      );
-      if (target?.username) {
-        headers['x-user-email'] = target.username;
-      }
-    } catch (e) {}
+    const target = allAccounts.find(a => 
+      (a.username && a.username.toLowerCase() === cleanAcc) ||
+      (a.homeAccountId && a.homeAccountId.toLowerCase() === cleanAcc) ||
+      (a.localAccountId && a.localAccountId.toLowerCase() === cleanAcc) ||
+      (a.username && (a.username.toLowerCase().includes(cleanAcc) || cleanAcc.includes(a.username.toLowerCase())))
+    );
+    if (target?.username) {
+      headers['x-user-email'] = target.username;
+    } else if (cleanAcc.includes('@')) {
+      headers['x-user-email'] = cleanAcc;
+    }
   } else {
-    // When requesting all accounts, gather and send live tokens for all accounts!
-    const tokenMap = await syncAllAccountsTokens();
-    if (tokenMap && Object.keys(tokenMap).length > 0) {
+    // When requesting all accounts, send cached tokens immediately (0ms)
+    if (Object.keys(tokenMap).length > 0) {
       headers['x-account-tokens'] = JSON.stringify(tokenMap);
     }
-    const activeEmail = localStorage.getItem('teamshub_active_email');
-    const token = await acquireGraphToken(activeEmail);
+    let token = (activeEmail && tokenMap[activeEmail]) || localStorage.getItem('teamshub_last_access_token');
+    if (!token && activeEmail) {
+      token = await acquireGraphToken(activeEmail);
+    }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     if (activeEmail) {
       headers['x-user-email'] = activeEmail;
     }
+
+    // Refresh any expiring tokens in background without blocking this request
+    syncAllAccountsTokens().catch(() => {});
   }
 
-  try {
-    const allAccounts = msalInstance.getAllAccounts();
-    if (allAccounts && allAccounts.length > 0) {
-      headers['x-user-emails'] = allAccounts.map(a => (a.username || '').toLowerCase()).filter(Boolean).join(',');
-    }
-  } catch (e) {}
+  if (allAccounts.length > 0) {
+    headers['x-user-emails'] = allAccounts.map(a => (a.username || '').toLowerCase()).filter(Boolean).join(',');
+  }
   return headers;
 };
 

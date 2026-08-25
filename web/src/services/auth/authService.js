@@ -8,20 +8,20 @@ export const getActiveMsalAccounts = async () => {
     const activeAcc = msalInstance.getActiveAccount();
     const list = [];
     for (const acc of accounts) {
+      const email = (acc.username || '').toLowerCase().trim();
       const token = await acquireGraphToken(acc.homeAccountId || acc.username);
-      // HARDCODE ESTATIC INFOTECH Tenant ID
-      const actualTenantId = '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
+      const actualTenantId = acc.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
       
       list.push({
         _id: acc.homeAccountId || acc.localAccountId,
         accountId: acc.homeAccountId || acc.localAccountId,
-        displayName: acc.name || acc.username.split('@')[0],
+        displayName: acc.name || (email ? email.split('@')[0] : 'Microsoft User'),
         email: acc.username,
         tenantId: actualTenantId,
         accountType: 'Microsoft Work / Personal Account',
         status: 'connected',
         isDefault: activeAcc ? (acc.username === activeAcc.username) : true,
-        accessToken: token,
+        accessToken: token || localStorage.getItem(`teamshub_token_${email}`) || localStorage.getItem('teamshub_last_access_token') || '',
         badgeClass: 'badge-company-a',
         lastAuthenticatedAt: new Date().toISOString()
       });
@@ -76,7 +76,7 @@ export const initializeMsal = async () => {
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
   ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
-  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? 'https://teamshub-backend.onrender.com/api' : '/api');
+  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? 'https://teamshub-api.onrender.com/api' : '/api');
 
 /**
  * Sync connected account payload to TeamsHub Backend
@@ -202,14 +202,30 @@ export const syncAllAccountsTokens = async () => {
     await msalInstance.initialize();
     const accounts = msalInstance.getAllAccounts();
     const tokenMap = {};
-    for (const acc of accounts) {
-      try {
-        const token = await acquireGraphToken(acc.homeAccountId || acc.username);
-        if (token) {
-          tokenMap[acc.username.toLowerCase()] = token;
-        }
-      } catch (err) {}
-    }
+    await Promise.all(
+      accounts.map(async (acc) => {
+        try {
+          const email = (acc.username || '').toLowerCase().trim();
+          if (!email) return;
+          const token = await acquireGraphToken(acc.homeAccountId || acc.username);
+          if (token) {
+            tokenMap[email] = token;
+            localStorage.setItem(`teamshub_token_${email}`, token);
+            syncAccountToBackend({
+              accountId: acc.homeAccountId || acc.localAccountId,
+              displayName: acc.name || email.split('@')[0],
+              email: acc.username,
+              accessToken: token
+            }).catch(() => {});
+          } else {
+            const fallback = localStorage.getItem(`teamshub_token_${email}`);
+            if (fallback) {
+              tokenMap[email] = fallback;
+            }
+          }
+        } catch (err) {}
+      })
+    );
     return tokenMap;
   } catch (e) {
     return {};
@@ -253,48 +269,38 @@ export const acquireGraphToken = async (accountId) => {
       }
 
       if (targetAccount) {
-        // HARDCODE ESTATIC INFOTECH Tenant ID
-        const targetTenantId = '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
+        const emailLower = (targetAccount.username || '').toLowerCase();
         
-        const tenantAuthority = `https://login.microsoftonline.com/${targetTenantId}`;
-
+        // 1. Try standard acquireTokenSilent with targetAccount
         try {
-          const reqObj = {
+          const result = await msalInstance.acquireTokenSilent({
             ...graphTokenRequest,
-            account: targetAccount,
-            ...(tenantAuthority ? { authority: tenantAuthority } : {})
-          };
-          const result = await msalInstance.acquireTokenSilent(reqObj);
+            account: targetAccount
+          });
           if (result && result.accessToken) {
-            syncAccountToBackend({
-              email: targetAccount.username,
-              displayName: targetAccount.name || targetAccount.username,
-              accessToken: result.accessToken,
-              tenantId: targetTenantId
-            }).catch(() => { });
+            localStorage.setItem(`teamshub_token_${emailLower}`, result.accessToken);
             return result.accessToken;
           }
         } catch (silentErr) {
+          // 2. Try with tenant authority if available
           try {
+            const targetTenantId = targetAccount.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
+            const tenantAuthority = `https://login.microsoftonline.com/${targetTenantId}`;
             const fallbackResult = await msalInstance.acquireTokenSilent({
-              scopes: ['User.Read', 'Chat.Read', 'Chat.ReadWrite', 'openid', 'profile'],
+              scopes: ['User.Read', 'User.ReadBasic.All', 'Chat.ReadWrite', 'Files.Read.All', 'Presence.Read.All', 'openid', 'profile'],
               account: targetAccount,
-              ...(tenantAuthority ? { authority: tenantAuthority } : {})
+              authority: tenantAuthority
             });
             if (fallbackResult && fallbackResult.accessToken) {
-              syncAccountToBackend({
-                email: targetAccount.username,
-                displayName: targetAccount.name || targetAccount.username,
-                accessToken: fallbackResult.accessToken,
-                tenantId: targetTenantId
-              }).catch(() => { });
+              localStorage.setItem(`teamshub_token_${emailLower}`, fallbackResult.accessToken);
               return fallbackResult.accessToken;
             }
-          } catch (fErr) {
-            const storedToken = localStorage.getItem(`teamshub_token_${targetAccount.username.toLowerCase()}`) || localStorage.getItem('teamshub_last_access_token');
-            if (storedToken) return storedToken;
-          }
+          } catch (fErr) {}
         }
+
+        // 3. Fallback to localStorage stored token for this account
+        const storedToken = localStorage.getItem(`teamshub_token_${emailLower}`) || (activeEmail?.toLowerCase() === emailLower ? localStorage.getItem('teamshub_last_access_token') : null);
+        if (storedToken) return storedToken;
       }
 
       if (activeEmail) {
@@ -304,10 +310,23 @@ export const acquireGraphToken = async (accountId) => {
       return null;
     })();
 
-    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 1500));
+    const timeoutPromise = new Promise(resolve => setTimeout(() => {
+      if (accountId) {
+        const cleanTarget = accountId.toString().toLowerCase().trim();
+        const stored = localStorage.getItem(`teamshub_token_${cleanTarget}`) || localStorage.getItem('teamshub_last_access_token');
+        resolve(stored || null);
+      } else {
+        resolve(null);
+      }
+    }, 6000));
+
     return await Promise.race([tokenPromise, timeoutPromise]);
   } catch (error) {
     console.warn('[MSAL Token Acquisition Warning]:', error.message);
+    if (accountId) {
+      const cleanTarget = accountId.toString().toLowerCase().trim();
+      return localStorage.getItem(`teamshub_token_${cleanTarget}`) || null;
+    }
     return null;
   }
 };

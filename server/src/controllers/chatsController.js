@@ -161,6 +161,20 @@ const getChats = async (req, res) => {
       }];
     }
 
+    // Ensure EVERY account with a live token from x-account-tokens is included in targetAccounts
+    if (!connectedAccountId || connectedAccountId === 'all') {
+      Object.entries(accountTokensMap).forEach(([email, token]) => {
+        if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === email.toLowerCase())) {
+          targetAccounts.push({
+            _id: `acc-token-${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+            email: email.toLowerCase(),
+            displayName: email.split('@')[0],
+            microsoftAccessToken: token
+          });
+        }
+      });
+    }
+
     if (targetAccounts.length === 0) {
       return res.status(200).json({
         success: true,
@@ -196,19 +210,6 @@ const getChats = async (req, res) => {
 
           if (activeAccessToken) {
             try {
-              const profile = await fetchGraphUserProfile(activeAccessToken);
-              if (profile) {
-                currentUserInfo = {
-                  email: profile.mail || profile.userPrincipalName || acc.email,
-                  displayName: profile.displayName || acc.displayName,
-                  id: profile.id || ''
-                };
-              }
-            } catch (pErr) {
-              console.error(`[getChats] Profile error for ${acc.email}:`, pErr.message);
-            }
-
-            try {
               const graphResponse = await fetchGraphChatsFromAPI(activeAccessToken);
               rawChats = graphResponse?.value || [];
             } catch (gErr) {
@@ -218,12 +219,73 @@ const getChats = async (req, res) => {
 
           let accountCompanyBadge = (acc.displayName || currentUserInfo.displayName || acc.email?.split('@')[0] || 'Microsoft Account').trim();
 
-          let normalizedList = rawChats.map((gc) => {
-            const normalized = normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo);
-            normalized.connectedAccountId = acc._id.toString();
-            normalized.accountEmail = (acc.email || currentUserInfo.email || '').toLowerCase();
-            return normalized;
-          });
+          let normalizedList = [];
+          if (rawChats && rawChats.length > 0) {
+            normalizedList = rawChats.map((gc) => {
+              const normalized = normalizeGraphChat(gc, acc._id.toString(), accountCompanyBadge, currentUserInfo);
+              normalized.connectedAccountId = acc._id.toString();
+              normalized.accountEmail = (acc.email || currentUserInfo.email || '').toLowerCase();
+              return normalized;
+            });
+
+            // Asynchronously persist/update chats in database
+            if (dbAvailable && req.user?._id) {
+              Promise.all(
+                normalizedList.map(async (nc) => {
+                  try {
+                    await Chat.findOneAndUpdate(
+                      { userId: req.user._id, microsoftChatId: nc.microsoftChatId },
+                      {
+                        userId: req.user._id,
+                        connectedAccountId: nc.connectedAccountId,
+                        accountEmail: nc.accountEmail,
+                        microsoftChatId: nc.microsoftChatId,
+                        participant: nc.participant,
+                        role: nc.role || 'Direct Message',
+                        company: nc.company || accountCompanyBadge,
+                        accountBadge: nc.accountBadge || accountCompanyBadge,
+                        lastMessagePreview: nc.lastMessagePreview || '',
+                        lastMessageTimestamp: nc.lastMessageTimestamp ? new Date(nc.lastMessageTimestamp) : new Date(),
+                        unreadCount: nc.unreadCount || 0,
+                        chatType: nc.chatType || 'oneOnOne',
+                        onlineStatus: 'online'
+                      },
+                      { upsert: true, new: true }
+                    );
+                  } catch (dbErr) {}
+                })
+              ).catch(() => {});
+            }
+          } else if (dbAvailable) {
+            // Fallback: retrieve cached chats for this account from database
+            try {
+              const cachedDbChats = await Chat.find({
+                $or: [
+                  { accountEmail: accEmail },
+                  { connectedAccountId: acc._id.toString() },
+                  { company: { $regex: new RegExp(accEmail.split('@')[0], 'i') } }
+                ]
+              }).lean();
+
+              if (cachedDbChats && cachedDbChats.length > 0) {
+                normalizedList = cachedDbChats.map((c) => ({
+                  _id: c.microsoftChatId || c._id.toString(),
+                  microsoftChatId: c.microsoftChatId || c._id.toString(),
+                  connectedAccountId: acc._id.toString(),
+                  accountEmail: c.accountEmail || accEmail,
+                  participant: c.participant,
+                  role: c.role || 'Direct Message',
+                  company: c.company || accountCompanyBadge,
+                  accountBadge: c.accountBadge || accountCompanyBadge,
+                  lastMessagePreview: c.lastMessagePreview || '',
+                  lastMessageTimestamp: c.lastMessageTimestamp,
+                  unreadCount: c.unreadCount || 0,
+                  chatType: c.chatType || 'oneOnOne',
+                  onlineStatus: 'online'
+                }));
+              }
+            } catch (cErr) {}
+          }
 
           allUnifiedChats.push(...normalizedList);
         } catch (err) {
@@ -340,7 +402,20 @@ const getChatMessages = async (req, res) => {
     const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
     const { connectedAccountId } = req.query;
 
-    if (dbAvailable) {
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
+
+    if (connectedAccountId && accountTokensMap[connectedAccountId.toLowerCase()]) {
+      accessToken = accountTokensMap[connectedAccountId.toLowerCase()];
+    } else if (activeEmailHeader && accountTokensMap[activeEmailHeader]) {
+      accessToken = accountTokensMap[activeEmailHeader];
+    }
+
+    if (!accessToken && dbAvailable) {
       let acc = null;
       if (connectedAccountId && connectedAccountId !== 'all') {
         if (connectedAccountId.includes('@')) {

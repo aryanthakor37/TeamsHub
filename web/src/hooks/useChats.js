@@ -34,8 +34,6 @@ const isLegacyOrFakeChat = (c) => {
 
 const getStoredLocalChats = () => {
   try {
-    const activeEmail = localStorage.getItem('teamshub_active_email');
-    if (!activeEmail) return [];
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
@@ -50,6 +48,27 @@ const saveStoredLocalChats = (items) => {
     const filtered = (items || []).filter((c) => !isLegacyOrFakeChat(c));
     localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
   } catch (e) {}
+};
+
+// Helper: merge fresh incoming chats with existing cached multi-account chats
+const mergeMultiAccountChats = (freshItems = [], existingItems = []) => {
+  const map = new Map();
+
+  // 1. Seed with existing cached chats
+  existingItems.forEach((c) => {
+    if (!c) return;
+    const key = `${(c.accountEmail || c.connectedAccountId || '').toLowerCase()}-${c.microsoftChatId || c._id || c.id}`;
+    map.set(key, c);
+  });
+
+  // 2. Overlay with fresh items
+  freshItems.forEach((c) => {
+    if (!c) return;
+    const key = `${(c.accountEmail || c.connectedAccountId || '').toLowerCase()}-${c.microsoftChatId || c._id || c.id}`;
+    map.set(key, c);
+  });
+
+  return Array.from(map.values());
 };
 
 export const useChats = () => {
@@ -96,11 +115,17 @@ export const useChats = () => {
       setError(null);
     };
 
+    const handleAccountSwitched = () => {
+      loadChats(true);
+    };
+
     window.addEventListener('teamshub:chat-marked-read', handleReadEvent);
     window.addEventListener('teamshub:logout', handleLogoutEvent);
+    window.addEventListener('teamshub:account-switched', handleAccountSwitched);
     return () => {
       window.removeEventListener('teamshub:chat-marked-read', handleReadEvent);
       window.removeEventListener('teamshub:logout', handleLogoutEvent);
+      window.removeEventListener('teamshub:account-switched', handleAccountSwitched);
     };
   }, []);
 
@@ -132,7 +157,10 @@ export const useChats = () => {
         ? data
         : (data?.items || data?.chats || data?.value || []);
 
-      const withRead = applyReadStatus(rawItems);
+      const existingCached = getStoredLocalChats();
+      const mergedList = mergeMultiAccountChats(rawItems, existingCached);
+
+      const withRead = applyReadStatus(mergedList);
       const sorted = sortChatsByDate(withRead);
       setChats(sorted);
       saveStoredLocalChats(sorted);
@@ -158,7 +186,10 @@ export const useChats = () => {
     try {
       const data = await fetchChatsFromBackend('all');
       const rawItems = data.items || [];
-      const withRead = applyReadStatus(rawItems);
+      const existingCached = getStoredLocalChats();
+      const mergedList = mergeMultiAccountChats(rawItems, existingCached);
+
+      const withRead = applyReadStatus(mergedList);
       const sorted = sortChatsByDate(withRead);
       
       // Check if any chat received a NEW incoming message since last sync
@@ -202,6 +233,7 @@ export const useChats = () => {
 
       if (sorted.length > 0) {
         setChats(sorted);
+        saveStoredLocalChats(sorted);
       }
     } catch (err) {
       console.warn('Silent chat list sync failed:', err.message);
@@ -257,9 +289,14 @@ export const useChats = () => {
 
   const refresh = async () => {
     setRefreshing(true);
-    await refreshChatsOnBackend(selectedAccountId);
-    await loadChats();
-    setRefreshing(false);
+    try {
+      await refreshChatsOnBackend('all');
+      await loadChats(true);
+    } catch (e) {
+      console.warn('Refresh error:', e);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Calculate real unread count
