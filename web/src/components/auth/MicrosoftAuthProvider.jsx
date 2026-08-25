@@ -85,19 +85,44 @@ export const MicrosoftAuthProvider = ({ children }) => {
   const handleSetActiveAccount = async (accOrId) => {
     let targetAcc = null;
     if (typeof accOrId === 'string') {
-      targetAcc = connectedAccounts.find(a => a._id === accOrId || a.accountId === accOrId || a.id === accOrId);
+      targetAcc = connectedAccounts.find(a => a._id === accOrId || a.accountId === accOrId || a.id === accOrId || a.email === accOrId);
     } else {
       targetAcc = accOrId;
     }
     if (targetAcc) {
       setActiveAccountState(targetAcc);
       if (targetAcc.email) {
+        const cleanEmail = targetAcc.email.toLowerCase().trim();
+        try {
+          let disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
+          if (disconnectedList.includes(cleanEmail)) {
+            disconnectedList = disconnectedList.filter(e => e.toLowerCase() !== cleanEmail);
+            localStorage.setItem('teamshub_disconnected_emails', JSON.stringify(disconnectedList));
+          }
+        } catch (e) {}
+
         localStorage.setItem('teamshub_active_email', targetAcc.email);
         setUser({
           name: targetAcc.displayName || targetAcc.email.split('@')[0],
           email: targetAcc.email,
           avatar: targetAcc.avatar || ''
         });
+
+        const existingToken = localStorage.getItem(`teamshub_token_${cleanEmail}`);
+        if (!existingToken) {
+          acquireGraphToken(cleanEmail).then(token => {
+            if (token) {
+              localStorage.setItem(`teamshub_token_${cleanEmail}`, token);
+              syncAccountToBackend({
+                accountId: targetAcc.accountId || targetAcc._id,
+                displayName: targetAcc.displayName,
+                email: targetAcc.email,
+                accessToken: token,
+                status: 'connected'
+              }).catch(() => {});
+            }
+          });
+        }
       }
       try {
         const allMsal = msalInstance.getAllAccounts();
@@ -122,14 +147,43 @@ export const MicrosoftAuthProvider = ({ children }) => {
     await setDefaultAccountOnBackend(accId);
   };
 
-  const handleReconnectAccount = async (accId) => {
-    await reconnectAccountOnBackend(accId);
+  const handleReconnectAccount = async (accOrId) => {
+    let targetEmail = null;
+    if (typeof accOrId === 'string' && accOrId.includes('@')) {
+      targetEmail = accOrId.toLowerCase().trim();
+    } else {
+      const found = connectedAccounts.find(a => a._id === accOrId || a.accountId === accOrId || a.id === accOrId);
+      if (found?.email) targetEmail = found.email.toLowerCase().trim();
+    }
+
+    if (targetEmail) {
+      try {
+        let disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
+        disconnectedList = disconnectedList.filter(e => e.toLowerCase() !== targetEmail);
+        localStorage.setItem('teamshub_disconnected_emails', JSON.stringify(disconnectedList));
+      } catch (e) {}
+
+      const token = await acquireGraphToken(targetEmail);
+      if (token) {
+        localStorage.setItem(`teamshub_token_${targetEmail}`, token);
+        await syncAccountToBackend({
+          accountId: accOrId,
+          email: targetEmail,
+          accessToken: token,
+          status: 'connected'
+        });
+      }
+    }
+
+    await reconnectAccountOnBackend(accOrId);
     setConnectedAccounts(prev => prev.map(a => {
-      if (a._id === accId || a.accountId === accId || a.id === accId) {
+      if (a._id === accOrId || a.accountId === accOrId || a.id === accOrId || (targetEmail && a.email?.toLowerCase() === targetEmail)) {
         return { ...a, status: 'connected', lastAuthenticatedAt: new Date().toISOString() };
       }
       return a;
     }));
+
+    window.dispatchEvent(new CustomEvent('teamshub:account-switched'));
   };
 
   const handleDisconnectAccount = async (accId) => {
