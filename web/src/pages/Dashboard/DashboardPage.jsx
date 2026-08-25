@@ -17,6 +17,8 @@ import { mockDashboardStats } from '../../services/mockDataService';
 import { useAuth } from '../../hooks/useAuth';
 import { useChats } from '../../hooks/useChats';
 import { fetchFilesFromBackend } from '../../services/fileService';
+import { getInitials, getAvatarColor } from '../../utils/avatarUtils';
+
 const sortFilesByDate = (list = []) => {
   return [...list].sort((a, b) => {
     const timeA = new Date(a.lastModifiedDateTime || a.createdDateTime || a.timestamp || a.date || a.createdAt || 0).getTime();
