@@ -504,6 +504,253 @@ function TextCodeDocumentViewer({ textContent, fileName, webUrl }) {
   );
 }
 
+// Realistic Visual First Page Header Component for Gallery Cards
+function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount }) {
+  if (actualCategory === 'Images') {
+    return (
+      <div style={{
+        height: '140px',
+        width: '100%',
+        backgroundColor: 'var(--bg-tertiary)',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <SecureThumbnail 
+          file={file}
+          accountId={file.connectedAccountId || file.accountEmail || activeAccount?._id}
+          alt={file.name}
+          fallbackColor={meta.color}
+        />
+        <span style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          color: '#fff',
+          fontSize: '0.7rem',
+          fontWeight: '600',
+          backdropFilter: 'blur(4px)'
+        }}>
+          {meta.label}
+        </span>
+      </div>
+    );
+  }
+
+  if (actualCategory === 'PDF') {
+    return (
+      <div style={{
+        height: '140px',
+        width: '100%',
+        backgroundColor: '#fff1f2',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '12px',
+        boxSizing: 'border-box'
+      }}>
+        {/* Realistic Mini PDF First Page */}
+        <div style={{
+          width: '80%',
+          height: '100%',
+          backgroundColor: '#ffffff',
+          borderRadius: '4px',
+          boxShadow: '0 4px 12px rgba(239,68,68,0.18)',
+          border: '1px solid #fecdd3',
+          padding: '8px 10px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          position: 'relative'
+        }}>
+          {/* Top Red Header Strip */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1.5px solid #ef4444', paddingBottom: '4px' }}>
+            <FileText size={13} color="#ef4444" />
+            <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#b91c1c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
+              {file.name || 'DOCUMENT.PDF'}
+            </span>
+          </div>
+          {/* Page Lines */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
+            <div style={{ height: '4px', backgroundColor: '#cbd5e1', borderRadius: '2px', width: '90%' }} />
+            <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '100%' }} />
+            <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '75%' }} />
+            <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '85%' }} />
+          </div>
+          {/* Footer Page 1 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '600' }}>Page 1</span>
+            <span style={{ fontSize: '0.55rem', color: '#ef4444', fontWeight: '700' }}>PDF</span>
+          </div>
+        </div>
+
+        <span style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          padding: '3px 8px',
+          borderRadius: '6px',
+          backgroundColor: '#ef4444',
+          color: '#fff',
+          fontSize: '0.68rem',
+          fontWeight: '700',
+          boxShadow: '0 2px 6px rgba(239,68,68,0.3)'
+        }}>
+          PDF
+        </span>
+      </div>
+    );
+  }
+
+  if (actualCategory === 'Excel') {
+    return (
+      <div style={{
+        height: '140px',
+        width: '100%',
+        backgroundColor: '#ecfdf5',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '12px',
+        boxSizing: 'border-box'
+      }}>
+        {/* Realistic Mini Excel Spreadsheet Grid */}
+        <div style={{
+          width: '88%',
+          height: '100%',
+          backgroundColor: '#ffffff',
+          borderRadius: '4px',
+          boxShadow: '0 4px 12px rgba(16,185,129,0.18)',
+          border: '1px solid #a7f3d0',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Sheet Top Bar */}
+          <div style={{ backgroundColor: '#10b981', color: '#fff', padding: '3px 8px', fontSize: '0.62rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <FileSpreadsheet size={12} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>Sheet1 • {file.name}</span>
+          </div>
+          {/* Columns A B C */}
+          <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 1fr 1fr', backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', fontSize: '0.55rem', fontWeight: '700', textAlign: 'center', color: '#64748b' }}>
+            <div>#</div><div>A</div><div>B</div><div>C</div>
+          </div>
+          {/* Row 1 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', fontSize: '0.55rem', padding: '2px 0', textAlign: 'center', color: '#334155' }}>
+            <div style={{ backgroundColor: '#f8fafc', fontWeight: '600', color: '#94a3b8' }}>1</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>ID</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>Name</div>
+            <div style={{ padding: '0 2px' }}>Value</div>
+          </div>
+          {/* Row 2 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', fontSize: '0.55rem', padding: '2px 0', textAlign: 'center', color: '#334155' }}>
+            <div style={{ backgroundColor: '#f8fafc', fontWeight: '600', color: '#94a3b8' }}>2</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>101</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>Data</div>
+            <div style={{ padding: '0 2px', color: '#10b981', fontWeight: '600' }}>OK</div>
+          </div>
+          {/* Row 3 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 1fr 1fr', fontSize: '0.55rem', padding: '2px 0', textAlign: 'center', color: '#334155' }}>
+            <div style={{ backgroundColor: '#f8fafc', fontWeight: '600', color: '#94a3b8' }}>3</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>102</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>Team</div>
+            <div style={{ padding: '0 2px', color: '#10b981', fontWeight: '600' }}>100%</div>
+          </div>
+        </div>
+
+        <span style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          padding: '3px 8px',
+          borderRadius: '6px',
+          backgroundColor: '#10b981',
+          color: '#fff',
+          fontSize: '0.68rem',
+          fontWeight: '700',
+          boxShadow: '0 2px 6px rgba(16,185,129,0.3)'
+        }}>
+          Excel
+        </span>
+      </div>
+    );
+  }
+
+  // Word & Other Documents (.docx, .cshtml, .html, .txt, etc.)
+  return (
+    <div style={{
+      height: '140px',
+      width: '100%',
+      backgroundColor: '#eff6ff',
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '12px',
+      boxSizing: 'border-box'
+    }}>
+      {/* Realistic Mini Word / Document First Page */}
+      <div style={{
+        width: '80%',
+        height: '100%',
+        backgroundColor: '#ffffff',
+        borderRadius: '4px',
+        boxShadow: '0 4px 12px rgba(59,130,246,0.18)',
+        border: '1px solid #bfdbfe',
+        padding: '8px 10px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between'
+      }}>
+        {/* Top Blue Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1.5px solid #3b82f6', paddingBottom: '4px' }}>
+          <FileText size={13} color="#3b82f6" />
+          <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#1d4ed8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
+            {file.name || 'DOCUMENT'}
+          </span>
+        </div>
+        {/* Paragraph Lines */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
+          <div style={{ height: '4px', backgroundColor: '#cbd5e1', borderRadius: '2px', width: '95%' }} />
+          <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '100%' }} />
+          <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
+          <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '60%' }} />
+        </div>
+        {/* Footer */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '600' }}>Page 1</span>
+          <span style={{ fontSize: '0.55rem', color: '#3b82f6', fontWeight: '700' }}>.{fileExt}</span>
+        </div>
+      </div>
+
+      <span style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        padding: '3px 8px',
+        borderRadius: '6px',
+        backgroundColor: '#3b82f6',
+        color: '#fff',
+        fontSize: '0.68rem',
+        fontWeight: '700',
+        boxShadow: '0 2px 6px rgba(59,130,246,0.3)'
+      }}>
+        {meta.label}
+      </span>
+    </div>
+  );
+}
+
 export default function FilesPage({ initialFile, onClearInitialFile }) {
   const { connectedAccounts, activeAccount } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -1100,80 +1347,14 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                     }}
                     onClick={() => setPreviewFile(file)}
                   >
-                    {/* Visual Card Header */}
-                    {isImage ? (
-                      <div style={{
-                        height: '140px',
-                        width: '100%',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <SecureThumbnail 
-                          file={file}
-                          accountId={file.connectedAccountId || file.accountEmail || activeAccount?._id}
-                          alt={file.name}
-                          fallbackColor={meta.color}
-                        />
-                        <span style={{
-                          position: 'absolute',
-                          top: '10px',
-                          right: '10px',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          color: '#fff',
-                          fontSize: '0.7rem',
-                          fontWeight: '600',
-                          backdropFilter: 'blur(4px)'
-                        }}>
-                          {meta.label}
-                        </span>
-                      </div>
-                    ) : (
-                      <div style={{
-                        height: '120px',
-                        width: '100%',
-                        backgroundColor: meta.bg,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative',
-                        borderBottom: `2px solid ${meta.color}25`
-                      }}>
-                        <Icon size={46} style={{ color: meta.color, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' }} />
-                        <span style={{
-                          position: 'absolute',
-                          top: '10px',
-                          right: '10px',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          backgroundColor: meta.color,
-                          color: '#fff',
-                          fontSize: '0.68rem',
-                          fontWeight: '700',
-                          letterSpacing: '0.04em',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                        }}>
-                          {meta.label}
-                        </span>
-                        <span style={{
-                          position: 'absolute',
-                          bottom: '8px',
-                          left: '12px',
-                          fontSize: '0.72rem',
-                          fontWeight: '700',
-                          color: meta.color,
-                          opacity: 0.85
-                        }}>
-                          .{fileExt}
-                        </span>
-                      </div>
-                    )}
+                    {/* Visual Card Header with realistic First Page preview */}
+                    <DocumentCardHeader 
+                      file={file} 
+                      actualCategory={actualCategory} 
+                      meta={meta} 
+                      fileExt={fileExt} 
+                      activeAccount={activeAccount} 
+                    />
 
                     {/* File Info */}
                     <div style={{ padding: '16px' }}>
