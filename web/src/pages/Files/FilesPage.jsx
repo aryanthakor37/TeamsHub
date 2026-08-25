@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FileText, 
   Image as ImageIcon, 
@@ -14,7 +14,8 @@ import {
   Loader2, 
   AlertCircle,
   X,
-  Maximize2
+  Maximize2,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchFilesFromBackend, fetchFileBlob, fetchFileArrayBuffer } from '../../services/fileService';
@@ -479,30 +480,35 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
   ];
 
   const [selectedFilterAccount, setSelectedFilterAccount] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
   const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
 
-  useEffect(() => {
-    const loadFiles = async () => {
-      if (!isAccountConnected) {
-        setFiles([]);
-        return;
-      }
+  const loadFiles = useCallback(async (isManual = false) => {
+    if (!isAccountConnected) {
+      setFiles([]);
+      return;
+    }
 
+    if (isManual || files.length === 0) {
       setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchFilesFromBackend('all');
-        setFiles(data || []);
-      } catch (err) {
-        setError(err.message || 'Failed to load files from Microsoft Graph. Make sure permissions are granted.');
-        setFiles([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+    }
+    if (isManual) setRefreshing(true);
+    setError(null);
+    try {
+      const data = await fetchFilesFromBackend('all');
+      setFiles(data || []);
+    } catch (err) {
+      console.warn('[FilesPage] Fetch error:', err.message);
+      setError(err.message || 'Failed to load files from Microsoft Graph.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [isAccountConnected, files.length]);
 
-    loadFiles();
-  }, [isAccountConnected]);
+  useEffect(() => {
+    loadFiles(false);
+  }, [isAccountConnected, connectedAccounts.length]);
 
   // Securely load blob / arrayBuffer preview when modal opens
   useEffect(() => {
@@ -796,6 +802,27 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                 </button>
               );
             })}
+
+            <button
+              onClick={() => loadFiles(true)}
+              disabled={refreshing}
+              title="Refresh Graph Files for all accounts"
+              style={{
+                marginLeft: 'auto',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--accent-primary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.8rem',
+                fontWeight: '600'
+              }}
+            >
+              <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
+              <span>{refreshing ? 'Syncing...' : 'Sync'}</span>
+            </button>
           </div>
         )}
 
