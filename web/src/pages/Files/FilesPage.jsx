@@ -26,8 +26,8 @@ import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
 import { renderAsync } from 'docx-preview';
 
-// Secure Image Thumbnail for Grid Gallery
-function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
+// Secure Document & Image Thumbnail for Grid Gallery
+function SecureThumbnail({ file, accountId, alt, fallbackColor, fallbackIcon: FallbackIcon }) {
   const [imgSrc, setImgSrc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -36,7 +36,7 @@ function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
     let active = true;
     let createdUrl = null;
 
-    const targetUrl = file.thumbnailUrl || file.previewUrl || file.contentUrl || file.downloadUrl || file.webUrl;
+    const targetUrl = file.thumbnailUrl || file.previewUrl || file.contentUrl || file.downloadUrl;
     if (!targetUrl || targetUrl === '#') {
       if (active) {
         setLoading(false);
@@ -63,7 +63,7 @@ function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
         }
       }).catch(() => {
         if (active) {
-          setImgSrc(targetUrl);
+          setError(true);
           setLoading(false);
         }
       });
@@ -77,16 +77,17 @@ function SecureThumbnail({ file, accountId, alt, fallbackColor }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-        <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', backgroundColor: 'var(--bg-tertiary)' }}>
+        <Loader2 size={24} className="animate-spin" style={{ color: fallbackColor || 'var(--text-muted)' }} />
       </div>
     );
   }
 
   if (error || !imgSrc) {
+    const IconComponent = FallbackIcon || FileText;
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: fallbackColor }}>
-        <ImageIcon size={36} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', backgroundColor: `${fallbackColor}15` }}>
+        <IconComponent size={40} style={{ color: fallbackColor, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.1))' }} />
       </div>
     );
   }
@@ -1090,80 +1091,41 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                     }}
                     onClick={() => setPreviewFile(file)}
                   >
-                    {/* Visual Thumbnail Header for Gallery Style */}
-                    {isImage ? (
-                      <div style={{
-                        height: '140px',
-                        width: '100%',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                    {/* Visual Thumbnail Header with real Microsoft Graph document preview */}
+                    <div style={{
+                      height: '140px',
+                      width: '100%',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <SecureThumbnail 
+                        file={file}
+                        accountId={file.connectedAccountId || file.accountEmail || activeAccount?._id}
+                        alt={file.name}
+                        fallbackColor={meta.color}
+                        fallbackIcon={Icon}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: meta.color,
+                        color: '#fff',
+                        fontSize: '0.68rem',
+                        fontWeight: '700',
+                        letterSpacing: '0.04em',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                        backdropFilter: 'blur(4px)'
                       }}>
-                        <SecureThumbnail 
-                          file={file}
-                          accountId={file.connectedAccountId || file.accountEmail || activeAccount?._id}
-                          alt={file.name}
-                          fallbackColor={meta.color}
-                        />
-                        <span style={{
-                          position: 'absolute',
-                          top: '10px',
-                          right: '10px',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          color: '#fff',
-                          fontSize: '0.7rem',
-                          fontWeight: '600',
-                          backdropFilter: 'blur(4px)'
-                        }}>
-                          {meta.label}
-                        </span>
-                      </div>
-                    ) : (
-                      <div style={{
-                        height: '115px',
-                        width: '100%',
-                        backgroundColor: meta.bg,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative',
-                        borderBottom: `2px solid ${meta.color}25`
-                      }}>
-                        <Icon size={44} style={{ color: meta.color, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' }} />
-                        <span style={{
-                          position: 'absolute',
-                          top: '10px',
-                          right: '10px',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          backgroundColor: meta.color,
-                          color: '#fff',
-                          fontSize: '0.68rem',
-                          fontWeight: '700',
-                          letterSpacing: '0.04em',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                        }}>
-                          {meta.label}
-                        </span>
-                        <span style={{
-                          position: 'absolute',
-                          bottom: '8px',
-                          left: '12px',
-                          fontSize: '0.72rem',
-                          fontWeight: '700',
-                          color: meta.color,
-                          opacity: 0.85
-                        }}>
-                          .{fileExt}
-                        </span>
-                      </div>
-                    )}
+                        {meta.label}
+                      </span>
+                    </div>
 
                     {/* File Info */}
                     <div style={{ padding: '16px' }}>
