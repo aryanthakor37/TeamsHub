@@ -505,10 +505,11 @@ function TextCodeDocumentViewer({ textContent, fileName, webUrl }) {
   );
 }
 
-// Realistic Visual First Page Header Component for Gallery Cards
+// Realistic Visual Full-Bleed First Page Header Component for Gallery Cards
 function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount }) {
   const fileName = (file.name || '').toLowerCase();
   const rawTitle = file.name || 'DOCUMENT';
+  const cleanTitle = rawTitle.replace(/\.[^/.]+$/, '');
 
   if (actualCategory === 'Images') {
     return (
@@ -530,15 +531,16 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         />
         <span style={{
           position: 'absolute',
-          top: '10px',
-          right: '10px',
-          padding: '4px 8px',
-          borderRadius: '6px',
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          top: '8px',
+          right: '8px',
+          padding: '3px 7px',
+          borderRadius: '5px',
+          backgroundColor: 'rgba(0,0,0,0.65)',
           color: '#fff',
-          fontSize: '0.7rem',
-          fontWeight: '600',
-          backdropFilter: 'blur(4px)'
+          fontSize: '0.68rem',
+          fontWeight: '700',
+          backdropFilter: 'blur(4px)',
+          zIndex: 2
         }}>
           {meta.label}
         </span>
@@ -549,108 +551,97 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
   if (actualCategory === 'PDF') {
     const isCert = fileName.includes('certificate') || fileName.includes('cert');
     const isReceipt = fileName.includes('receipt') || fileName.includes('payment') || fileName.includes('invoice') || fileName.includes('bill');
-    const isPlan = fileName.includes('plan') || fileName.includes('project') || fileName.includes('agent') || fileName.includes('report');
 
     return (
       <div style={{
         height: '140px',
         width: '100%',
-        backgroundColor: '#fff1f2',
+        backgroundColor: '#ffffff',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '10px',
-        boxSizing: 'border-box'
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '10px 12px',
+        boxSizing: 'border-box',
+        borderBottom: '1px solid var(--border-color)',
+        backgroundImage: 'linear-gradient(to bottom, #ffffff, #fafafa)'
       }}>
-        {/* Realistic Mini PDF First Page */}
-        <div style={{
-          width: '84%',
-          height: '100%',
-          backgroundColor: '#ffffff',
-          borderRadius: '4px',
-          boxShadow: '0 4px 14px rgba(239,68,68,0.18)',
-          border: isCert ? '1.5px solid #fbbf24' : '1px solid #fecdd3',
-          padding: '8px 10px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {isCert ? (
-            /* Certificate First Page */
-            <>
-              <div style={{ textAlign: 'center', borderBottom: '1px solid #fef3c7', paddingBottom: '3px' }}>
-                <span style={{ fontSize: '0.58rem', fontWeight: '900', color: '#b45309', letterSpacing: '0.06em' }}>★ CERTIFICATE ★</span>
-                <p style={{ fontSize: '0.52rem', color: '#78350f', margin: '2px 0 0', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {rawTitle}
-                </p>
+        {isCert ? (
+          /* Full-Bleed Certificate 1st Page */
+          <>
+            <div style={{ borderBottom: '2px double #d97706', paddingBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: '900', color: '#b45309', letterSpacing: '0.04em' }}>★ CERTIFICATE OF EXCELLENCE ★</span>
+            </div>
+            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: '800', color: '#1e293b', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {cleanTitle}
               </div>
-              <div style={{ textAlign: 'center', margin: '3px 0' }}>
-                <span style={{ fontSize: '0.5rem', color: '#92400e' }}>Awarded for Completion & Excellence</span>
-                <div style={{ height: '3px', backgroundColor: '#fef3c7', borderRadius: '2px', width: '80%', margin: '3px auto 0' }} />
+              <div style={{ fontSize: '0.62rem', color: '#64748b', marginTop: '2px' }}>
+                Awarded for verified completion & compliance
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #fde68a', paddingTop: '3px' }}>
-                <span style={{ fontSize: '0.52rem', color: '#d97706', fontWeight: '700' }}>✔ VERIFIED</span>
-                <span style={{ fontSize: '0.52rem', color: '#ef4444', fontWeight: '800' }}>PDF</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
+              <span style={{ color: '#16a34a', fontWeight: '700' }}>✔ Officially Verified</span>
+              <span style={{ color: '#ef4444', fontWeight: '800', backgroundColor: '#fee2e2', padding: '1px 5px', borderRadius: '3px' }}>PDF • Page 1</span>
+            </div>
+          </>
+        ) : isReceipt ? (
+          /* Full-Bleed Payment Receipt 1st Page */
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #ef4444', paddingBottom: '3px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#991b1b' }}>RECEIPT / PAYMENT INVOICE</span>
+              <span style={{ fontSize: '0.58rem', backgroundColor: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '3px', fontWeight: '800' }}>PAID ✔</span>
+            </div>
+            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: '700', color: '#1e293b' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{cleanTitle}</span>
+                <span style={{ color: '#15803d', fontWeight: '800' }}>$1,250.00</span>
               </div>
-            </>
-          ) : isReceipt ? (
-            /* Payment Receipt First Page */
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #fecdd3', paddingBottom: '3px' }}>
-                <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#991b1b' }}>RECEIPT</span>
-                <span style={{ fontSize: '0.5rem', backgroundColor: '#dcfce7', color: '#166534', padding: '1px 4px', borderRadius: '3px', fontWeight: '700' }}>PAID</span>
+              <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                Payment Method: Online Transfer • Tax Invoice
               </div>
-              <div style={{ margin: '3px 0', fontSize: '0.52rem', color: '#334155' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Ref: #84549869</span>
-                  <span style={{ fontWeight: '700', color: '#15803d' }}>$1,250.00</span>
-                </div>
-                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '90%', margin: '4px 0 2px' }} />
-                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '70%' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
+              <span style={{ color: '#64748b' }}>Ref: #84549869-PDF</span>
+              <span style={{ color: '#ef4444', fontWeight: '800', backgroundColor: '#fee2e2', padding: '1px 5px', borderRadius: '3px' }}>PDF • Page 1</span>
+            </div>
+          </>
+        ) : (
+          /* Full-Bleed Executive Project Proposal / Document 1st Page */
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '2px solid #ef4444', paddingBottom: '3px' }}>
+              <FileText size={13} color="#ef4444" />
+              <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#991b1b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {cleanTitle}
+              </span>
+            </div>
+            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#334155' }}>
+                1. Executive Summary & Goals
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-                <span style={{ fontSize: '0.5rem', color: '#64748b' }}>TeamsHub Pay</span>
-                <span style={{ fontSize: '0.52rem', color: '#ef4444', fontWeight: '800' }}>PDF</span>
+              <div style={{ fontSize: '0.6rem', color: '#64748b', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                This official specification document provides verified project milestones, scope, and implementation details.
               </div>
-            </>
-          ) : (
-            /* Executive Project Proposal / Document First Page */
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1.5px solid #ef4444', paddingBottom: '3px' }}>
-                <FileText size={12} color="#ef4444" />
-                <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#991b1b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {rawTitle}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '4px 0' }}>
-                <div style={{ fontSize: '0.52rem', fontWeight: '700', color: '#475569' }}>1. Executive Summary & Goals</div>
-                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '95%' }} />
-                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '100%' }} />
-                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-                <span style={{ fontSize: '0.5rem', color: '#94a3b8', fontWeight: '600' }}>Page 1 • Final</span>
-                <span style={{ fontSize: '0.52rem', color: '#ef4444', fontWeight: '800' }}>PDF</span>
-              </div>
-            </>
-          )}
-        </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
+              <span style={{ color: '#64748b' }}>Version 1.0 • Final</span>
+              <span style={{ color: '#ef4444', fontWeight: '800', backgroundColor: '#fee2e2', padding: '1px 5px', borderRadius: '3px' }}>PDF • Page 1</span>
+            </div>
+          </>
+        )}
 
         <span style={{
           position: 'absolute',
-          top: '8px',
+          top: '6px',
           right: '8px',
-          padding: '2px 7px',
-          borderRadius: '5px',
+          padding: '2px 6px',
+          borderRadius: '4px',
           backgroundColor: '#ef4444',
           color: '#fff',
-          fontSize: '0.65rem',
-          fontWeight: '700',
-          boxShadow: '0 2px 6px rgba(239,68,68,0.3)'
+          fontSize: '0.62rem',
+          fontWeight: '800',
+          boxShadow: '0 2px 4px rgba(239,68,68,0.25)'
         }}>
           PDF
         </span>
@@ -659,77 +650,83 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
   }
 
   if (actualCategory === 'Excel') {
+    const isBook = fileName.includes('book');
+    const isSample = fileName.includes('sample');
+
     return (
       <div style={{
         height: '140px',
         width: '100%',
-        backgroundColor: '#ecfdf5',
+        backgroundColor: '#ffffff',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '10px',
-        boxSizing: 'border-box'
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        borderBottom: '1px solid var(--border-color)',
+        fontSize: '0.62rem'
       }}>
-        {/* Realistic Mini Excel Spreadsheet Grid */}
-        <div style={{
-          width: '88%',
-          height: '100%',
-          backgroundColor: '#ffffff',
-          borderRadius: '4px',
-          boxShadow: '0 4px 12px rgba(16,185,129,0.18)',
-          border: '1px solid #a7f3d0',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          {/* Sheet Top Bar */}
-          <div style={{ backgroundColor: '#10b981', color: '#fff', padding: '3px 8px', fontSize: '0.62rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <FileSpreadsheet size={12} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>Sheet1 • {file.name}</span>
+        {/* Full-Bleed Excel Sheet Top Bar */}
+        <div style={{ backgroundColor: '#10b981', color: '#fff', padding: '4px 10px', fontSize: '0.66rem', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <FileSpreadsheet size={13} />
+            <span>Sheet1 • {cleanTitle}</span>
           </div>
-          {/* Columns A B C */}
-          <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 1fr 1fr', backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', fontSize: '0.55rem', fontWeight: '700', textAlign: 'center', color: '#64748b' }}>
-            <div>#</div><div>A</div><div>B</div><div>C</div>
+          <span style={{ backgroundColor: '#059669', padding: '1px 5px', borderRadius: '3px', fontSize: '0.58rem', fontWeight: '700' }}>XLSX</span>
+        </div>
+
+        {/* Real Structured Table Grid */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
+          {/* Header Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '24px 1.5fr 1fr 1fr', backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', fontWeight: '800', color: '#475569', textAlign: 'center', padding: '2px 0' }}>
+            <div>#</div>
+            <div>{isBook ? 'Book Title' : isSample ? 'Item Name' : 'Field'}</div>
+            <div>{isBook ? 'Author' : isSample ? 'Category' : 'Value'}</div>
+            <div>{isBook ? 'Status' : isSample ? 'Qty' : 'Status'}</div>
           </div>
+
           {/* Row 1 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', fontSize: '0.55rem', padding: '2px 0', textAlign: 'center', color: '#334155' }}>
-            <div style={{ backgroundColor: '#f8fafc', fontWeight: '600', color: '#94a3b8' }}>1</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>ID</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>Name</div>
-            <div style={{ padding: '0 2px' }}>Value</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '24px 1.5fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', color: '#334155', textAlign: 'center', padding: '2px 0', fontSize: '0.6rem' }}>
+            <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>1</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>
+              {isBook ? 'The Lean Startup' : isSample ? 'Product Sample 1' : 'Active Account'}
+            </div>
+            <div style={{ borderRight: '1px solid #f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {isBook ? 'Eric Ries' : isSample ? 'Hardware' : 'Verified'}
+            </div>
+            <div style={{ color: '#10b981', fontWeight: '700' }}>{isBook ? 'In Stock' : isSample ? '24' : '100%'}</div>
           </div>
+
           {/* Row 2 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', fontSize: '0.55rem', padding: '2px 0', textAlign: 'center', color: '#334155' }}>
-            <div style={{ backgroundColor: '#f8fafc', fontWeight: '600', color: '#94a3b8' }}>2</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>101</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>Data</div>
-            <div style={{ padding: '0 2px', color: '#10b981', fontWeight: '600' }}>OK</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '24px 1.5fr 1fr 1fr', borderBottom: '1px solid #f1f5f9', color: '#334155', textAlign: 'center', padding: '2px 0', fontSize: '0.6rem' }}>
+            <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>2</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>
+              {isBook ? 'Clean Code' : isSample ? 'Product Sample 2' : 'Pending Tasks'}
+            </div>
+            <div style={{ borderRight: '1px solid #f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {isBook ? 'R. Martin' : isSample ? 'Software' : 'Completed'}
+            </div>
+            <div style={{ color: '#10b981', fontWeight: '700' }}>{isBook ? 'In Stock' : isSample ? '18' : 'OK'}</div>
           </div>
+
           {/* Row 3 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 1fr 1fr', fontSize: '0.55rem', padding: '2px 0', textAlign: 'center', color: '#334155' }}>
-            <div style={{ backgroundColor: '#f8fafc', fontWeight: '600', color: '#94a3b8' }}>3</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>102</div>
-            <div style={{ borderRight: '1px solid #f1f5f9', padding: '0 2px' }}>Team</div>
-            <div style={{ padding: '0 2px', color: '#10b981', fontWeight: '600' }}>100%</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '24px 1.5fr 1fr 1fr', color: '#334155', textAlign: 'center', padding: '2px 0', fontSize: '0.6rem' }}>
+            <div style={{ backgroundColor: '#f8fafc', color: '#94a3b8', fontWeight: '600' }}>3</div>
+            <div style={{ borderRight: '1px solid #f1f5f9', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 4px', textAlign: 'left' }}>
+              {isBook ? 'Pragmatic Programmer' : isSample ? 'Product Sample 3' : 'Total Revenue'}
+            </div>
+            <div style={{ borderRight: '1px solid #f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {isBook ? 'A. Hunt' : isSample ? 'Cloud' : '$45,200'}
+            </div>
+            <div style={{ color: '#10b981', fontWeight: '700' }}>{isBook ? 'Available' : isSample ? '52' : 'Passed'}</div>
           </div>
         </div>
 
-        <span style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          padding: '2px 7px',
-          borderRadius: '5px',
-          backgroundColor: '#10b981',
-          color: '#fff',
-          fontSize: '0.65rem',
-          fontWeight: '700',
-          boxShadow: '0 2px 6px rgba(16,185,129,0.3)'
-        }}>
-          Excel
-        </span>
+        {/* Footer */}
+        <div style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #cbd5e1', padding: '2px 10px', fontSize: '0.58rem', display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+          <span>Ready • SUM: 100%</span>
+          <span style={{ fontWeight: '700', color: '#059669' }}>Excel Grid • Page 1</span>
+        </div>
       </div>
     );
   }
@@ -743,79 +740,55 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '10px',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '10px 12px',
         boxSizing: 'border-box'
       }}>
-        {/* Realistic Mini Video Player Frame */}
         <div style={{
-          width: '88%',
-          height: '100%',
-          backgroundColor: '#1e293b',
-          borderRadius: '6px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-          border: '1px solid #334155',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: 'radial-gradient(rgba(99,102,241,0.2) 1px, transparent 1px)',
-            backgroundSize: '12px 12px',
-            opacity: 0.6
-          }} />
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'radial-gradient(rgba(99,102,241,0.25) 1px, transparent 1px)',
+          backgroundSize: '12px 12px',
+          opacity: 0.8
+        }} />
 
-          {/* Central Play Button */}
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(99,102,241,0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            boxShadow: '0 0 16px rgba(99,102,241,0.7)',
-            zIndex: 1
-          }}>
-            <Play size={16} fill="#ffffff" style={{ marginLeft: '2px' }} />
-          </div>
-
-          {/* Video Timeline Bar at Bottom */}
-          <div style={{
-            position: 'absolute',
-            bottom: '6px',
-            left: '8px',
-            right: '8px',
-            height: '3px',
-            backgroundColor: '#475569',
-            borderRadius: '2px',
-            overflow: 'hidden'
-          }}>
-            <div style={{ width: '45%', height: '100%', backgroundColor: '#6366f1' }} />
-          </div>
+        <div style={{ zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#fff', fontSize: '0.68rem', fontWeight: '800', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+            {cleanTitle}
+          </span>
+          <span style={{ backgroundColor: '#6366f1', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: '800' }}>
+            VIDEO
+          </span>
         </div>
 
-        <span style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          padding: '2px 7px',
-          borderRadius: '5px',
-          backgroundColor: '#6366f1',
+        {/* Central Play Button */}
+        <div style={{
+          alignSelf: 'center',
+          width: '38px',
+          height: '38px',
+          borderRadius: '50%',
+          backgroundColor: 'rgba(99,102,241,0.9)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           color: '#fff',
-          fontSize: '0.65rem',
-          fontWeight: '700',
-          boxShadow: '0 2px 6px rgba(99,102,241,0.4)'
+          boxShadow: '0 0 16px rgba(99,102,241,0.8)',
+          zIndex: 1
         }}>
-          Video
-        </span>
+          <Play size={18} fill="#ffffff" style={{ marginLeft: '2px' }} />
+        </div>
+
+        {/* Video Timeline Bar at Bottom */}
+        <div style={{ zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.58rem', marginBottom: '3px' }}>
+            <span>01:24</span>
+            <span>03:45</span>
+          </div>
+          <div style={{ height: '3px', backgroundColor: '#334155', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ width: '40%', height: '100%', backgroundColor: '#6366f1' }} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -829,61 +802,34 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '10px',
-        boxSizing: 'border-box'
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '10px 12px',
+        boxSizing: 'border-box',
+        borderBottom: '1px solid var(--border-color)'
       }}>
-        {/* Realistic Mini Archive / Folder Preview */}
-        <div style={{
-          width: '82%',
-          height: '100%',
-          backgroundColor: '#ffffff',
-          borderRadius: '6px',
-          boxShadow: '0 4px 12px rgba(245,158,11,0.18)',
-          border: '1.5px dashed #fcd34d',
-          padding: '8px 10px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', borderBottom: '1px solid #fef3c7', paddingBottom: '4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #f59e0b', paddingBottom: '3px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             <Archive size={14} color="#d97706" />
-            <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#b45309', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {rawTitle}
-            </span>
+            <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#b45309' }}>{cleanTitle}</span>
           </div>
+          <span style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontSize: '0.58rem', fontWeight: '800' }}>ZIP</span>
+        </div>
 
-          {/* Zipper Teeth Graphic */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', margin: '4px 0' }}>
-            <div style={{ width: '8px', height: '6px', backgroundColor: '#f59e0b', borderRadius: '1px' }} />
-            <div style={{ width: '8px', height: '6px', backgroundColor: '#d97706', borderRadius: '1px' }} />
-            <div style={{ width: '8px', height: '6px', backgroundColor: '#f59e0b', borderRadius: '1px' }} />
-            <div style={{ width: '8px', height: '6px', backgroundColor: '#d97706', borderRadius: '1px' }} />
-            <div style={{ width: '8px', height: '6px', backgroundColor: '#f59e0b', borderRadius: '1px' }} />
+        {/* Zipper Teeth Graphic */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '4px 0', fontSize: '0.62rem', color: '#92400e' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>📁 archive_contents/</span>
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.52rem', color: '#92400e', fontWeight: '600' }}>Compressed</span>
-            <span style={{ fontSize: '0.52rem', color: '#d97706', fontWeight: '700' }}>.ZIP</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#78350f', paddingLeft: '8px' }}>
+            <span>📄 documents.pdf, data.xlsx</span>
           </div>
         </div>
 
-        <span style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          padding: '2px 7px',
-          borderRadius: '5px',
-          backgroundColor: '#f59e0b',
-          color: '#fff',
-          fontSize: '0.65rem',
-          fontWeight: '700',
-          boxShadow: '0 2px 6px rgba(245,158,11,0.3)'
-        }}>
-          Archive
-        </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #fde68a', paddingTop: '3px', fontSize: '0.58rem' }}>
+          <span style={{ color: '#92400e', fontWeight: '700' }}>✔ Compressed Package</span>
+          <span style={{ color: '#d97706', fontWeight: '800' }}>ZIP Archive</span>
+        </div>
       </div>
     );
   }
@@ -897,124 +843,106 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
     <div style={{
       height: '140px',
       width: '100%',
-      backgroundColor: isCodeDoc ? '#0f172a' : '#eff6ff',
+      backgroundColor: isCodeDoc ? '#0f172a' : '#ffffff',
       position: 'relative',
       overflow: 'hidden',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '10px',
-      boxSizing: 'border-box'
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      padding: '10px 12px',
+      boxSizing: 'border-box',
+      borderBottom: '1px solid var(--border-color)'
     }}>
       {isCodeDoc ? (
-        /* Realistic Code / Template First Page Preview */
-        <div style={{
-          width: '86%',
-          height: '100%',
-          backgroundColor: '#1e293b',
-          borderRadius: '5px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-          border: '1px solid #334155',
-          padding: '6px 8px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          fontFamily: 'monospace',
-          fontSize: '0.52rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px solid #334155', paddingBottom: '3px' }}>
-            <div style={{ display: 'flex', gap: '3px' }}>
-              <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-              <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#eab308' }} />
-              <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
+        /* Full-Bleed Code / Template 1st Page Preview */
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#eab308' }} />
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
+              <span style={{ color: '#94a3b8', fontSize: '0.62rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                {rawTitle}
+              </span>
             </div>
-            <span style={{ color: '#94a3b8', fontSize: '0.52rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {rawTitle}
+            <span style={{ backgroundColor: '#38bdf8', color: '#0f172a', padding: '1px 5px', borderRadius: '3px', fontSize: '0.58rem', fontWeight: '800' }}>
+              .{fileExt}
             </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '2px 0' }}>
-            <div><span style={{ color: '#64748b' }}>1 </span><span style={{ color: '#f43f5e' }}>@model</span> <span style={{ color: '#38bdf8' }}>CertificateVM</span></div>
-            <div><span style={{ color: '#64748b' }}>2 </span><span style={{ color: '#818cf8' }}>&lt;div</span> <span style={{ color: '#fbbf24' }}>class=</span><span style={{ color: '#34d399' }}>"cert-box"</span><span style={{ color: '#818cf8' }}>&gt;</span></div>
-            <div><span style={{ color: '#64748b' }}>3 </span>&nbsp;&nbsp;<span style={{ color: '#e2e8f0' }}>&lt;h1&gt;@Model.Title&lt;/h1&gt;</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '3px 0', fontFamily: 'monospace', fontSize: '0.6rem' }}>
+            <div><span style={{ color: '#64748b' }}>1 </span><span style={{ color: '#f43f5e' }}>@model</span> <span style={{ color: '#38bdf8' }}>CertificateViewModel</span></div>
+            <div><span style={{ color: '#64748b' }}>2 </span><span style={{ color: '#818cf8' }}>&lt;div</span> <span style={{ color: '#fbbf24' }}>class=</span><span style={{ color: '#34d399' }}>"cert-container"</span><span style={{ color: '#818cf8' }}>&gt;</span></div>
+            <div><span style={{ color: '#64748b' }}>3 </span>&nbsp;&nbsp;<span style={{ color: '#e2e8f0' }}>&lt;h1&gt;@Model.StudentName&lt;/h1&gt;</span></div>
             <div><span style={{ color: '#64748b' }}>4 </span><span style={{ color: '#818cf8' }}>&lt;/div&gt;</span></div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.48rem' }}>
-            <span>UTF-8</span>
-            <span style={{ color: '#38bdf8', fontWeight: '700' }}>.{fileExt}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.55rem', borderTop: '1px solid #1e293b', paddingTop: '2px' }}>
+            <span>UTF-8 • Razor Template</span>
+            <span style={{ color: '#38bdf8', fontWeight: '700' }}>Code Editor • Page 1</span>
           </div>
-        </div>
+        </>
       ) : (
-        /* Realistic Word Document First Page */
-        <div style={{
-          width: '84%',
-          height: '100%',
-          backgroundColor: '#ffffff',
-          borderRadius: '4px',
-          boxShadow: '0 4px 12px rgba(59,130,246,0.18)',
-          border: '1px solid #bfdbfe',
-          padding: '8px 10px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between'
-        }}>
-          {/* Top Blue Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1.5px solid #3b82f6', paddingBottom: '3px' }}>
-            <FileText size={12} color="#3b82f6" />
-            <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#1d4ed8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {rawTitle}
+        /* Full-Bleed Word Document 1st Page */
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '2px solid #3b82f6', paddingBottom: '3px' }}>
+            <FileText size={13} color="#3b82f6" />
+            <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#1d4ed8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {cleanTitle}
             </span>
           </div>
 
           {isFormDoc ? (
             /* Feedback Form Document Lines */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '3px 0', fontSize: '0.52rem', color: '#334155' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: '700' }}>Feedback Form</span>
+            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', fontWeight: '800', color: '#1e293b' }}>
+                <span>Customer Feedback & Review</span>
                 <span style={{ color: '#2563eb' }}>★★★★★</span>
               </div>
-              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '90%' }} />
-              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '70%' }} />
+              <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                Evaluation: 100% Satisfaction • Deliverables approved on schedule.
+              </div>
             </div>
           ) : isRulesDoc ? (
             /* CRM Rules Document Lines */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '3px 0', fontSize: '0.52rem', color: '#334155' }}>
-              <div style={{ fontWeight: '700', color: '#1e40af' }}>1. Action Buttons & Rules</div>
-              <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                <span style={{ color: '#16a34a' }}>✔</span> <div style={{ height: '3px', backgroundColor: '#cbd5e1', borderRadius: '2px', width: '80%' }} />
+            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#1e40af' }}>
+                1. Action Buttons & Business Rules
               </div>
-              <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                <span style={{ color: '#16a34a' }}>✔</span> <div style={{ height: '3px', backgroundColor: '#cbd5e1', borderRadius: '2px', width: '65%' }} />
+              <div style={{ fontSize: '0.6rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span>✔ Button 1: Submit Inquiry (Role: Admin)</span>
+                <span>✔ Button 2: Export Data (Permission: Level 2)</span>
               </div>
             </div>
           ) : (
             /* Standard Document Paragraph Lines */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '3px 0' }}>
-              <div style={{ height: '3px', backgroundColor: '#94a3b8', borderRadius: '2px', width: '95%' }} />
-              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '100%' }} />
-              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
-              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '60%' }} />
+            <div style={{ margin: '4px 0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#334155' }}>
+                Project Overview & Requirements
+              </div>
+              <div style={{ fontSize: '0.6rem', color: '#64748b', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                This document outlines the standard architecture, features, and core workflows for the platform.
+              </div>
             </div>
           )}
 
           {/* Footer */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-            <span style={{ fontSize: '0.5rem', color: '#94a3b8', fontWeight: '600' }}>Page 1</span>
-            <span style={{ fontSize: '0.52rem', color: '#3b82f6', fontWeight: '800' }}>.{fileExt}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '4px', fontSize: '0.6rem' }}>
+            <span style={{ color: '#64748b' }}>Microsoft Word Doc</span>
+            <span style={{ color: '#3b82f6', fontWeight: '800', backgroundColor: '#eff6ff', padding: '1px 5px', borderRadius: '3px' }}>.{fileExt} • Page 1</span>
           </div>
-        </div>
+        </>
       )}
 
       <span style={{
         position: 'absolute',
-        top: '8px',
+        top: '6px',
         right: '8px',
-        padding: '2px 7px',
-        borderRadius: '5px',
+        padding: '2px 6px',
+        borderRadius: '4px',
         backgroundColor: '#3b82f6',
         color: '#fff',
-        fontSize: '0.65rem',
-        fontWeight: '700',
-        boxShadow: '0 2px 6px rgba(59,130,246,0.3)'
+        fontSize: '0.62rem',
+        fontWeight: '800',
+        boxShadow: '0 2px 4px rgba(59,130,246,0.25)'
       }}>
         {meta.label}
       </span>
