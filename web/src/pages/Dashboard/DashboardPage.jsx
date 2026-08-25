@@ -1,16 +1,49 @@
-import React from 'react';
-import { MessageSquare, Folder, Users, Clock, ArrowUpRight, FileText, CheckCircle2 } from 'lucide-react';
-import { mockDashboardStats, mockFiles } from '../../services/mockDataService';
+import React, { useState, useEffect } from 'react';
+import { 
+  MessageSquare, 
+  Folder, 
+  Users, 
+  Clock, 
+  ArrowUpRight, 
+  FileText, 
+  ImageIcon, 
+  Video, 
+  FileSpreadsheet, 
+  Archive, 
+  CheckCircle2,
+  ExternalLink
+} from 'lucide-react';
+import { mockDashboardStats } from '../../services/mockDataService';
 import { useAuth } from '../../hooks/useAuth';
 import { useChats } from '../../hooks/useChats';
+import { fetchFilesFromBackend } from '../../services/fileService';
 import { getInitials, getAvatarColor } from '../../utils/avatarUtils';
 
 export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile }) {
   const { connectedAccounts, activeAccount, user } = useAuth();
   const { chats } = useChats('all');
+  const [recentFiles, setRecentFiles] = useState([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
   const connectedCount = connectedAccounts ? connectedAccounts.length : 0;
   const activeAccName = activeAccount ? (activeAccount.displayName || activeAccount.email) : 'No Active Account';
   
+  useEffect(() => {
+    let active = true;
+    if (connectedAccounts && connectedAccounts.length > 0) {
+      setLoadingFiles(true);
+      fetchFilesFromBackend('all').then((data) => {
+        if (active && Array.isArray(data)) {
+          setRecentFiles(data);
+        }
+      }).catch(() => {}).finally(() => {
+        if (active) setLoadingFiles(false);
+      });
+    } else {
+      setRecentFiles([]);
+    }
+    return () => { active = false; };
+  }, [connectedAccounts?.length]);
+
   const getChatOwnerEmail = (c) => {
     if (!c) return '';
     const email = (c.accountEmail || '').toLowerCase().trim();
@@ -19,6 +52,27 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
     if (badge.includes('aryan') || badge.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
     if (badge.includes('keval') || badge.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
     return email;
+  };
+
+  const getFileCategoryMeta = (fileName = '', rawCategory = '') => {
+    const name = (fileName || '').toLowerCase().trim();
+    const ext = name.includes('.') ? name.split('.').pop() : '';
+    if (ext === 'pdf' || name.endsWith('.pdf') || rawCategory === 'PDF') {
+      return { label: 'PDF', icon: FileText, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)' };
+    }
+    if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp'].includes(ext) || name.startsWith('photo from') || name.startsWith('image') || rawCategory === 'Images') {
+      return { label: 'Image', icon: ImageIcon, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' };
+    }
+    if (['xls', 'xlsx', 'csv', 'tsv', 'ods'].includes(ext) || rawCategory === 'Excel') {
+      return { label: 'Excel', icon: FileSpreadsheet, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' };
+    }
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext) || rawCategory === 'Videos') {
+      return { label: 'Video', icon: Video, color: '#6366f1', bg: 'rgba(99, 102, 241, 0.12)' };
+    }
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || rawCategory === 'ZIP') {
+      return { label: 'Archive', icon: Archive, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' };
+    }
+    return { label: 'Document', icon: FileText, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' };
   };
 
   const visibleChats = (chats || []).filter(chat => {
@@ -32,6 +86,21 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
       if (accName && chat.company && chat.company.toLowerCase().includes(accName)) return true;
       if (accEmail.includes('aryan') && chatOwnerEmail.includes('aryan')) return true;
       if (accEmail.includes('keval') && chatOwnerEmail.includes('keval')) return true;
+      return false;
+    });
+  });
+
+  const visibleFiles = (recentFiles || []).filter(file => {
+    if (!connectedAccounts || connectedAccounts.length === 0) return false;
+    const fileOwnerEmail = (file.accountEmail || '').toLowerCase().trim();
+    if (!fileOwnerEmail) return true;
+    return connectedAccounts.some(acc => {
+      const accEmail = (acc.email || '').toLowerCase().trim();
+      const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
+      if (accEmail && fileOwnerEmail === accEmail) return true;
+      if (accName && file.account && file.account.toLowerCase().includes(accName)) return true;
+      if (accEmail.includes('aryan') && fileOwnerEmail.includes('aryan')) return true;
+      if (accEmail.includes('keval') && fileOwnerEmail.includes('keval')) return true;
       return false;
     });
   });
@@ -100,7 +169,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
           <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Shared Files</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2 }}>{isConnected ? (chats ? chats.length : 0) : 0}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2 }}>{isConnected ? visibleFiles.length : 0}</div>
           </div>
         </div>
 
@@ -244,10 +313,102 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {isConnected ? (
+            {isConnected && visibleFiles && visibleFiles.length > 0 ? (
+              visibleFiles.slice(0, 4).map((file) => {
+                const meta = getFileCategoryMeta(file.name, file.category);
+                const Icon = meta.icon;
+                return (
+                  <div
+                    key={file.id || file.name}
+                    onClick={() => {
+                      if (onSelectFile) {
+                        onSelectFile(file);
+                      } else {
+                        setActiveTab('files');
+                      }
+                    }}
+                    className="glass-card-interactive"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '14px',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: 'var(--shadow-sm)',
+                      cursor: 'pointer',
+                      transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)'
+                    }}
+                  >
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      backgroundColor: meta.bg,
+                      color: meta.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Icon size={20} />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ 
+                        fontWeight: '700', 
+                        fontSize: '0.9rem', 
+                        color: 'var(--text-primary)', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        marginBottom: '2px'
+                      }} title={file.name}>
+                        {file.name}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        {meta.label} • {file.size || 'Shared File'} • {file.sender || file.account}
+                      </div>
+                    </div>
+
+                    <span className="badge" style={{
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.72rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      flexShrink: 0
+                    }}>
+                      <span style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: getAvatarColor(file.account),
+                        color: '#fff',
+                        fontSize: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '700'
+                      }}>
+                        {(file.account?.[0] || 'A').toUpperCase()}
+                      </span>
+                      <span>{file.account}</span>
+                    </span>
+                  </div>
+                );
+              })
+            ) : isConnected && loadingFiles ? (
+              <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                <Folder size={32} style={{ marginBottom: '10px', opacity: 0.4 }} className="spin" />
+                <div>Fetching latest shared files from Microsoft Graph...</div>
+              </div>
+            ) : isConnected ? (
               <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
                 <Folder size={32} style={{ marginBottom: '10px', opacity: 0.4 }} />
-                <div>Select Files tab to view all Microsoft Graph shared files.</div>
+                <div>No recent shared files found.</div>
               </div>
             ) : (
               <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
