@@ -929,17 +929,18 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                 <p style={{ fontSize: '0.85rem', marginTop: '8px' }}>Please select a specific account in the sidebar to view files.</p>
               ) : null}
             </div>
-          ) : viewMode === 'grid' ? (
+) : viewMode === 'grid' ? (
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
               gap: '20px'
             }}>
               {filteredFiles.map((file) => {
-                const meta = getCategoryMeta(file.category);
+                const actualCategory = getFileCategory(file);
+                const meta = getCategoryMeta(actualCategory);
                 const Icon = meta.icon;
-                const isImage = file.category === 'Images' || (file.name && file.name.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i)) || Boolean(file.previewUrl) || Boolean(file.thumbnailUrl);
-                const fileExt = file.name.includes('.') ? file.name.split('.').pop().toUpperCase() : file.category.toUpperCase();
+                const isImage = actualCategory === 'Images';
+                const fileExt = file.name.includes('.') ? file.name.split('.').pop().toUpperCase() : actualCategory.toUpperCase();
 
                 return (
                   <div 
@@ -1033,9 +1034,9 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                       </div>
                     )}
 
-                    {/* Card Content */}
-                    <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <div>
+                    {/* File Info */}
+                    <div style={{ padding: '16px' }}>
+                      <div style={{ marginBottom: '12px' }}>
                         <h4 style={{ 
                           fontSize: '0.92rem', 
                           fontWeight: '600', 
@@ -1050,7 +1051,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                         </h4>
 
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                          {file.category} • {file.size}
+                          {actualCategory} • {file.size}
                         </p>
                       </div>
 
@@ -1143,7 +1144,8 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                 </thead>
                 <tbody>
                   {filteredFiles.map((file) => {
-                    const meta = getCategoryMeta(file.category);
+                    const actualCategory = getFileCategory(file);
+                    const meta = getCategoryMeta(actualCategory);
                     const Icon = meta.icon;
 
                     return (
@@ -1175,7 +1177,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                             color: meta.color,
                             fontWeight: '600'
                           }}>
-                            {file.category}
+                            {actualCategory}
                           </span>
                         </td>
                         <td style={{ padding: '14px 20px', color: 'var(--text-muted)' }}>{file.size}</td>
