@@ -1100,41 +1100,80 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                     }}
                     onClick={() => setPreviewFile(file)}
                   >
-                    {/* Visual Thumbnail Header with real Microsoft Graph document preview */}
-                    <div style={{
-                      height: '140px',
-                      width: '100%',
-                      backgroundColor: 'var(--bg-tertiary)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <SecureThumbnail 
-                        file={file}
-                        accountId={file.connectedAccountId || file.accountEmail || activeAccount?._id}
-                        alt={file.name}
-                        fallbackColor={meta.color}
-                        fallbackIcon={Icon}
-                      />
-                      <span style={{
-                        position: 'absolute',
-                        top: '10px',
-                        right: '10px',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        backgroundColor: meta.color,
-                        color: '#fff',
-                        fontSize: '0.68rem',
-                        fontWeight: '700',
-                        letterSpacing: '0.04em',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                        backdropFilter: 'blur(4px)'
+                    {/* Visual Card Header */}
+                    {isImage ? (
+                      <div style={{
+                        height: '140px',
+                        width: '100%',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}>
-                        {meta.label}
-                      </span>
-                    </div>
+                        <SecureThumbnail 
+                          file={file}
+                          accountId={file.connectedAccountId || file.accountEmail || activeAccount?._id}
+                          alt={file.name}
+                          fallbackColor={meta.color}
+                        />
+                        <span style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          color: '#fff',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          backdropFilter: 'blur(4px)'
+                        }}>
+                          {meta.label}
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{
+                        height: '120px',
+                        width: '100%',
+                        backgroundColor: meta.bg,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        borderBottom: `2px solid ${meta.color}25`
+                      }}>
+                        <Icon size={46} style={{ color: meta.color, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' }} />
+                        <span style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          backgroundColor: meta.color,
+                          color: '#fff',
+                          fontSize: '0.68rem',
+                          fontWeight: '700',
+                          letterSpacing: '0.04em',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                        }}>
+                          {meta.label}
+                        </span>
+                        <span style={{
+                          position: 'absolute',
+                          bottom: '8px',
+                          left: '12px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          color: meta.color,
+                          opacity: 0.85
+                        }}>
+                          .{fileExt}
+                        </span>
+                      </div>
+                    )}
 
                     {/* File Info */}
                     <div style={{ padding: '16px' }}>

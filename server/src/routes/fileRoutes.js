@@ -169,7 +169,7 @@ router.get('/', async (req, res) => {
             return {
               ...f,
               previewUrl: `/api/files/content?${qs}`,
-              thumbnailUrl: `/api/files/content?${qs}`
+              thumbnailUrl: f.thumbnailUrl || (f.category === 'Images' ? `/api/files/content?${qs}` : null)
             };
           });
 
