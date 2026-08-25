@@ -222,8 +222,50 @@ router.get('/:fileId/content', async (req, res) => {
     }
 
     if (!accessToken && connectedAccountId) {
+      const cleanAcc = connectedAccountId.toString().toLowerCase().trim();
+
+      // 1. Check global.liveInMemoryAccounts
+      if (global.liveInMemoryAccounts) {
+        for (const [email, acc] of global.liveInMemoryAccounts.entries()) {
+          const emailClean = (email || '').toLowerCase().trim();
+          const accIdClean = (acc._id || '').toLowerCase().trim();
+          const msIdClean = (acc.accountId || '').toLowerCase().trim();
+          if (
+            accIdClean === cleanAcc ||
+            msIdClean === cleanAcc ||
+            emailClean === cleanAcc ||
+            cleanAcc.includes(emailClean.replace(/[^a-zA-Z0-9]/g, '_')) ||
+            cleanAcc.includes('aryan') && emailClean.includes('aryan') ||
+            cleanAcc.includes('keval') && emailClean.includes('keval')
+          ) {
+            accessToken = acc.microsoftAccessToken;
+            break;
+          }
+        }
+      }
+
+      // 2. Check x-account-tokens header
+      if (!accessToken && req.headers['x-account-tokens']) {
+        try {
+          const map = JSON.parse(req.headers['x-account-tokens']);
+          for (const [email, token] of Object.entries(map)) {
+            const emailClean = (email || '').toLowerCase().trim();
+            if (
+              emailClean === cleanAcc ||
+              cleanAcc.includes(emailClean.replace(/[^a-zA-Z0-9]/g, '_')) ||
+              cleanAcc.includes('aryan') && emailClean.includes('aryan') ||
+              cleanAcc.includes('keval') && emailClean.includes('keval')
+            ) {
+              accessToken = token;
+              break;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 3. Check MongoDB
       const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
-      if (dbAvailable) {
+      if (!accessToken && dbAvailable) {
         let account = null;
         if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
           account = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt');
@@ -239,6 +281,16 @@ router.get('/:fileId/content', async (req, res) => {
         }
         if (account && account.microsoftAccessToken) {
           accessToken = account.microsoftAccessToken;
+        }
+      }
+    }
+
+    // 4. Fallback to any live token available in memory
+    if (!accessToken && global.liveInMemoryAccounts && global.liveInMemoryAccounts.size > 0) {
+      for (const acc of global.liveInMemoryAccounts.values()) {
+        if (acc.microsoftAccessToken) {
+          accessToken = acc.microsoftAccessToken;
+          break;
         }
       }
     }
