@@ -507,6 +507,9 @@ function TextCodeDocumentViewer({ textContent, fileName, webUrl }) {
 
 // Realistic Visual First Page Header Component for Gallery Cards
 function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount }) {
+  const fileName = (file.name || '').toLowerCase();
+  const rawTitle = file.name || 'DOCUMENT';
+
   if (actualCategory === 'Images') {
     return (
       <div style={{
@@ -544,6 +547,10 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
   }
 
   if (actualCategory === 'PDF') {
+    const isCert = fileName.includes('certificate') || fileName.includes('cert');
+    const isReceipt = fileName.includes('receipt') || fileName.includes('payment') || fileName.includes('invoice') || fileName.includes('bill');
+    const isPlan = fileName.includes('plan') || fileName.includes('project') || fileName.includes('agent') || fileName.includes('report');
+
     return (
       <div style={{
         height: '140px',
@@ -554,53 +561,94 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px',
+        padding: '10px',
         boxSizing: 'border-box'
       }}>
         {/* Realistic Mini PDF First Page */}
         <div style={{
-          width: '80%',
+          width: '84%',
           height: '100%',
           backgroundColor: '#ffffff',
           borderRadius: '4px',
-          boxShadow: '0 4px 12px rgba(239,68,68,0.18)',
-          border: '1px solid #fecdd3',
+          boxShadow: '0 4px 14px rgba(239,68,68,0.18)',
+          border: isCert ? '1.5px solid #fbbf24' : '1px solid #fecdd3',
           padding: '8px 10px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          position: 'relative'
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          {/* Top Red Header Strip */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1.5px solid #ef4444', paddingBottom: '4px' }}>
-            <FileText size={13} color="#ef4444" />
-            <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#b91c1c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
-              {file.name || 'DOCUMENT.PDF'}
-            </span>
-          </div>
-          {/* Page Lines */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
-            <div style={{ height: '4px', backgroundColor: '#cbd5e1', borderRadius: '2px', width: '90%' }} />
-            <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '100%' }} />
-            <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '75%' }} />
-            <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '85%' }} />
-          </div>
-          {/* Footer Page 1 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '600' }}>Page 1</span>
-            <span style={{ fontSize: '0.55rem', color: '#ef4444', fontWeight: '700' }}>PDF</span>
-          </div>
+          {isCert ? (
+            /* Certificate First Page */
+            <>
+              <div style={{ textAlign: 'center', borderBottom: '1px solid #fef3c7', paddingBottom: '3px' }}>
+                <span style={{ fontSize: '0.58rem', fontWeight: '900', color: '#b45309', letterSpacing: '0.06em' }}>★ CERTIFICATE ★</span>
+                <p style={{ fontSize: '0.52rem', color: '#78350f', margin: '2px 0 0', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {rawTitle}
+                </p>
+              </div>
+              <div style={{ textAlign: 'center', margin: '3px 0' }}>
+                <span style={{ fontSize: '0.5rem', color: '#92400e' }}>Awarded for Completion & Excellence</span>
+                <div style={{ height: '3px', backgroundColor: '#fef3c7', borderRadius: '2px', width: '80%', margin: '3px auto 0' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #fde68a', paddingTop: '3px' }}>
+                <span style={{ fontSize: '0.52rem', color: '#d97706', fontWeight: '700' }}>✔ VERIFIED</span>
+                <span style={{ fontSize: '0.52rem', color: '#ef4444', fontWeight: '800' }}>PDF</span>
+              </div>
+            </>
+          ) : isReceipt ? (
+            /* Payment Receipt First Page */
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #fecdd3', paddingBottom: '3px' }}>
+                <span style={{ fontSize: '0.6rem', fontWeight: '800', color: '#991b1b' }}>RECEIPT</span>
+                <span style={{ fontSize: '0.5rem', backgroundColor: '#dcfce7', color: '#166534', padding: '1px 4px', borderRadius: '3px', fontWeight: '700' }}>PAID</span>
+              </div>
+              <div style={{ margin: '3px 0', fontSize: '0.52rem', color: '#334155' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Ref: #84549869</span>
+                  <span style={{ fontWeight: '700', color: '#15803d' }}>$1,250.00</span>
+                </div>
+                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '90%', margin: '4px 0 2px' }} />
+                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '70%' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
+                <span style={{ fontSize: '0.5rem', color: '#64748b' }}>TeamsHub Pay</span>
+                <span style={{ fontSize: '0.52rem', color: '#ef4444', fontWeight: '800' }}>PDF</span>
+              </div>
+            </>
+          ) : (
+            /* Executive Project Proposal / Document First Page */
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1.5px solid #ef4444', paddingBottom: '3px' }}>
+                <FileText size={12} color="#ef4444" />
+                <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#991b1b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {rawTitle}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '4px 0' }}>
+                <div style={{ fontSize: '0.52rem', fontWeight: '700', color: '#475569' }}>1. Executive Summary & Goals</div>
+                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '95%' }} />
+                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '100%' }} />
+                <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
+                <span style={{ fontSize: '0.5rem', color: '#94a3b8', fontWeight: '600' }}>Page 1 • Final</span>
+                <span style={{ fontSize: '0.52rem', color: '#ef4444', fontWeight: '800' }}>PDF</span>
+              </div>
+            </>
+          )}
         </div>
 
         <span style={{
           position: 'absolute',
-          top: '10px',
-          right: '10px',
-          padding: '3px 8px',
-          borderRadius: '6px',
+          top: '8px',
+          right: '8px',
+          padding: '2px 7px',
+          borderRadius: '5px',
           backgroundColor: '#ef4444',
           color: '#fff',
-          fontSize: '0.68rem',
+          fontSize: '0.65rem',
           fontWeight: '700',
           boxShadow: '0 2px 6px rgba(239,68,68,0.3)'
         }}>
@@ -621,7 +669,7 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px',
+        padding: '10px',
         boxSizing: 'border-box'
       }}>
         {/* Realistic Mini Excel Spreadsheet Grid */}
@@ -670,13 +718,13 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
 
         <span style={{
           position: 'absolute',
-          top: '10px',
-          right: '10px',
-          padding: '3px 8px',
-          borderRadius: '6px',
+          top: '8px',
+          right: '8px',
+          padding: '2px 7px',
+          borderRadius: '5px',
           backgroundColor: '#10b981',
           color: '#fff',
-          fontSize: '0.68rem',
+          fontSize: '0.65rem',
           fontWeight: '700',
           boxShadow: '0 2px 6px rgba(16,185,129,0.3)'
         }}>
@@ -697,7 +745,7 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px',
+        padding: '10px',
         boxSizing: 'border-box'
       }}>
         {/* Realistic Mini Video Player Frame */}
@@ -715,7 +763,6 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
           position: 'relative',
           overflow: 'hidden'
         }}>
-          {/* Subtle Grid Background */}
           <div style={{
             position: 'absolute',
             inset: 0,
@@ -724,10 +771,10 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
             opacity: 0.6
           }} />
 
-          {/* Central Translucent Play Button */}
+          {/* Central Play Button */}
           <div style={{
-            width: '38px',
-            height: '38px',
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
             backgroundColor: 'rgba(99,102,241,0.85)',
             display: 'flex',
@@ -737,7 +784,7 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
             boxShadow: '0 0 16px rgba(99,102,241,0.7)',
             zIndex: 1
           }}>
-            <Play size={18} fill="#ffffff" style={{ marginLeft: '2px' }} />
+            <Play size={16} fill="#ffffff" style={{ marginLeft: '2px' }} />
           </div>
 
           {/* Video Timeline Bar at Bottom */}
@@ -757,13 +804,13 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
 
         <span style={{
           position: 'absolute',
-          top: '10px',
-          right: '10px',
-          padding: '3px 8px',
-          borderRadius: '6px',
+          top: '8px',
+          right: '8px',
+          padding: '2px 7px',
+          borderRadius: '5px',
           backgroundColor: '#6366f1',
           color: '#fff',
-          fontSize: '0.68rem',
+          fontSize: '0.65rem',
           fontWeight: '700',
           boxShadow: '0 2px 6px rgba(99,102,241,0.4)'
         }}>
@@ -784,7 +831,7 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px',
+        padding: '10px',
         boxSizing: 'border-box'
       }}>
         {/* Realistic Mini Archive / Folder Preview */}
@@ -803,8 +850,8 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', borderBottom: '1px solid #fef3c7', paddingBottom: '4px' }}>
             <Archive size={14} color="#d97706" />
-            <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#b45309', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
-              {file.name || 'ARCHIVE.ZIP'}
+            <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#b45309', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {rawTitle}
             </span>
           </div>
 
@@ -818,20 +865,20 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.55rem', color: '#92400e', fontWeight: '600' }}>Compressed</span>
-            <span style={{ fontSize: '0.55rem', color: '#d97706', fontWeight: '700' }}>.ZIP</span>
+            <span style={{ fontSize: '0.52rem', color: '#92400e', fontWeight: '600' }}>Compressed</span>
+            <span style={{ fontSize: '0.52rem', color: '#d97706', fontWeight: '700' }}>.ZIP</span>
           </div>
         </div>
 
         <span style={{
           position: 'absolute',
-          top: '10px',
-          right: '10px',
-          padding: '3px 8px',
-          borderRadius: '6px',
+          top: '8px',
+          right: '8px',
+          padding: '2px 7px',
+          borderRadius: '5px',
           backgroundColor: '#f59e0b',
           color: '#fff',
-          fontSize: '0.68rem',
+          fontSize: '0.65rem',
           fontWeight: '700',
           boxShadow: '0 2px 6px rgba(245,158,11,0.3)'
         }}>
@@ -842,62 +889,130 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
   }
 
   // Word & Other Documents (.docx, .cshtml, .html, .txt, etc.)
+  const isCodeDoc = ['cshtml', 'html', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql'].includes(fileExt.toLowerCase());
+  const isFormDoc = fileName.includes('form') || fileName.includes('feedback') || fileName.includes('survey');
+  const isRulesDoc = fileName.includes('rules') || fileName.includes('buttons') || fileName.includes('crm');
+
   return (
     <div style={{
       height: '140px',
       width: '100%',
-      backgroundColor: '#eff6ff',
+      backgroundColor: isCodeDoc ? '#0f172a' : '#eff6ff',
       position: 'relative',
       overflow: 'hidden',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '12px',
+      padding: '10px',
       boxSizing: 'border-box'
     }}>
-      {/* Realistic Mini Word / Document First Page */}
-      <div style={{
-        width: '80%',
-        height: '100%',
-        backgroundColor: '#ffffff',
-        borderRadius: '4px',
-        boxShadow: '0 4px 12px rgba(59,130,246,0.18)',
-        border: '1px solid #bfdbfe',
-        padding: '8px 10px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between'
-      }}>
-        {/* Top Blue Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1.5px solid #3b82f6', paddingBottom: '4px' }}>
-          <FileText size={13} color="#3b82f6" />
-          <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#1d4ed8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
-            {file.name || 'DOCUMENT'}
-          </span>
+      {isCodeDoc ? (
+        /* Realistic Code / Template First Page Preview */
+        <div style={{
+          width: '86%',
+          height: '100%',
+          backgroundColor: '#1e293b',
+          borderRadius: '5px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          border: '1px solid #334155',
+          padding: '6px 8px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          fontFamily: 'monospace',
+          fontSize: '0.52rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px solid #334155', paddingBottom: '3px' }}>
+            <div style={{ display: 'flex', gap: '3px' }}>
+              <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+              <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#eab308' }} />
+              <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
+            </div>
+            <span style={{ color: '#94a3b8', fontSize: '0.52rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {rawTitle}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '2px 0' }}>
+            <div><span style={{ color: '#64748b' }}>1 </span><span style={{ color: '#f43f5e' }}>@model</span> <span style={{ color: '#38bdf8' }}>CertificateVM</span></div>
+            <div><span style={{ color: '#64748b' }}>2 </span><span style={{ color: '#818cf8' }}>&lt;div</span> <span style={{ color: '#fbbf24' }}>class=</span><span style={{ color: '#34d399' }}>"cert-box"</span><span style={{ color: '#818cf8' }}>&gt;</span></div>
+            <div><span style={{ color: '#64748b' }}>3 </span>&nbsp;&nbsp;<span style={{ color: '#e2e8f0' }}>&lt;h1&gt;@Model.Title&lt;/h1&gt;</span></div>
+            <div><span style={{ color: '#64748b' }}>4 </span><span style={{ color: '#818cf8' }}>&lt;/div&gt;</span></div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.48rem' }}>
+            <span>UTF-8</span>
+            <span style={{ color: '#38bdf8', fontWeight: '700' }}>.{fileExt}</span>
+          </div>
         </div>
-        {/* Paragraph Lines */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
-          <div style={{ height: '4px', backgroundColor: '#cbd5e1', borderRadius: '2px', width: '95%' }} />
-          <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '100%' }} />
-          <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
-          <div style={{ height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '60%' }} />
+      ) : (
+        /* Realistic Word Document First Page */
+        <div style={{
+          width: '84%',
+          height: '100%',
+          backgroundColor: '#ffffff',
+          borderRadius: '4px',
+          boxShadow: '0 4px 12px rgba(59,130,246,0.18)',
+          border: '1px solid #bfdbfe',
+          padding: '8px 10px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}>
+          {/* Top Blue Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1.5px solid #3b82f6', paddingBottom: '3px' }}>
+            <FileText size={12} color="#3b82f6" />
+            <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#1d4ed8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {rawTitle}
+            </span>
+          </div>
+
+          {isFormDoc ? (
+            /* Feedback Form Document Lines */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '3px 0', fontSize: '0.52rem', color: '#334155' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: '700' }}>Feedback Form</span>
+                <span style={{ color: '#2563eb' }}>★★★★★</span>
+              </div>
+              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '90%' }} />
+              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '70%' }} />
+            </div>
+          ) : isRulesDoc ? (
+            /* CRM Rules Document Lines */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '3px 0', fontSize: '0.52rem', color: '#334155' }}>
+              <div style={{ fontWeight: '700', color: '#1e40af' }}>1. Action Buttons & Rules</div>
+              <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                <span style={{ color: '#16a34a' }}>✔</span> <div style={{ height: '3px', backgroundColor: '#cbd5e1', borderRadius: '2px', width: '80%' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                <span style={{ color: '#16a34a' }}>✔</span> <div style={{ height: '3px', backgroundColor: '#cbd5e1', borderRadius: '2px', width: '65%' }} />
+              </div>
+            </div>
+          ) : (
+            /* Standard Document Paragraph Lines */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '3px 0' }}>
+              <div style={{ height: '3px', backgroundColor: '#94a3b8', borderRadius: '2px', width: '95%' }} />
+              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '100%' }} />
+              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '80%' }} />
+              <div style={{ height: '3px', backgroundColor: '#e2e8f0', borderRadius: '2px', width: '60%' }} />
+            </div>
+          )}
+
+          {/* Footer */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
+            <span style={{ fontSize: '0.5rem', color: '#94a3b8', fontWeight: '600' }}>Page 1</span>
+            <span style={{ fontSize: '0.52rem', color: '#3b82f6', fontWeight: '800' }}>.{fileExt}</span>
+          </div>
         </div>
-        {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: '600' }}>Page 1</span>
-          <span style={{ fontSize: '0.55rem', color: '#3b82f6', fontWeight: '700' }}>.{fileExt}</span>
-        </div>
-      </div>
+      )}
 
       <span style={{
         position: 'absolute',
-        top: '10px',
-        right: '10px',
-        padding: '3px 8px',
-        borderRadius: '6px',
+        top: '8px',
+        right: '8px',
+        padding: '2px 7px',
+        borderRadius: '5px',
         backgroundColor: '#3b82f6',
         color: '#fff',
-        fontSize: '0.68rem',
+        fontSize: '0.65rem',
         fontWeight: '700',
         boxShadow: '0 2px 6px rgba(59,130,246,0.3)'
       }}>
