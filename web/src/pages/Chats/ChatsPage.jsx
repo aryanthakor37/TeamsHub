@@ -403,7 +403,8 @@ export default function ChatsPage({
       const imgElements = document.querySelectorAll('.message-html-content img');
       if (imgElements.length === 0) return;
       
-      const token = await acquireGraphToken(activeChat?.connectedAccountId || activeChat?.userEmail || activeChat?.email);
+      const targetAccount = activeChat?.accountEmail || activeChat?.email || activeChat?.company || activeChat?.connectedAccountId;
+      const token = await acquireGraphToken(targetAccount);
 
       imgElements.forEach(async (img) => {
         const src = img.getAttribute('src');
@@ -419,9 +420,6 @@ export default function ChatsPage({
               const objectUrl = URL.createObjectURL(blob);
               img.src = objectUrl;
               img.style.cursor = 'pointer';
-              img.style.maxWidth = '100%';
-              img.style.borderRadius = '8px';
-              img.style.marginTop = '6px';
               img.title = 'Click to preview';
               img.onclick = () => {
                 setPreviewDocModal({

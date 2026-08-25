@@ -264,19 +264,35 @@ const sendGraphChatMessage = async (accessToken, chatId, content) => {
  * Returns raw buffer and content type, not JSON.
  */
 const fetchGraphMessageImage = async (accessToken, chatId, msgId, contentId) => {
-  const url = `${GRAPH_API_BASE}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(msgId)}/hostedContents/${encodeURIComponent(contentId)}/$value`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  });
+  const cleanChatId = decodeURIComponent(chatId);
+  const cleanMsgId = decodeURIComponent(msgId);
+  const cleanContentId = decodeURIComponent(contentId);
 
-  if (!response.ok) {
-    throw new GraphApiError('IMAGE_FETCH_FAILED', `Failed to fetch image: ${response.status}`, response.status);
+  const urlsToTry = [
+    `${GRAPH_API_BASE}/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/hostedContents/${encodeURIComponent(cleanContentId)}/$value`,
+    `${GRAPH_API_BASE}/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/hostedContents/${cleanContentId}/$value`,
+    `${GRAPH_API_BASE}/me/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/hostedContents/${encodeURIComponent(cleanContentId)}/$value`
+  ];
+
+  let lastError = null;
+  for (const url of urlsToTry) {
+    try {
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        return { buffer, contentType };
+      }
+      lastError = new GraphApiError('IMAGE_FETCH_FAILED', `Failed to fetch image: ${response.status}`, response.status);
+    } catch (err) {
+      lastError = err;
+    }
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const contentType = response.headers.get('content-type') || 'image/jpeg';
-  return { buffer, contentType };
+  throw lastError || new GraphApiError('IMAGE_FETCH_FAILED', 'Failed to fetch image', 404);
 };
 
 /**
