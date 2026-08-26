@@ -303,9 +303,11 @@ const fetchGraphRecentFiles = async (accessToken) => {
 
   const addFile = (item, sourceName = 'Microsoft Teams') => {
     if (!item) return;
-    if (item.folder) return; // Skip folder containers (Attachments, Meetings, Recordings, etc.)
+    if (item.folder || item.deleted || item.root) return; // Skip folder containers & deleted items
 
     const actualItem = item.remoteItem || item;
+    if (actualItem.folder || actualItem.deleted || actualItem.root) return;
+
     const name = actualItem.name || actualItem.displayName || 'Untitled File';
     if (!name || name.startsWith('.')) return;
 
