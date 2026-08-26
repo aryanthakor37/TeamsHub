@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  FileText, 
-  Image as ImageIcon, 
-  Video, 
-  Archive, 
-  FileSpreadsheet, 
-  Search, 
-  Grid, 
-  List, 
-  Download, 
+import {
+  FileText,
+  Image as ImageIcon,
+  Video,
+  Archive,
+  FileSpreadsheet,
+  Search,
+  Grid,
+  List,
+  Download,
   ExternalLink,
   Eye,
-  Loader2, 
+  Loader2,
   AlertCircle,
   X,
   Maximize2,
@@ -34,7 +34,7 @@ try {
   if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
   }
-} catch (e) {}
+} catch (e) { }
 
 // Secure Document & Image Thumbnail for Grid Gallery
 function SecureThumbnail({ file, accountId, alt, fallbackColor, fallbackIcon: FallbackIcon }) {
@@ -103,8 +103,8 @@ function SecureThumbnail({ file, accountId, alt, fallbackColor, fallbackIcon: Fa
   }
 
   return (
-    <img 
-      src={imgSrc} 
+    <img
+      src={imgSrc}
       alt={alt}
       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       onError={() => setError(true)}
@@ -396,9 +396,9 @@ function WordDocumentViewer({ arrayBuffer, fileName, webUrl }) {
           </div>
         )}
 
-        <div 
-          ref={containerRef} 
-          style={{ width: '100%', display: loading || error ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center' }} 
+        <div
+          ref={containerRef}
+          style={{ width: '100%', display: loading || error ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center' }}
         />
       </div>
     </div>
@@ -552,8 +552,8 @@ function RealPdfCardHeader({ file, accountId, cleanTitle }) {
           viewport: scaledViewport
         }).promise;
         if (active) setLoaded(true);
-      } catch (err) {}
-    }).catch(() => {});
+      } catch (err) { }
+    }).catch(() => { });
 
     return () => { active = false; };
   }, [file.id, file.previewUrl, accountId]);
@@ -570,14 +570,14 @@ function RealPdfCardHeader({ file, accountId, cleanTitle }) {
       justifyContent: 'center',
       borderBottom: '1px solid var(--border-color)'
     }}>
-      <canvas 
-        ref={canvasRef} 
-        style={{ 
-          width: '100%', 
-          height: 'auto', 
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: '100%',
+          height: 'auto',
           display: loaded ? 'block' : 'none',
           objectFit: 'cover'
-        }} 
+        }}
       />
 
       {!loaded && (
@@ -708,7 +708,7 @@ function RealExcelCardHeader({ file, accountId, cleanTitle }) {
           setSheetName(firstSheetName);
           setSheetData(rows.slice(0, 4));
         }
-      } catch (e) {}
+      } catch (e) { }
     });
 
     return () => { active = false; };
@@ -740,11 +740,11 @@ function RealExcelCardHeader({ file, accountId, cleanTitle }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff', overflow: 'hidden' }}>
         {sheetData && sheetData.length > 0 ? (
           sheetData.map((row, rIdx) => (
-            <div 
-              key={rIdx} 
-              style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '20px 1.5fr 1fr 1fr', 
+            <div
+              key={rIdx}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '20px 1.5fr 1fr 1fr',
                 backgroundColor: rIdx === 0 ? '#f1f5f9' : '#fff',
                 borderBottom: '1px solid #f1f5f9',
                 fontWeight: rIdx === 0 ? '800' : '500',
@@ -816,7 +816,7 @@ function RealWordCardHeader({ file, accountId, cleanTitle, rawTitle, fileExt, is
             setDocSnippet(lines.slice(0, 3));
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     });
 
     return () => { active = false; };
@@ -934,7 +934,7 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <SecureThumbnail 
+        <SecureThumbnail
           file={file}
           accountId={accountId}
           alt={file.name}
@@ -1072,13 +1072,13 @@ function DocumentCardHeader({ file, actualCategory, meta, fileExt, activeAccount
   // Documents
   const isCodeDoc = ['cshtml', 'html', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql'].includes(fileExt.toLowerCase());
   return (
-    <RealWordCardHeader 
-      file={file} 
-      accountId={accountId} 
-      cleanTitle={cleanTitle} 
-      rawTitle={file.name || 'DOCUMENT'} 
-      fileExt={fileExt} 
-      isCodeDoc={isCodeDoc} 
+    <RealWordCardHeader
+      file={file}
+      accountId={accountId}
+      cleanTitle={cleanTitle}
+      rawTitle={file.name || 'DOCUMENT'}
+      fileExt={fileExt}
+      isCodeDoc={isCodeDoc}
     />
   );
 }
@@ -1499,8 +1499,8 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = selectedCategory === cat.name;
-          const count = cat.name === 'All' 
-            ? accountScopedFiles.length 
+          const count = cat.name === 'All'
+            ? accountScopedFiles.length
             : accountScopedFiles.filter(f => getFileCategory(f).toLowerCase() === cat.name.toLowerCase()).length;
 
           return (
@@ -1754,7 +1754,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                 <p style={{ fontSize: '0.85rem', marginTop: '8px' }}>Please select a specific account in the sidebar to view files.</p>
               ) : null}
             </div>
-) : viewMode === 'grid' ? (
+          ) : viewMode === 'grid' ? (
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
@@ -1770,39 +1770,69 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                 const isImage = actualCategory === 'Images';
                 const fileExt = file.name.includes('.') ? file.name.split('.').pop().toUpperCase() : actualCategory.toUpperCase();
 
+                const isSelected = selectedFileIds.has(file.id || file._id || file.name);
+
                 return (
-                  <div 
+                  <div
                     key={file.id}
                     id={`file-card-${file.id || file.name}`}
-                    className="glass-card" 
-                    style={{ 
-                      borderRadius: 'var(--radius-md)', 
-                      overflow: 'hidden', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
+                    className="glass-card"
+                    style={{
+                      borderRadius: 'var(--radius-md)',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
                       justifyContent: 'space-between',
                       cursor: 'pointer',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      border: '1px solid var(--border-color)'
+                      transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      boxShadow: isSelected ? '0 0 16px rgba(99, 102, 241, 0.25)' : 'none',
+                      position: 'relative'
                     }}
                     onClick={() => setPreviewFile(file)}
                   >
+                    {/* Multi-Select Checkbox Overlay */}
+                    <div
+                      onClick={(e) => toggleSelectFile(file.id || file._id || file.name, e)}
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        left: '10px',
+                        zIndex: 10,
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '6px',
+                        backgroundColor: isSelected ? 'var(--accent-primary)' : 'rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        border: isSelected ? '1px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.4)'
+                      }}
+                      title={isSelected ? "Deselect file" : "Select for batch download"}
+                    >
+                      {isSelected && <Check size={14} strokeWidth={3} />}
+                    </div>
+
                     {/* Visual Card Header with realistic First Page preview */}
-                    <DocumentCardHeader 
-                      file={file} 
-                      actualCategory={actualCategory} 
-                      meta={meta} 
-                      fileExt={fileExt} 
-                      activeAccount={activeAccount} 
+                    <DocumentCardHeader
+                      file={file}
+                      actualCategory={actualCategory}
+                      meta={meta}
+                      fileExt={fileExt}
+                      activeAccount={activeAccount}
                     />
 
                     {/* File Info */}
                     <div style={{ padding: '16px' }}>
                       <div style={{ marginBottom: '12px' }}>
-                        <h4 style={{ 
-                          fontSize: '0.92rem', 
-                          fontWeight: '600', 
-                          marginBottom: '6px', 
+                        <h4 style={{
+                          fontSize: '0.92rem',
+                          fontWeight: '600',
+                          marginBottom: '6px',
                           wordBreak: 'break-word',
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
@@ -1849,34 +1879,52 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button 
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShareFileModalTarget(file);
+                            }}
+                            title="Share to Teams Chat"
+                            style={{
+                              background: 'var(--bg-tertiary)',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px',
+                              cursor: 'pointer',
+                              color: 'var(--accent-primary)'
+                            }}
+                          >
+                            <Share2 size={16} />
+                          </button>
+
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setPreviewFile(file);
                             }}
                             title="Preview File"
-                            style={{ 
-                              background: 'var(--bg-tertiary)', 
-                              border: 'none', 
-                              borderRadius: '6px', 
-                              padding: '6px', 
-                              cursor: 'pointer', 
-                              color: 'var(--accent-primary)' 
+                            style={{
+                              background: 'var(--bg-tertiary)',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px',
+                              cursor: 'pointer',
+                              color: 'var(--text-secondary)'
                             }}
                           >
                             <Eye size={16} />
                           </button>
 
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               if (file.webUrl) window.open(file.webUrl, '_blank');
                             }}
                             title="Open in Microsoft 365"
-                            style={{ 
-                              background: 'none', 
-                              border: 'none', 
-                              cursor: file.webUrl ? 'pointer' : 'not-allowed', 
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: file.webUrl ? 'pointer' : 'not-allowed',
                               color: file.webUrl ? 'var(--text-secondary)' : 'var(--text-disabled)',
                               padding: '6px'
                             }}
@@ -1895,6 +1943,18 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                      <div
+                        onClick={handleSelectAllVisible}
+                        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                      >
+                        {filteredFiles.length > 0 && filteredFiles.every(f => selectedFileIds.has(f.id || f._id || f.name)) ? (
+                          <CheckSquare size={16} color="var(--accent-primary)" />
+                        ) : (
+                          <Square size={16} color="var(--text-muted)" />
+                        )}
+                      </div>
+                    </th>
                     <th style={{ padding: '14px 20px' }}>Name</th>
                     <th style={{ padding: '14px 20px' }}>Category</th>
                     <th style={{ padding: '14px 20px' }}>Size</th>
@@ -1912,18 +1972,32 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                     }
                     const meta = getCategoryMeta(actualCategory);
                     const Icon = meta.icon;
+                    const isSelected = selectedFileIds.has(file.id || file._id || file.name);
 
                     return (
-                      <tr 
-                        key={file.id} 
-                        style={{ borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer' }}
+                      <tr
+                        key={file.id}
+                        style={{
+                          borderBottom: '1px solid var(--border-subtle)',
+                          cursor: 'pointer',
+                          backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent'
+                        }}
                         onClick={() => setPreviewFile(file)}
                       >
+                        <td style={{ padding: '14px 16px', textAlign: 'center' }} onClick={(e) => toggleSelectFile(file.id || file._id || file.name, e)}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+                            {isSelected ? (
+                              <CheckSquare size={16} color="var(--accent-primary)" />
+                            ) : (
+                              <Square size={16} color="var(--text-muted)" />
+                            )}
+                          </div>
+                        </td>
                         <td style={{ padding: '14px 20px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ 
-                            padding: '6px', 
-                            borderRadius: '6px', 
-                            backgroundColor: meta.bg, 
+                          <div style={{
+                            padding: '6px',
+                            borderRadius: '6px',
+                            backgroundColor: meta.bg,
                             color: meta.color,
                             display: 'flex',
                             alignItems: 'center',
@@ -1934,11 +2008,11 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                           <span>{file.name}</span>
                         </td>
                         <td style={{ padding: '14px 20px' }}>
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '2px 8px', 
-                            borderRadius: '4px', 
-                            backgroundColor: meta.bg, 
+                          <span style={{
+                            fontSize: '0.75rem',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            backgroundColor: meta.bg,
                             color: meta.color,
                             fontWeight: '600'
                           }}>
@@ -1975,17 +2049,27 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                         <td style={{ padding: '14px 20px', color: 'var(--text-muted)' }}>{file.date}</td>
                         <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '8px' }}>
-                            <button 
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShareFileModalTarget(file);
+                              }}
+                              title="Share to Teams Chat"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)' }}
+                            >
+                              <Share2 size={16} />
+                            </button>
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setPreviewFile(file);
                               }}
                               title="Preview"
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                             >
                               <Eye size={16} />
                             </button>
-                            <button 
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (file.webUrl) window.open(file.webUrl, '_blank');
@@ -2002,6 +2086,83 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Floating Batch Action Toolbar */}
+          {selectedFileIds.size > 0 && (
+            <div style={{
+              position: 'sticky',
+              bottom: '16px',
+              left: 0,
+              right: 0,
+              marginTop: '20px',
+              zIndex: 80,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 24px',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--accent-primary)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 12px 36px rgba(0, 0, 0, 0.25)',
+              backdropFilter: 'blur(10px)',
+              animation: 'fadeIn 0.2s ease-out'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: 'var(--accent-light)',
+                  color: 'var(--accent-primary)',
+                  fontWeight: '700',
+                  fontSize: '0.88rem'
+                }}>
+                  {selectedFileIds.size} {selectedFileIds.size === 1 ? 'file' : 'files'} selected
+                </div>
+                <button
+                  onClick={handleClearSelection}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Clear Selection
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {isZipping ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent-primary)', fontSize: '0.88rem', fontWeight: '600' }}>
+                    <Loader2 size={18} className="spinner" />
+                    <span>
+                      Packaging ZIP ({zipProgress?.current || 0}/{zipProgress?.total || selectedFileIds.size})...
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleBatchDownloadZip}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 20px',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      borderRadius: 'var(--radius-md)',
+                      boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)'
+                    }}
+                  >
+                    <Download size={17} />
+                    <span>Download {selectedFileIds.size} Files as ZIP</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -2139,8 +2300,8 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                   </div>
                 ) : (
                   <>
-                    <img 
-                      src={previewBlobUrl || previewFile.previewUrl || previewFile.thumbnailUrl || previewFile.webUrl} 
+                    <img
+                      src={previewBlobUrl || previewFile.previewUrl || previewFile.thumbnailUrl || previewFile.webUrl}
                       alt={previewFile.name}
                       style={{
                         maxWidth: '100%',
@@ -2185,10 +2346,10 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                 {previewLoading ? (
                   <Loader2 size={44} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
                 ) : (
-                  <video 
-                    src={previewBlobUrl || previewFile.previewUrl || previewFile.webUrl} 
-                    controls 
-                    autoPlay 
+                  <video
+                    src={previewBlobUrl || previewFile.previewUrl || previewFile.webUrl}
+                    controls
+                    autoPlay
                     style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px' }}
                   >
                     Your browser does not support the video tag.
@@ -2203,7 +2364,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                     <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Loading PDF document...</span>
                   </div>
                 ) : previewBlobUrl ? (
-                  <iframe 
+                  <iframe
                     src={previewBlobUrl}
                     title={previewFile.name}
                     style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#fff' }}
@@ -2363,6 +2524,43 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Share File to Teams Chat Modal */}
+      {shareFileModalTarget && (
+        <ShareFileModal
+          file={shareFileModalTarget}
+          onClose={() => setShareFileModalTarget(null)}
+          onSuccess={(chat, file) => {
+            setShareToastMessage(`File "${file.name}" sent to ${chat.participant}!`);
+            setTimeout(() => setShareToastMessage(null), 4000);
+          }}
+        />
+      )}
+
+      {/* Floating Success Toast */}
+      {shareToastMessage && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 100000,
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--accent-primary)',
+          color: 'var(--text-primary)',
+          padding: '12px 20px',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontWeight: '600',
+          fontSize: '0.9rem',
+          animation: 'slideUp 0.3s ease-out'
+        }}>
+          <CheckCircle2 size={20} color="var(--accent-primary)" />
+          <span>{shareToastMessage}</span>
         </div>
       )}
     </div>
