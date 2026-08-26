@@ -18,18 +18,22 @@ export const msalConfig = {
   auth: {
     clientId: clientId,
     authority: `https://login.microsoftonline.com/${tenantId}`,
-    redirectUri: window.location.origin,
-    postLogoutRedirectUri: window.location.origin,
-    navigateToLoginRequestUrl: true
+    redirectUri: typeof window !== 'undefined' ? window.location.origin : '',
+    postLogoutRedirectUri: typeof window !== 'undefined' ? window.location.origin : '',
+    navigateToLoginRequestUrl: false
   },
   cache: {
     cacheLocation: 'localStorage',
-    storeAuthStateInCookie: false
+    storeAuthStateInCookie: typeof window !== 'undefined' && window.location.protocol === 'https:'
   },
   system: {
+    allowRedirectInIframe: false,
+    windowHashTimeout: 9000,
+    iframeHashTimeout: 9000,
     loggerOptions: {
       loggerCallback: (level, message, containsPii) => {
         if (containsPii) return;
+        if (message && (message.includes('Unsafe attempt') || message.includes('sandboxed') || message.includes('iframe'))) return;
         switch (level) {
           case LogLevel.Error:
             console.error('[MSAL Error]', message);
