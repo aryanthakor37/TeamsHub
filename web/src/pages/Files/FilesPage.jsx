@@ -1495,6 +1495,61 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     }
   };
 
+  // Toggle selection for a single file
+  const toggleSelectFile = (fileId, e) => {
+    if (e) e.stopPropagation();
+    setSelectedFileIds(prev => {
+      const next = new Set(prev);
+      if (next.has(fileId)) {
+        next.delete(fileId);
+      } else {
+        next.add(fileId);
+      }
+      return next;
+    });
+  };
+
+  // Toggle select all visible filtered files
+  const handleSelectAllVisible = () => {
+    const visibleIds = filteredFiles.map(f => f.id || f._id || f.name);
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedFileIds.has(id));
+    if (allSelected) {
+      setSelectedFileIds(new Set());
+    } else {
+      setSelectedFileIds(new Set(visibleIds));
+    }
+  };
+
+  // Clear all selections
+  const handleClearSelection = () => {
+    setSelectedFileIds(new Set());
+  };
+
+  // Batch download selected files as ZIP
+  const handleBatchDownloadZip = async () => {
+    const selectedFiles = filteredFiles.filter(f => selectedFileIds.has(f.id || f._id || f.name));
+    if (selectedFiles.length === 0) return;
+
+    setIsZipping(true);
+    setZipProgress({ current: 0, total: selectedFiles.length, currentFileName: 'Initializing...' });
+
+    try {
+      const categoryLabel = selectedCategory === 'All' ? 'Files' : selectedCategory;
+      const zipName = `TeamsHub_${categoryLabel}_Bundle_${selectedFiles.length}.zip`;
+      await downloadFilesAsZip(selectedFiles, zipName, (progress) => {
+        setZipProgress(progress);
+      });
+      setShareToastMessage(`Successfully downloaded ${selectedFiles.length} files as ZIP!`);
+      setTimeout(() => setShareToastMessage(null), 3500);
+    } catch (err) {
+      console.error('[BatchZip] Download failed:', err);
+      setError('Failed to bundle selected files into ZIP.');
+    } finally {
+      setIsZipping(false);
+      setZipProgress(null);
+    }
+  };
+
   return (
     <div style={{ flex: 1, display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* Category Sidebar */}

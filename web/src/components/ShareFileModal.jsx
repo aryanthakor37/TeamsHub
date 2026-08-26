@@ -36,8 +36,14 @@ export default function ShareFileModal({ file, onClose, onSuccess }) {
         ? `<p>${customNote}</p><p>📎 <strong><a href="${fileUrl}" target="_blank" rel="noopener noreferrer">${file.name}</a></strong> (${file.size || 'File'})</p>`
         : `<p>${customNote}</p><p>📎 <strong>${file.name}</strong> (${file.size || 'File'})</p>`;
 
-      const accountId = selectedChat.connectedAccountId || selectedChat.accountEmail || 'all';
-      await sendMessageToBackend(selectedChat.id, fileLinkHtml, accountId);
+      const targetChatId = selectedChat.microsoftChatId || selectedChat._id || selectedChat.id || selectedChat.chatId;
+      const accountId = selectedChat.connectedAccountId || selectedChat.accountEmail || selectedChat.account || 'all';
+
+      if (!targetChatId) {
+        throw new Error('Could not determine Teams conversation ID.');
+      }
+
+      await sendMessageToBackend(targetChatId, fileLinkHtml, accountId);
 
       setSentSuccess(true);
       setTimeout(() => {

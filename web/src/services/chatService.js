@@ -167,11 +167,11 @@ export const sendMessageToBackend = async (chatId, content, accountId) => {
   try {
     const headers = await getAuthHeaders(accountId);
     const response = await fetch(
-      `${API_BASE_URL}/chats/${chatId}/messages`,
+      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages`,
       {
         method: 'POST',
         headers,
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ content, connectedAccountId: accountId })
       }
     );
 
