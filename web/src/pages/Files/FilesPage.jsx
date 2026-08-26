@@ -1317,15 +1317,24 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
 
   const getFileCategory = (file) => {
     if (!file) return 'Documents';
+
     const name = (file.name || '').toLowerCase().trim();
-    const ext = name.includes('.') ? name.split('.').pop() : '';
+    const cleanName = name.split('?')[0].split('#')[0];
+    const ext = cleanName.includes('.') ? cleanName.split('.').pop().toLowerCase() : '';
+    const mime = (file.file?.mimeType || file.contentType || file.mimeType || '').toLowerCase().trim();
+    const rawCat = (file.category || '').toLowerCase().trim();
 
     // 1. PDF
-    if (ext === 'pdf' || name.endsWith('.pdf')) return 'PDF';
+    if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime.includes('pdf') || rawCat === 'pdf') {
+      return 'PDF';
+    }
 
-    // 2. Images (MUST include .jpg, .png, Photo from..., Image.jpg, Image, etc.)
+    // 2. Images (strict extension & mime match)
     if (
-      ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic'].includes(ext) ||
+      ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) ||
+      mime.includes('image/') ||
+      rawCat === 'images' ||
+      rawCat === 'image' ||
       name.startsWith('photo from') ||
       name.startsWith('image.') ||
       name === 'image' ||
@@ -1336,24 +1345,50 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     }
 
     // 3. Videos
-    if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp'].includes(ext)) return 'Videos';
+    if (
+      ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) ||
+      mime.includes('video/') ||
+      rawCat === 'videos' ||
+      rawCat === 'video'
+    ) {
+      return 'Videos';
+    }
 
     // 4. Excel
-    if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm'].includes(ext)) return 'Excel';
+    if (
+      ['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) ||
+      mime.includes('spreadsheet') ||
+      mime.includes('excel') ||
+      rawCat === 'excel' ||
+      rawCat === 'spreadsheet'
+    ) {
+      return 'Excel';
+    }
 
-    // 5. ZIP
-    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext)) return 'ZIP';
+    // 5. ZIP / Archives
+    if (
+      ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) ||
+      mime.includes('zip') ||
+      mime.includes('compressed') ||
+      mime.includes('archive') ||
+      rawCat === 'zip' ||
+      rawCat === 'archive'
+    ) {
+      return 'ZIP';
+    }
 
-    // 6. Documents
-    if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'cshtml', 'html', 'htm', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql', 'log', 'env'].includes(ext)) return 'Documents';
-
-    // Fallback check on raw file.category
-    const rawCat = (file.category || '').toLowerCase().trim();
-    if (rawCat === 'pdf') return 'PDF';
-    if (rawCat === 'images' || rawCat === 'image') return 'Images';
-    if (rawCat === 'videos' || rawCat === 'video') return 'Videos';
-    if (rawCat === 'excel' || rawCat === 'spreadsheet') return 'Excel';
-    if (rawCat === 'zip' || rawCat === 'archive') return 'ZIP';
+    // 6. Documents (Word, Text, Presentation, Code, Docs)
+    if (
+      ['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'cshtml', 'html', 'htm', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql', 'log', 'env'].includes(ext) ||
+      mime.includes('word') ||
+      mime.includes('document') ||
+      mime.includes('presentation') ||
+      mime.includes('text/') ||
+      rawCat === 'documents' ||
+      rawCat === 'document'
+    ) {
+      return 'Documents';
+    }
 
     return 'Documents';
   };
