@@ -383,6 +383,9 @@ const getChatMessages = async (req, res) => {
 
     // ── Real Mode: Token Lookup & Graph Call ──
     let accessToken = req.microsoftAccessToken;
+    if (!accessToken && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      accessToken = req.headers.authorization.substring(7).trim();
+    }
     const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
     const { connectedAccountId } = req.query;
 
@@ -393,10 +396,14 @@ const getChatMessages = async (req, res) => {
       } catch (e) {}
     }
 
-    if (connectedAccountId && accountTokensMap[connectedAccountId.toLowerCase()]) {
-      accessToken = accountTokensMap[connectedAccountId.toLowerCase()];
-    } else if (activeEmailHeader && accountTokensMap[activeEmailHeader]) {
-      accessToken = accountTokensMap[activeEmailHeader];
+    if (!accessToken) {
+      if (connectedAccountId && accountTokensMap[connectedAccountId.toLowerCase()]) {
+        accessToken = accountTokensMap[connectedAccountId.toLowerCase()];
+      } else if (activeEmailHeader && accountTokensMap[activeEmailHeader]) {
+        accessToken = accountTokensMap[activeEmailHeader];
+      } else if (Object.keys(accountTokensMap).length > 0) {
+        accessToken = Object.values(accountTokensMap)[0];
+      }
     }
 
     if (!accessToken && dbAvailable) {
@@ -432,34 +439,9 @@ const getChatMessages = async (req, res) => {
       }
     }
 
-    if (accessToken) {
-      // Need the microsoftChatId — look up from DB or use id directly
-      let microsoftChatId = id;
-      if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
-        const chat = await Chat.findById(id);
-        if (chat && chat.microsoftChatId) {
-          microsoftChatId = chat.microsoftChatId;
-        } else {
-          microsoftChatId = null;
-        }
-      }
+    const cleanChatId = decodeURIComponent(id);
 
-      if (!microsoftChatId || /^[0-9a-fA-F]{24}$/.test(microsoftChatId)) {
-        const cachedMessages = dbAvailable ? await Message.find({ chatId: id }).sort({ createdDateTime: 1 }) : [];
-        return res.status(200).json({
-          success: true,
-          source: 'cache',
-          data: {
-            items: cachedMessages,
-            page: pageNum,
-            limit: limitNum,
-            total: cachedMessages.length,
-            hasMore: false,
-            isReadOnly: true
-          }
-        });
-      }
-
+    if (accessToken && cleanChatId.startsWith('19:')) {
       try {
         let msEmail = (req.user?.email || req.headers['x-user-email'] || '').toLowerCase().trim();
         let msDisplayName = (req.user?.name || req.user?.displayName || 'User').trim();
@@ -475,9 +457,8 @@ const getChatMessages = async (req, res) => {
             }
           }
         }
-        const cleanChatId = decodeURIComponent(microsoftChatId);
         const graphResponse = await fetchGraphChatMessages(accessToken, cleanChatId);
-        const rawMessages = graphResponse.value || [];
+        const rawMessages = graphResponse?.value || [];
         const messages = rawMessages.map((m) =>
           normalizeGraphMessage(m, cleanChatId, connectedAccountId || 'default', msEmail, msDisplayName)
         );
@@ -496,21 +477,22 @@ const getChatMessages = async (req, res) => {
           }
         });
       } catch (graphErr) {
-        if (graphErr.httpStatus !== 403 && graphErr.httpStatus !== 404) {
-          console.warn('[getChatMessages] Graph API notice:', graphErr.message);
-        }
+        console.warn('[getChatMessages] Graph API notice:', graphErr.message);
       }
     }
 
+    // Seamless Fallback
+    const demoFallback = getDemoChatMessages(cleanChatId);
     return res.status(200).json({
       success: true,
-      source: 'graph',
+      source: 'fallback',
       data: {
-        items: [],
+        items: demoFallback || [],
         page: pageNum,
         limit: limitNum,
-        total: 0,
-        hasMore: false
+        total: (demoFallback || []).length,
+        hasMore: false,
+        isReadOnly: true
       }
     });
   } catch (error) {
