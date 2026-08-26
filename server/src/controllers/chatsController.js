@@ -155,6 +155,14 @@ const getChats = async (req, res) => {
       }];
     }
 
+    // Filter targetAccounts strictly by active connected accounts in current client session
+    if (activeEmailsList.length > 0) {
+      targetAccounts = targetAccounts.filter(acc => {
+        const accEmail = (acc.email || '').toLowerCase().trim();
+        return activeEmailsList.some(clientEmail => clientEmail === accEmail || clientEmail.includes(accEmail) || accEmail.includes(clientEmail));
+      });
+    }
+
     // Filter by specific connectedAccountId if requested
     if (connectedAccountId && connectedAccountId !== 'all' && connectedAccountId !== '[object Object]') {
       const filterKey = connectedAccountId.toLowerCase().trim();
@@ -163,7 +171,8 @@ const getChats = async (req, res) => {
         const aId = (a._id || a.accountId || '').toString().toLowerCase().trim();
         return aEmail === filterKey || aId === filterKey || aEmail.includes(filterKey) || filterKey.includes(aEmail) ||
                (filterKey.includes('aryan') && aEmail.includes('aryan')) ||
-               (filterKey.includes('keval') && aEmail.includes('keval'));
+               (filterKey.includes('keval') && aEmail.includes('keval')) ||
+               (filterKey.includes('laxay') && aEmail.includes('laxay'));
       });
       if (matched.length > 0) {
         targetAccounts = matched;
@@ -266,10 +275,12 @@ const getChats = async (req, res) => {
       })
     );
 
-    // If still 0 chats across all target accounts, fallback to global in-memory chats
+    // If still 0 chats across all target accounts, fallback to global in-memory chats for active accounts only
     if (allUnifiedChats.length === 0 && global.liveInMemoryChats && global.liveInMemoryChats.size > 0) {
-      for (const chatsArr of global.liveInMemoryChats.values()) {
-        if (Array.isArray(chatsArr)) {
+      for (const [memEmail, chatsArr] of global.liveInMemoryChats.entries()) {
+        const cleanMemEmail = memEmail.toLowerCase().trim();
+        const isActive = activeEmailsList.length === 0 || activeEmailsList.some(e => e === cleanMemEmail || e.includes(cleanMemEmail) || cleanMemEmail.includes(e));
+        if (isActive && Array.isArray(chatsArr)) {
           allUnifiedChats.push(...chatsArr);
         }
       }

@@ -82,6 +82,14 @@ router.get('/', async (req, res) => {
       }
     }
 
+    // Filter targetAccounts strictly by active connected accounts in current client session
+    if (activeEmailsList.length > 0) {
+      targetAccounts = targetAccounts.filter(acc => {
+        const accEmail = (acc.email || '').toLowerCase().trim();
+        return activeEmailsList.some(clientEmail => clientEmail === accEmail || clientEmail.includes(accEmail) || accEmail.includes(clientEmail));
+      });
+    }
+
     // Filter by specific connectedAccountId if requested
     if (connectedAccountId && connectedAccountId !== 'all' && connectedAccountId !== '[object Object]') {
       const filterKey = connectedAccountId.toLowerCase().trim();
@@ -90,7 +98,8 @@ router.get('/', async (req, res) => {
         const aId = (a._id || a.accountId || '').toString().toLowerCase().trim();
         return aEmail === filterKey || aId === filterKey || aEmail.includes(filterKey) || filterKey.includes(aEmail) ||
                (filterKey.includes('aryan') && aEmail.includes('aryan')) ||
-               (filterKey.includes('keval') && aEmail.includes('keval'));
+               (filterKey.includes('keval') && aEmail.includes('keval')) ||
+               (filterKey.includes('laxay') && aEmail.includes('laxay'));
       });
       if (matched.length > 0) {
         targetAccounts = matched;
