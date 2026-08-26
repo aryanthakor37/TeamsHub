@@ -13,7 +13,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
       id: 'chats', 
       label: 'Chats', 
       icon: MessageSquare, 
-      badge: unreadChatCount > 0 ? unreadChatCount : null,
+      badge: (connectedAccounts && connectedAccounts.length > 0 && unreadChatCount > 0) ? unreadChatCount : null,
       isAlertBadge: true
     },
     { id: 'files', label: 'Files', icon: Folder },
@@ -22,7 +22,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
       id: 'accounts', 
       label: 'Accounts', 
       icon: Users, 
-      badge: connectedAccounts.length > 0 ? connectedAccounts.length : null 
+      badge: (connectedAccounts && connectedAccounts.length > 0) ? connectedAccounts.length : null 
     },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];

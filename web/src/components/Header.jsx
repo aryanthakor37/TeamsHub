@@ -29,7 +29,7 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
     };
 
     verifyHealth();
-    const interval = setInterval(verifyHealth, 5000);
+    const interval = setInterval(verifyHealth, 30000);
     return () => {
       isMounted = false;
       clearInterval(interval);
