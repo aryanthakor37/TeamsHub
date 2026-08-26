@@ -1012,6 +1012,18 @@ export default function ChatsPage({
                                 overflow: 'hidden'
                               }}
                             >
+                            {/* Quoted Message Reference Box (Teams-style Reply) */}
+                            {msg.quoteReply && (
+                              <div className="teams-quote-box">
+                                <div className="teams-quote-header">
+                                  {msg.quoteReply.sender} {msg.quoteReply.date && `• ${new Date(msg.quoteReply.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                                </div>
+                                <div style={{ fontStyle: 'italic', opacity: 0.9 }}>
+                                  {msg.quoteReply.text}
+                                </div>
+                              </div>
+                            )}
+
                             {msg.contentType === 'html' ? (
                               <div
                                 className="message-html-content"

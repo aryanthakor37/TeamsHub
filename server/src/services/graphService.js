@@ -623,16 +623,42 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
           return `src="/api/chats/${encodeURIComponent(finalChatId)}/messages/${encodeURIComponent(finalMsgId)}/hostedContents/${encodeURIComponent(cid)}${emailParam}"`;
         }
       );
+      // Clean empty <attachment> tags from HTML body
+      content = content.replace(/<attachment\b[^>]*>.*?<\/attachment>/gi, '');
+      content = content.replace(/<attachment\b[^>]*\/>/gi, '');
       // Remove potentially malicious script tags
       content = content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
     }
   }
 
-  // Extract attachments (supporting reference URLs and teams download content)
-  const attachments = (graphMessage.attachments || []).map(att => {
+  // Extract attachments (distinguishing between real files and quote references)
+  let quoteReply = null;
+  const attachments = [];
+
+  (graphMessage.attachments || []).forEach(att => {
     let contentUrl = att.contentUrl;
     let name = att.name;
     let contentType = att.contentType || 'application/octet-stream';
+
+    // 1. Check if this is a quote/reply reference
+    if (
+      contentType.includes('messageReference') ||
+      contentType.includes('quote') ||
+      att.teamsAppId === 'quote'
+    ) {
+      if (att.content) {
+        try {
+          const parsed = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
+          quoteReply = {
+            messageId: parsed.messageId || parsed.id,
+            sender: parsed.sender || parsed.from?.user?.displayName || 'User',
+            text: parsed.content || parsed.text || parsed.body || '',
+            date: parsed.createdDateTime || ''
+          };
+        } catch (e) {}
+      }
+      return; // Do NOT render quote as a file attachment!
+    }
 
     if (att.content) {
       try {
@@ -646,14 +672,17 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
       }
     }
 
-    return {
-      id: att.id || `att-${Math.random().toString(36).substring(2, 9)}`,
-      name: name || 'Attachment',
-      contentType: contentType,
-      contentUrl: contentUrl || att.thumbnailUrl || '#',
-      thumbnailUrl: att.thumbnailUrl,
-      teamsAppId: att.teamsAppId
-    };
+    // Only include if it has a real file name or real content URL
+    if ((name && name !== 'Attachment' && name !== 'Unknown File') || (contentUrl && contentUrl !== '#')) {
+      attachments.push({
+        id: att.id || `att-${Math.random().toString(36).substring(2, 9)}`,
+        name: name || 'Shared File',
+        contentType: contentType,
+        contentUrl: contentUrl || att.thumbnailUrl || '#',
+        thumbnailUrl: att.thumbnailUrl,
+        teamsAppId: att.teamsAppId
+      });
+    }
   });
 
   // Skip system/event messages with no useful content
@@ -671,6 +700,7 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     contentType: graphMessage.body?.contentType === 'html' ? 'html' : 'text',
     isOutgoing,
     attachments,
+    quoteReply,
     reactions: graphMessage.reactions || [],
     createdDateTime: graphMessage.createdDateTime || new Date().toISOString()
   };
