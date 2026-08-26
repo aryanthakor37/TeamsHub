@@ -244,9 +244,11 @@ export default function ChatsPage({
     const badge = (c.company || c.accountBadge || '').toLowerCase().trim();
     if (badge.includes('aryan') || badge.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
     if (badge.includes('keval') || badge.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    if (badge.includes('kaushal') || badge.includes('nimavat')) return 'kaushal.nimavat@estatic-infotech.com';
     const accId = (c.connectedAccountId || '').toLowerCase().trim();
     if (accId.includes('aryan') || accId.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
     if (accId.includes('keval') || accId.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    if (accId.includes('kaushal') || accId.includes('nimavat')) return 'kaushal.nimavat@estatic-infotech.com';
     return email;
   };
 
@@ -254,12 +256,11 @@ export default function ChatsPage({
     const chatOwnerEmail = getChatOwnerEmail(chat).toLowerCase().trim();
     if (chatOwnerEmail && connectedAccounts && connectedAccounts.length > 0) {
       const isOwnerConnected = connectedAccounts.some(acc => {
-        const accEmail = (acc.email || '').toLowerCase().trim();
+        const accEmail = (acc.email || acc.username || '').toLowerCase().trim();
         const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
         if (accEmail && chatOwnerEmail === accEmail) return true;
         if (accName && chat.company && chat.company.toLowerCase().includes(accName)) return true;
-        if (accEmail.includes('aryan') && chatOwnerEmail.includes('aryan')) return true;
-        if (accEmail.includes('keval') && chatOwnerEmail.includes('keval')) return true;
+        if (accEmail && chatOwnerEmail && accEmail.split('@')[0] === chatOwnerEmail.split('@')[0]) return true;
         return false;
       });
       if (!isOwnerConnected) return false;
@@ -278,18 +279,14 @@ export default function ChatsPage({
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const filterKey = selectedFilterAccount.toLowerCase().trim();
-
-    // 1. Account Specific Matching
-    if (filterKey.includes('aryan') || filterKey.includes('kumrecha')) {
-      return chatOwnerEmail.includes('aryan') || chatOwnerEmail.includes('kumrecha');
-    }
-    if (filterKey.includes('keval') || filterKey.includes('trivedi')) {
-      return chatOwnerEmail.includes('keval') || chatOwnerEmail.includes('trivedi');
-    }
-
-    // 2. Exact email or account ID match
     const chatAccId = (chat.connectedAccountId || '').toLowerCase().trim();
-    return chatOwnerEmail === filterKey || chatAccId === filterKey;
+
+    if (chatOwnerEmail === filterKey || chatAccId === filterKey) return true;
+    if (chatOwnerEmail && filterKey && chatOwnerEmail.split('@')[0] === filterKey.split('@')[0]) return true;
+    if (chat.company && chat.company.toLowerCase() === filterKey) return true;
+    if (chat.accountBadge && chat.accountBadge.toLowerCase() === filterKey) return true;
+
+    return false;
   });
 
   // Set active chat instantaneously based on current filtered view

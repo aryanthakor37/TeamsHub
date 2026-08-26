@@ -1374,9 +1374,11 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     const badge = (f.account || f.accountBadge || '').toLowerCase().trim();
     if (badge.includes('aryan') || badge.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
     if (badge.includes('keval') || badge.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    if (badge.includes('kaushal') || badge.includes('nimavat')) return 'kaushal.nimavat@estatic-infotech.com';
     const accId = (f.connectedAccountId || '').toLowerCase().trim();
     if (accId.includes('aryan') || accId.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
     if (accId.includes('keval') || accId.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    if (accId.includes('kaushal') || badge.includes('nimavat')) return 'kaushal.nimavat@estatic-infotech.com';
     return email;
   };
 
@@ -1387,12 +1389,11 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     // 1. Strictly ensure the file belongs to currently CONNECTED accounts
     if (fileOwnerEmail && connectedAccounts && connectedAccounts.length > 0) {
       const isOwnerConnected = connectedAccounts.some(acc => {
-        const accEmail = (acc.email || '').toLowerCase().trim();
+        const accEmail = (acc.email || acc.username || '').toLowerCase().trim();
         const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
         if (accEmail && fileOwnerEmail === accEmail) return true;
         if (accName && file.account && file.account.toLowerCase().includes(accName)) return true;
-        if (accEmail.includes('aryan') && fileOwnerEmail.includes('aryan')) return true;
-        if (accEmail.includes('keval') && fileOwnerEmail.includes('keval')) return true;
+        if (accEmail && fileOwnerEmail && accEmail.split('@')[0] === fileOwnerEmail.split('@')[0]) return true;
         return false;
       });
       if (!isOwnerConnected) return false;
@@ -1401,16 +1402,14 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const filterKey = selectedFilterAccount.toLowerCase().trim();
-
-    if (filterKey.includes('aryan') || filterKey.includes('kumrecha')) {
-      return fileOwnerEmail.includes('aryan') || fileOwnerEmail.includes('kumrecha');
-    }
-    if (filterKey.includes('keval') || filterKey.includes('trivedi')) {
-      return fileOwnerEmail.includes('keval') || fileOwnerEmail.includes('trivedi');
-    }
-
     const fileAccId = (file.connectedAccountId || '').toLowerCase().trim();
-    return fileOwnerEmail === filterKey || fileAccId === filterKey;
+
+    if (fileOwnerEmail === filterKey || fileAccId === filterKey) return true;
+    if (fileOwnerEmail && filterKey && fileOwnerEmail.split('@')[0] === filterKey.split('@')[0]) return true;
+    if (file.account && file.account.toLowerCase() === filterKey) return true;
+    if (file.accountBadge && file.accountBadge.toLowerCase() === filterKey) return true;
+
+    return false;
   });
 
   const filteredFiles = accountScopedFiles.filter((file) => {
