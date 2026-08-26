@@ -239,34 +239,7 @@ const getChats = async (req, res) => {
               return normalized;
             });
 
-            // Asynchronously persist/update chats in database
-            if (dbAvailable && req.user?._id) {
-              Promise.all(
-                normalizedList.map(async (nc) => {
-                  try {
-                    await Chat.findOneAndUpdate(
-                      { userId: req.user._id, microsoftChatId: nc.microsoftChatId },
-                      {
-                        userId: req.user._id,
-                        connectedAccountId: nc.connectedAccountId,
-                        accountEmail: nc.accountEmail,
-                        microsoftChatId: nc.microsoftChatId,
-                        participant: nc.participant,
-                        role: nc.role || 'Direct Message',
-                        company: nc.company || accountCompanyBadge,
-                        accountBadge: nc.accountBadge || accountCompanyBadge,
-                        lastMessagePreview: nc.lastMessagePreview || '',
-                        lastMessageTimestamp: nc.lastMessageTimestamp ? new Date(nc.lastMessageTimestamp) : new Date(),
-                        unreadCount: nc.unreadCount || 0,
-                        chatType: nc.chatType || 'oneOnOne',
-                        onlineStatus: 'online'
-                      },
-                      { upsert: true, new: true }
-                    );
-                  } catch (dbErr) {}
-                })
-              ).catch(() => {});
-            }
+            // Zero-Storage Mode: Pass-through normalized chats directly in memory (No DB persistence)
           } else if (dbAvailable) {
             // Fallback: retrieve cached chats for this account from database
             try {

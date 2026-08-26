@@ -48,19 +48,22 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
 
   return (
     <header style={{
-      height: '64px',
-      backgroundColor: 'var(--bg-secondary)',
+      height: '66px',
+      backgroundColor: 'var(--bg-glass)',
+      backdropFilter: 'blur(16px)',
+      WebkitBackdropFilter: 'blur(16px)',
       borderBottom: '1px solid var(--border-color)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 28px',
       zIndex: 10,
-      position: 'relative'
+      position: 'relative',
+      boxShadow: 'var(--shadow-sm)'
     }}>
       {/* Title & Status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: '700' }}>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
           {titles[activeTab] || 'Dashboard'}
         </h1>
 
@@ -69,16 +72,23 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
           display: 'inline-flex',
           alignItems: 'center',
           gap: '6px',
-          padding: '3px 10px',
+          padding: '4px 11px',
           borderRadius: 'var(--radius-full)',
           fontSize: '0.75rem',
-          fontWeight: '600',
-          backgroundColor: healthStatus.online ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+          fontWeight: '700',
+          backgroundColor: healthStatus.online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
           color: healthStatus.online ? '#10b981' : '#ef4444',
-          border: `1px solid ${healthStatus.online ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+          border: `1px solid ${healthStatus.online ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
+          boxShadow: healthStatus.online ? '0 0 12px rgba(16, 185, 129, 0.2)' : 'none'
         }}>
-          {healthStatus.online ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-          <span>{healthStatus.loading ? 'Checking API...' : healthStatus.online ? 'API Online' : 'API Standby'}</span>
+          <div style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            backgroundColor: healthStatus.online ? '#10b981' : '#ef4444',
+            boxShadow: healthStatus.online ? '0 0 8px #10b981' : 'none'
+          }} className={healthStatus.online ? 'pulse-online' : ''} />
+          <span>{healthStatus.loading ? 'Checking API...' : healthStatus.online ? 'API Live' : 'API Standby'}</span>
         </div>
       </div>
 
@@ -95,16 +105,18 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '8px 16px',
+            padding: '8px 18px',
             backgroundColor: 'var(--bg-tertiary)',
             border: '1px solid var(--border-color)',
             borderRadius: 'var(--radius-full)',
             color: 'var(--text-muted)',
             fontSize: '0.85rem',
-            cursor: 'pointer'
+            fontWeight: '500',
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-sm)'
           }}
         >
-          <Search size={15} />
+          <Search size={15} style={{ color: 'var(--accent-primary)' }} />
           <span>Search workspace...</span>
         </button>
 
@@ -112,7 +124,7 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
         <button
           className="btn btn-primary"
           onClick={onOpenMicrosoftModal}
-          style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: '700' }}
+          style={{ padding: '9px 18px', fontSize: '0.85rem', fontWeight: '700' }}
         >
           <Plus size={16} />
           <span>Connect Account</span>
@@ -122,8 +134,8 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
         <button 
           className="tab-pill-3d"
           style={{
-            width: '38px',
-            height: '38px',
+            width: '40px',
+            height: '40px',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-color)',
             backgroundColor: 'var(--bg-secondary)',
@@ -131,7 +143,8 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: 'var(--text-secondary)'
+            color: 'var(--text-secondary)',
+            boxShadow: 'var(--shadow-sm)'
           }}
         >
           <Bell size={18} />
@@ -143,8 +156,8 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
           onClick={toggleTheme}
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
           style={{
-            width: '38px',
-            height: '38px',
+            width: '40px',
+            height: '40px',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-color)',
             backgroundColor: 'var(--bg-secondary)',
@@ -152,7 +165,8 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: 'var(--accent-primary)'
+            color: 'var(--accent-primary)',
+            boxShadow: 'var(--shadow-sm)'
           }}
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
