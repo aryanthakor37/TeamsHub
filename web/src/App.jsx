@@ -34,7 +34,13 @@ function MainLayout() {
     const handleToast = (e) => {
       const chat = e.detail?.chat;
       if (chat) {
-        if (chat.isSelfChat || chat.participant?.includes('(You)')) return;
+        // Exclude self-chats, outgoing messages sent by the user, and conversations actively open on screen
+        if (chat.isSelfChat || chat.participant?.includes('(You)') || chat.isLastMessageOutgoing || chat.isOutgoing) return;
+        const id = chat._id || chat.id || chat.microsoftChatId;
+        if (typeof window !== 'undefined' && window.__teamshub_active_chat_id &&
+          (window.__teamshub_active_chat_id === id || window.__teamshub_active_chat_id === chat.microsoftChatId)) {
+          return;
+        }
         setActiveToast(chat);
         setTimeout(() => {
           setActiveToast((curr) => ((curr?._id || curr?.id) === (chat._id || chat.id) ? null : curr));

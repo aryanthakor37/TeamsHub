@@ -43,8 +43,8 @@ const initSocket = (server) => {
       if (chatId && message) {
         // Broadcast to chat room
         socket.to(`chat:${chatId}`).emit('chat:message:received', message);
-        // Also broadcast toast notification event to all connected clients
-        io.emit('teamshub:new-toast-notification', { chat: { ...message, _id: chatId } });
+        // Broadcast toast notification only to other clients (exclude sender)
+        socket.broadcast.emit('teamshub:new-toast-notification', { chat: { ...message, _id: chatId } });
       }
     });
 

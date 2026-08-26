@@ -513,10 +513,12 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
   // Calculate Unread Status based on viewpoint and lastMessagePreview
   let unreadCount = 0;
   const lastMessageTimestamp = graphChat.lastMessagePreview?.createdDateTime || graphChat.lastUpdatedDateTime || graphChat.createdDateTime || new Date().toISOString();
-  const lastMsgFromEmail = graphChat.lastMessagePreview?.from?.user?.email || graphChat.lastMessagePreview?.from?.user?.userPrincipalName || '';
-  const lastMsgFromName = (graphChat.lastMessagePreview?.from?.user?.displayName || '').toLowerCase();
+  const lastMsgFromId = (graphChat.lastMessagePreview?.from?.user?.id || '').toLowerCase().trim();
+  const lastMsgFromEmail = (graphChat.lastMessagePreview?.from?.user?.email || graphChat.lastMessagePreview?.from?.user?.userPrincipalName || '').toLowerCase().trim();
+  const lastMsgFromName = (graphChat.lastMessagePreview?.from?.user?.displayName || '').toLowerCase().trim();
   const isFromMe = !!(
-    (currentEmail && lastMsgFromEmail && currentEmail === lastMsgFromEmail.toLowerCase()) ||
+    (currentUserId && lastMsgFromId && currentUserId.toLowerCase() === lastMsgFromId) ||
+    (currentEmail && lastMsgFromEmail && currentEmail === lastMsgFromEmail) ||
     (currentDisplayName && lastMsgFromName && (currentDisplayName === lastMsgFromName || lastMsgFromName.includes(currentDisplayName)))
   );
 
@@ -539,11 +541,12 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     accountBadge: company,
     chatType: graphChat.chatType || 'oneOnOne',
     isSelfChat,
+    isLastMessageOutgoing: isFromMe,
     lastMessagePreview: graphChat.lastMessagePreview?.body?.content
       ? graphChat.lastMessagePreview.body.content.replace(/<[^>]*>/g, '').substring(0, 120)
       : '',
     lastMessageTimestamp,
-    unreadCount,
+    unreadCount: isFromMe ? 0 : unreadCount,
     onlineStatus: 'online'
   };
 };

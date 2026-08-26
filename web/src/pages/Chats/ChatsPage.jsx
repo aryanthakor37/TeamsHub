@@ -223,6 +223,18 @@ export default function ChatsPage({
     return () => window.removeEventListener('teamshub:open-chat', handleOpenChatEvent);
   }, [chats]);
 
+  // Synchronize active chat ID globally to suppress self-notifications on active view
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__teamshub_active_chat_id = activeChatId;
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.__teamshub_active_chat_id = null;
+      }
+    };
+  }, [activeChatId]);
+
   const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
 
   const getChatOwnerEmail = (c) => {

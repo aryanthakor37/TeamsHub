@@ -223,8 +223,13 @@ export const useChats = () => {
           const currentTs = new Date(chat.lastMessageTimestamp || 0).getTime();
           const prevTs = prevChatTimestamps.current.get(id) || 0;
 
-          // If timestamp is newer and chat is not a self-chat
-          if (currentTs > prevTs && prevTs > 0 && !chat.isSelfChat && !chat.participant?.includes('(You)')) {
+          const isOutgoing = !!(chat.isLastMessageOutgoing || chat.isOutgoing);
+          const isSelf = !!(chat.isSelfChat || chat.participant?.includes('(You)'));
+          const isActiveChat = typeof window !== 'undefined' && window.__teamshub_active_chat_id &&
+            (window.__teamshub_active_chat_id === id || window.__teamshub_active_chat_id === chat.microsoftChatId || window.__teamshub_active_chat_id === chat.id);
+
+          // ONLY trigger notification if it is an INCOMING message from the other person
+          if (currentTs > prevTs && prevTs > 0 && !isOutgoing && !isSelf && !isActiveChat) {
             hasNewIncomingMessage = true;
             newestChat = chat;
             break;
@@ -239,7 +244,7 @@ export const useChats = () => {
         prevChatTimestamps.current.set(id, ts);
       });
 
-      // Play Teams chime & show notification if a new message arrived
+      // Play Teams chime & show notification if a new incoming message arrived from the other person
       if (hasNewIncomingMessage && newestChat) {
         playTeamsNotificationSound();
         showDesktopNotification(
@@ -280,14 +285,17 @@ export const useChats = () => {
 
   // Immediately bump a chat to top when sending/receiving message in active view
   const bumpChatToTop = useCallback((chatId, newLastMessagePreview) => {
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+    prevChatTimestamps.current.set(chatId, nowMs);
     setChats((prev) => {
-      const now = new Date().toISOString();
       const updated = prev.map((c) => {
         if ((c._id && c._id === chatId) || (c.id && c.id === chatId) || (c.microsoftChatId && c.microsoftChatId === chatId)) {
           return {
             ...c,
             lastMessagePreview: newLastMessagePreview !== undefined ? newLastMessagePreview : c.lastMessagePreview,
             lastMessageTimestamp: now,
+            isLastMessageOutgoing: true,
             unreadCount: 0
           };
         }
