@@ -460,6 +460,7 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
   let participantName = '';
   let participantEmail = '';
   let isSelfChat = false;
+  let otherMembers = [];
 
   // 1. Group Chat Topic
   if (graphChat.chatType === 'group' && graphChat.topic && graphChat.topic.trim()) {
@@ -468,7 +469,7 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
 
   // 2. Members Inspection
   if (graphChat.members && graphChat.members.length > 0) {
-    const otherMembers = graphChat.members.filter((m) => {
+    otherMembers = graphChat.members.filter((m) => {
       const mEmail = (m.email || m.userPrincipalName || m.emailAddress?.address || '').toLowerCase().trim();
       const mName = (m.displayName || '').toLowerCase().trim();
       const mId = (m.userId || m.id || '').toLowerCase().trim();
