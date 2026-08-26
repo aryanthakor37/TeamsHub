@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Search, RefreshCw, Send, Lock, ShieldCheck, CheckCircle2, MessageSquare, AlertCircle, Sparkles, FileText, Paperclip, Download, X, ExternalLink, Eye, Smile, ThumbsUp, Heart, LogIn, Check, ArrowLeft } from 'lucide-react';
 import { useChats } from '../../hooks/useChats';
 import { useMessages } from '../../hooks/useMessages';
