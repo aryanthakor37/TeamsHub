@@ -18,10 +18,17 @@ import {
   RefreshCw,
   Copy,
   Check,
-  Play
+  Play,
+  Share2,
+  CheckSquare,
+  Square,
+  PackageCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchFilesFromBackend, fetchFileBlob, fetchFileArrayBuffer, fetchFileText } from '../../services/fileService';
+import { downloadFilesAsZip } from '../../utils/zipUtils';
+import ShareFileModal from '../../components/ShareFileModal';
 import { getAvatarColor, getInitials } from '../../utils/avatarUtils';
 import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
