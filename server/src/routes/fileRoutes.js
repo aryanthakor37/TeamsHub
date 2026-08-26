@@ -27,77 +27,74 @@ router.get('/', async (req, res) => {
       ? userEmailsHeader.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
       : [];
 
-    if (dbAvailable) {
-      if (connectedAccountId && connectedAccountId !== 'all' && connectedAccountId !== '[object Object]') {
-        let acc = null;
-        if (connectedAccountId.includes('@')) {
-          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-        if (!acc && mongoose.Types.ObjectId.isValid(connectedAccountId)) {
-          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-        if (!acc) {
-          acc = await ConnectedAccount.findOne({
-            $or: [
-              { accountId: connectedAccountId },
-              { microsoftUserId: connectedAccountId },
-              { email: connectedAccountId }
-            ]
-          }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-        if (acc) targetAccounts = [acc];
-      } else if (activeEmailsList.length > 0) {
-        targetAccounts = await ConnectedAccount.find({
-          email: { $in: activeEmailsList },
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
+    const authHeader = req.headers.authorization;
+    const clientUserEmail = (req.headers['x-user-email'] || '').toLowerCase().trim();
 
-      if (targetAccounts.length === 0) {
-        targetAccounts = await ConnectedAccount.find({
-          status: { $ne: 'disconnected' },
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+    // 1. Populate from accountTokensMap
+    Object.entries(accountTokensMap).forEach(([email, token]) => {
+      const cleanEmail = email.toLowerCase().trim();
+      if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
+        targetAccounts.push({
+          _id: `acc-token-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          email: cleanEmail,
+          displayName: cleanEmail.split('@')[0],
+          microsoftAccessToken: token
+        });
       }
+    });
+
+    // 2. Add from DB if available
+    if (dbAvailable) {
+      const dbAccs = await ConnectedAccount.find({
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      dbAccs.forEach(acc => {
+        const cleanEmail = (acc.email || '').toLowerCase().trim();
+        if (cleanEmail && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
+          targetAccounts.push(acc);
+        }
+      });
     }
 
-    // Include in-memory connected accounts (when MongoDB is offline)
+    // 3. Add from in-memory accounts
     if (global.liveInMemoryAccounts) {
       global.liveInMemoryAccounts.forEach((memAcc, memEmail) => {
-        if (memAcc.status === 'disconnected') return;
-        if (activeEmailsList.length > 0 && !activeEmailsList.includes(memEmail.toLowerCase())) return;
-        if (!targetAccounts.some(a => (a.email || '').toLowerCase() === memEmail.toLowerCase())) {
+        const cleanEmail = memEmail.toLowerCase().trim();
+        if (memAcc.status !== 'disconnected' && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
           targetAccounts.push(memAcc);
         }
       });
     }
 
-    // Ensure EVERY account with a live token from x-account-tokens is included in targetAccounts
-    if (!connectedAccountId || connectedAccountId === 'all') {
-      Object.entries(accountTokensMap).forEach(([email, token]) => {
-        const cleanEmail = email.toLowerCase().trim();
-        if (activeEmailsList.length > 0 && !activeEmailsList.includes(cleanEmail)) return;
-        if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
+    // 4. Header token fallback
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7).trim();
+      if (token) {
+        const email = clientUserEmail || 'default-account';
+        if (!targetAccounts.some(a => (a.email || '').toLowerCase() === email)) {
           targetAccounts.push({
-            _id: `acc-token-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-            email: cleanEmail,
-            displayName: cleanEmail.split('@')[0],
-            microsoftAccessToken: token
+            _id: 'active-user-session',
+            microsoftAccessToken: token,
+            displayName: email.split('@')[0],
+            email: email
           });
         }
-      });
+      }
     }
 
-    // Header token fallback
-    const authHeader = req.headers.authorization;
-    if (targetAccounts.length === 0 && authHeader && authHeader.startsWith('Bearer ')) {
-      const clientUserEmail = (req.headers['x-user-email'] || '').toLowerCase().trim();
-      targetAccounts = [{
-        _id: 'active-user-session',
-        microsoftAccessToken: authHeader.substring(7),
-        displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft Account',
-        email: clientUserEmail
-      }];
+    // Filter by specific connectedAccountId if requested
+    if (connectedAccountId && connectedAccountId !== 'all' && connectedAccountId !== '[object Object]') {
+      const filterKey = connectedAccountId.toLowerCase().trim();
+      const matched = targetAccounts.filter(a => {
+        const aEmail = (a.email || '').toLowerCase().trim();
+        const aId = (a._id || a.accountId || '').toString().toLowerCase().trim();
+        return aEmail === filterKey || aId === filterKey || aEmail.includes(filterKey) || filterKey.includes(aEmail) ||
+               (filterKey.includes('aryan') && aEmail.includes('aryan')) ||
+               (filterKey.includes('keval') && aEmail.includes('keval'));
+      });
+      if (matched.length > 0) {
+        targetAccounts = matched;
+      }
     }
 
     if (targetAccounts.length === 0) {

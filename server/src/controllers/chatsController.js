@@ -109,48 +109,44 @@ const getChats = async (req, res) => {
       } catch (e) {}
     }
 
+    // 1. Populate all accounts from accountTokensMap
+    Object.entries(accountTokensMap).forEach(([email, token]) => {
+      const cleanEmail = email.toLowerCase().trim();
+      if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
+        targetAccounts.push({
+          _id: `acc-token-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          email: cleanEmail,
+          displayName: cleanEmail.split('@')[0],
+          microsoftAccessToken: token
+        });
+      }
+    });
+
+    // 2. Add from DB if available
     if (dbAvailable) {
-      if (connectedAccountId && connectedAccountId !== 'all') {
-        let acc = null;
-        if (connectedAccountId.includes('@')) {
-          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase().trim() }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      const dbAccs = await ConnectedAccount.find({
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      dbAccs.forEach(acc => {
+        const cleanEmail = (acc.email || '').toLowerCase().trim();
+        if (cleanEmail && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
+          targetAccounts.push(acc);
         }
-        if (!acc && mongoose.Types.ObjectId.isValid(connectedAccountId)) {
-          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-        if (!acc) {
-          acc = await ConnectedAccount.findOne({ accountId: connectedAccountId }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-        if (!acc) {
-          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase().trim() }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-        if (!acc && clientUserEmail) {
-          acc = await ConnectedAccount.findOne({ email: clientUserEmail }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-        }
-        if (acc) targetAccounts = [acc];
-      } else if (activeEmailsList.length > 0) {
-        targetAccounts = await ConnectedAccount.find({
-          email: { $in: activeEmailsList }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
+      });
+    }
 
-      // Fallback: If no accounts matched by email header, find all active connected accounts in DB
-      if (targetAccounts.length === 0) {
-        targetAccounts = await ConnectedAccount.find({
-          status: { $ne: 'disconnected' },
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
+    // 3. Include in-memory connected accounts (when MongoDB is offline)
+    if (global.liveInMemoryAccounts) {
+      global.liveInMemoryAccounts.forEach((memAcc, memEmail) => {
+        const cleanEmail = memEmail.toLowerCase().trim();
+        if (memAcc.status !== 'disconnected' && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
+          targetAccounts.push(memAcc);
+        }
+      });
+    }
 
-      if (targetAccounts.length === 0 && headerToken) {
-        targetAccounts = [{
-          _id: 'active-user-session',
-          microsoftAccessToken: headerToken,
-          email: clientUserEmail || '',
-          displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft User'
-        }];
-      }
-    } else if (headerToken) {
+    // 4. Header token fallback
+    if (targetAccounts.length === 0 && headerToken) {
       targetAccounts = [{
         _id: 'active-user-session',
         microsoftAccessToken: headerToken,
@@ -159,31 +155,19 @@ const getChats = async (req, res) => {
       }];
     }
 
-    // Include in-memory connected accounts (when MongoDB is offline)
-    if (global.liveInMemoryAccounts) {
-      global.liveInMemoryAccounts.forEach((memAcc, memEmail) => {
-        if (memAcc.status === 'disconnected') return;
-        if (activeEmailsList.length > 0 && !activeEmailsList.includes(memEmail.toLowerCase())) return;
-        if (!targetAccounts.some(a => (a.email || '').toLowerCase() === memEmail.toLowerCase())) {
-          targetAccounts.push(memAcc);
-        }
+    // Filter by specific connectedAccountId if requested
+    if (connectedAccountId && connectedAccountId !== 'all' && connectedAccountId !== '[object Object]') {
+      const filterKey = connectedAccountId.toLowerCase().trim();
+      const matched = targetAccounts.filter(a => {
+        const aEmail = (a.email || '').toLowerCase().trim();
+        const aId = (a._id || a.accountId || '').toString().toLowerCase().trim();
+        return aEmail === filterKey || aId === filterKey || aEmail.includes(filterKey) || filterKey.includes(aEmail) ||
+               (filterKey.includes('aryan') && aEmail.includes('aryan')) ||
+               (filterKey.includes('keval') && aEmail.includes('keval'));
       });
-    }
-
-    // Ensure EVERY account with a live token from x-account-tokens is included in targetAccounts (if active)
-    if (!connectedAccountId || connectedAccountId === 'all') {
-      Object.entries(accountTokensMap).forEach(([email, token]) => {
-        const cleanEmail = email.toLowerCase().trim();
-        if (activeEmailsList.length > 0 && !activeEmailsList.includes(cleanEmail)) return;
-        if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
-          targetAccounts.push({
-            _id: `acc-token-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-            email: cleanEmail,
-            displayName: cleanEmail.split('@')[0],
-            microsoftAccessToken: token
-          });
-        }
-      });
+      if (matched.length > 0) {
+        targetAccounts = matched;
+      }
     }
 
     if (targetAccounts.length === 0) {
