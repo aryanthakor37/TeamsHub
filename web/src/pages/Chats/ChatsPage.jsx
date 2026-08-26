@@ -1013,12 +1013,17 @@ export default function ChatsPage({
                               }}
                             >
                             {/* Quoted Message Reference Box (Teams-style Reply) */}
-                            {msg.quoteReply && (
+                            {msg.quoteReply && msg.quoteReply.text && !msg.content?.includes('<blockquote') && (
                               <div className="teams-quote-box">
                                 <div className="teams-quote-header">
-                                  {msg.quoteReply.sender} {msg.quoteReply.date && `• ${new Date(msg.quoteReply.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                                  <span>{msg.quoteReply.sender}</span>
+                                  {msg.quoteReply.date && (
+                                    <span style={{ fontSize: '0.74rem', opacity: 0.8, marginLeft: '8px', fontWeight: 'normal' }}>
+                                      {new Date(msg.quoteReply.date).toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })} {new Date(msg.quoteReply.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  )}
                                 </div>
-                                <div style={{ fontStyle: 'italic', opacity: 0.9 }}>
+                                <div style={{ color: 'var(--text-secondary)', marginTop: '2px', wordBreak: 'break-word' }}>
                                   {msg.quoteReply.text}
                                 </div>
                               </div>

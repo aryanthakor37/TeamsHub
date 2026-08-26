@@ -649,12 +649,31 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
       if (att.content) {
         try {
           const parsed = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
-          quoteReply = {
-            messageId: parsed.messageId || parsed.id,
-            sender: parsed.sender || parsed.from?.user?.displayName || 'User',
-            text: parsed.content || parsed.text || parsed.body || '',
-            date: parsed.createdDateTime || ''
-          };
+          const senderName = parsed.messageFrom?.user?.displayName ||
+                             parsed.from?.user?.displayName ||
+                             parsed.sender?.displayName ||
+                             parsed.sender ||
+                             parsed.user?.displayName ||
+                             parsed.author ||
+                             '';
+          let quotedContent = parsed.messageBody?.content ||
+                              parsed.body?.content ||
+                              parsed.content ||
+                              parsed.text ||
+                              '';
+          if (typeof quotedContent === 'string') {
+            quotedContent = quotedContent.replace(/<[^>]*>/g, '').trim();
+          }
+          const quotedDate = parsed.messageDateTime || parsed.createdDateTime || parsed.date || '';
+
+          if (senderName || quotedContent) {
+            quoteReply = {
+              messageId: parsed.messageId || parsed.id,
+              sender: senderName || 'User',
+              text: quotedContent,
+              date: quotedDate
+            };
+          }
         } catch (e) {}
       }
       return; // Do NOT render quote as a file attachment!
