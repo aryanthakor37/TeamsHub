@@ -263,91 +263,60 @@ export const syncAllAccountsTokens = async () => {
 export const acquireGraphToken = async (accountId) => {
   if (!isRealMsalConfigured()) return null;
   try {
-    const tokenPromise = (async () => {
-      await msalInstance.initialize();
-      const accounts = msalInstance.getAllAccounts();
-      if (!accounts || accounts.length === 0) return null;
+    await msalInstance.initialize();
+    const accounts = msalInstance.getAllAccounts() || [];
+    if (!accounts || accounts.length === 0) return null;
 
-      const activeEmail = localStorage.getItem('teamshub_active_email');
-      let targetAccount = null;
+    const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+    let targetAccount = null;
 
-      if (accountId) {
-        const cleanTarget = accountId.toString().toLowerCase().trim();
-        targetAccount = accounts.find(acc =>
-          (acc.username && acc.username.toLowerCase() === cleanTarget) ||
-          (acc.homeAccountId && acc.homeAccountId.toLowerCase() === cleanTarget) ||
-          (acc.localAccountId && acc.localAccountId.toLowerCase() === cleanTarget) ||
-          (acc.name && acc.name.toLowerCase() === cleanTarget) ||
-          (acc.username && (acc.username.toLowerCase().includes(cleanTarget) || cleanTarget.includes(acc.username.toLowerCase())))
-        );
+    if (accountId) {
+      const cleanTarget = accountId.toString().toLowerCase().trim();
+      targetAccount = accounts.find(acc =>
+        (acc.username && acc.username.toLowerCase() === cleanTarget) ||
+        (acc.homeAccountId && acc.homeAccountId.toLowerCase() === cleanTarget) ||
+        (acc.localAccountId && acc.localAccountId.toLowerCase() === cleanTarget) ||
+        (acc.name && acc.name.toLowerCase() === cleanTarget) ||
+        (acc.username && (acc.username.toLowerCase().includes(cleanTarget) || cleanTarget.includes(acc.username.toLowerCase())))
+      );
+    }
+
+    if (!targetAccount && activeEmail) {
+      targetAccount = accounts.find(acc => acc.username?.toLowerCase() === activeEmail);
+    }
+    if (!targetAccount) {
+      targetAccount = msalInstance.getActiveAccount() || accounts[0];
+    }
+
+    if (targetAccount) {
+      const emailLower = (targetAccount.username || '').toLowerCase().trim();
+      const storedToken = localStorage.getItem(`teamshub_token_${emailLower}`);
+
+      // If we already have stored token for this account, return immediately
+      if (storedToken) {
+        return storedToken;
       }
 
-      if (!targetAccount && activeEmail) {
-        targetAccount = accounts.find(acc => acc.username?.toLowerCase() === activeEmail.toLowerCase());
-      }
-      if (!targetAccount) {
-        targetAccount = msalInstance.getActiveAccount();
-      }
-      if (!targetAccount && accounts.length > 0) {
-        targetAccount = accounts[0];
-      }
-
-      if (targetAccount) {
-        const emailLower = (targetAccount.username || '').toLowerCase().trim();
-        
-        // 1. Try standard acquireTokenSilent with targetAccount
-        try {
-          const result = await msalInstance.acquireTokenSilent({
-            ...graphTokenRequest,
-            account: targetAccount
-          });
-          if (result && result.accessToken) {
-            localStorage.setItem(`teamshub_token_${emailLower}`, result.accessToken);
-            return result.accessToken;
-          }
-        } catch (silentErr) {
-          // 2. Try with tenant authority if available
-          try {
-            const targetTenantId = targetAccount.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
-            const tenantAuthority = `https://login.microsoftonline.com/${targetTenantId}`;
-            const fallbackResult = await msalInstance.acquireTokenSilent({
-              scopes: ['User.Read', 'User.ReadBasic.All', 'Chat.ReadWrite', 'Files.Read.All', 'Presence.Read.All', 'openid', 'profile'],
-              account: targetAccount,
-              authority: tenantAuthority
-            });
-            if (fallbackResult && fallbackResult.accessToken) {
-              localStorage.setItem(`teamshub_token_${emailLower}`, fallbackResult.accessToken);
-              return fallbackResult.accessToken;
-            }
-          } catch (fErr) {}
+      // Silent acquisition with loginHint to avoid multi-account iframe mismatch
+      try {
+        const result = await msalInstance.acquireTokenSilent({
+          ...graphTokenRequest,
+          account: targetAccount,
+          loginHint: targetAccount.username
+        });
+        if (result && result.accessToken) {
+          localStorage.setItem(`teamshub_token_${emailLower}`, result.accessToken);
+          return result.accessToken;
         }
-
-        // 3. Fallback strictly to stored token for THIS account only
-        const storedToken = localStorage.getItem(`teamshub_token_${emailLower}`);
-        if (storedToken) return storedToken;
+      } catch (silentErr) {
+        console.warn(`[acquireGraphToken] Silent refresh notice for ${emailLower}:`, silentErr?.message || 'Silent request');
       }
 
-      // Only return activeEmail token if no specific accountId was requested
-      if (!accountId && activeEmail) {
-        return localStorage.getItem(`teamshub_token_${activeEmail.toLowerCase()}`) || null;
-      }
+      return storedToken || null;
+    }
 
-      return null;
-    })();
-
-    const timeoutPromise = new Promise(resolve => setTimeout(() => {
-      if (accountId) {
-        const cleanTarget = accountId.toString().toLowerCase().trim();
-        const stored = localStorage.getItem(`teamshub_token_${cleanTarget}`);
-        resolve(stored || null);
-      } else {
-        resolve(null);
-      }
-    }, 4000));
-
-    return await Promise.race([tokenPromise, timeoutPromise]);
+    return null;
   } catch (error) {
-    console.warn('[MSAL Token Acquisition Warning]:', error.message);
     if (accountId) {
       const cleanTarget = accountId.toString().toLowerCase().trim();
       return localStorage.getItem(`teamshub_token_${cleanTarget}`) || null;
