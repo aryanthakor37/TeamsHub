@@ -1762,6 +1762,9 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             }}>
               {filteredFiles.map((file) => {
                 const actualCategory = getFileCategory(file);
+                if (selectedCategory !== 'All' && actualCategory.toLowerCase() !== selectedCategory.toLowerCase()) {
+                  return null;
+                }
                 const meta = getCategoryMeta(actualCategory);
                 const Icon = meta.icon;
                 const isImage = actualCategory === 'Images';
@@ -1904,6 +1907,9 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                 <tbody>
                   {filteredFiles.map((file) => {
                     const actualCategory = getFileCategory(file);
+                    if (selectedCategory !== 'All' && actualCategory.toLowerCase() !== selectedCategory.toLowerCase()) {
+                      return null;
+                    }
                     const meta = getCategoryMeta(actualCategory);
                     const Icon = meta.icon;
 
