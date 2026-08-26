@@ -223,7 +223,11 @@ const getChats = async (req, res) => {
               return normalized;
             });
 
-            // Zero-Storage Mode: Pass-through normalized chats directly in memory (No DB persistence)
+            if (!global.liveInMemoryChats) global.liveInMemoryChats = new Map();
+            global.liveInMemoryChats.set(accEmail, normalizedList);
+          } else if (global.liveInMemoryChats && (global.liveInMemoryChats.get(accEmail) || Array.from(global.liveInMemoryChats.entries()).find(([k]) => k.includes(accEmail.split('@')[0])))) {
+            const entry = global.liveInMemoryChats.get(accEmail) || Array.from(global.liveInMemoryChats.entries()).find(([k]) => k.includes(accEmail.split('@')[0]))?.[1] || [];
+            normalizedList = entry;
           } else if (dbAvailable) {
             // Fallback: retrieve cached chats for this account from database
             try {
@@ -261,6 +265,15 @@ const getChats = async (req, res) => {
         }
       })
     );
+
+    // If still 0 chats across all target accounts, fallback to global in-memory chats
+    if (allUnifiedChats.length === 0 && global.liveInMemoryChats && global.liveInMemoryChats.size > 0) {
+      for (const chatsArr of global.liveInMemoryChats.values()) {
+        if (Array.isArray(chatsArr)) {
+          allUnifiedChats.push(...chatsArr);
+        }
+      }
+    }
 
     // Deduplicate combined multi-account chats by unique account + microsoftChatId
     const uniqueMap = new Map();
