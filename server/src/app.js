@@ -9,30 +9,15 @@ dotenv.config();
 const app = express();
 
 // CORS Configuration
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
-  process.env.WEB_URL || 'http://localhost:5173',
-  'http://localhost:3000',
-  'https://teamshub.onrender.com'
-];
-
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
-      if (
-        allowedOrigins.indexOf(origin) !== -1 ||
-        origin.endsWith('.onrender.com') ||
-        process.env.NODE_ENV !== 'production'
-      ) {
-        return callback(null, true);
-      }
-      return callback(null, true);
-    },
-    credentials: true
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-account-tokens', 'x-user-emails', 'x-user-email', 'x-client-request-id']
   })
 );
+app.options('*', cors());
 
 // Middleware
 app.use(express.json());
