@@ -417,6 +417,7 @@ export default function ChatsPage({
   const [previewImage, setPreviewImage] = useState(null);
   const [previewAttachment, setPreviewAttachment] = useState(null);
   const messagesEndRef = useRef(null);
+  const messagesThreadContainerRef = useRef(null);
 
   // Automatically mark currently opened chat as read
   useEffect(() => {
@@ -425,10 +426,22 @@ export default function ChatsPage({
     }
   }, [selectedChatId, activeChat?.connectedAccountId, markChatAsRead]);
 
-  // Auto-scroll to bottom when messages update
+  // Instant Teams Jump to Bottom (0ms, directly opens on the latest message)
+  useLayoutEffect(() => {
+    if (messagesThreadContainerRef.current) {
+      messagesThreadContainerRef.current.scrollTop = messagesThreadContainerRef.current.scrollHeight;
+    }
+  }, [activeChatId, safeMessages.length]);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // Secondary micro-adjustment for loaded images/attachments
+    const timer = setTimeout(() => {
+      if (messagesThreadContainerRef.current) {
+        messagesThreadContainerRef.current.scrollTop = messagesThreadContainerRef.current.scrollHeight;
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [activeChatId, safeMessages.length]);
 
   const handleSendMessage = async () => {
     if (!draftMessage.trim() || isSending) return;
@@ -883,7 +896,7 @@ export default function ChatsPage({
             </div>
 
             {/* Messages Thread List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div ref={messagesThreadContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {messagesLoading ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '40px' }}>Loading conversation history...</div>
               ) : messagesError ? (

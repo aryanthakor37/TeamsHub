@@ -6,22 +6,44 @@ import { joinChatRoom, leaveChatRoom, getSocket, emitChatMessage } from '../serv
 const messageMemoryCache = new Map();
 
 export const useMessages = (chatId, accountId) => {
-  const [messages, setMessages] = useState(() => {
-    if (!chatId) return [];
-    if (messageMemoryCache.has(chatId)) return messageMemoryCache.get(chatId);
+  const getInitialMessages = (id) => {
+    if (!id) return [];
+    if (messageMemoryCache.has(id)) return messageMemoryCache.get(id);
     try {
-      const stored = localStorage.getItem(`teamshub_msgs_${chatId}`);
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+      const stored = localStorage.getItem(`teamshub_msgs_${id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        messageMemoryCache.set(id, parsed);
+        return parsed;
+      }
+    } catch (e) {}
+    return [];
+  };
 
+  const [messages, setMessages] = useState(() => getInitialMessages(chatId));
   const [loading, setLoading] = useState(() => {
     if (!chatId) return false;
-    return !messageMemoryCache.has(chatId);
+    const initial = getInitialMessages(chatId);
+    return initial.length === 0;
   });
   const [error, setError] = useState(null);
+
+  // Synchronously switch message view to cache (0ms instant Teams jump)
+  useEffect(() => {
+    if (!chatId) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+    const cached = getInitialMessages(chatId);
+    if (cached && cached.length > 0) {
+      setMessages(cached);
+      setLoading(false);
+    } else {
+      setMessages([]);
+      setLoading(true);
+    }
+  }, [chatId]);
 
   const loadMessages = useCallback(async () => {
     if (!chatId) {
@@ -33,9 +55,8 @@ export const useMessages = (chatId, accountId) => {
     const cached = messageMemoryCache.get(chatId);
     if (!cached || cached.length === 0) {
       setLoading(true);
-    } else {
-      setMessages(cached);
     }
+
     setError(null);
 
     try {
