@@ -531,14 +531,33 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     }
   }
 
+  // Dynamically detect real external client organizations from member domains
+  let detectedCompany = company || 'ESTATIC INFOTECH';
+  if (otherMembers && otherMembers.length > 0) {
+    const firstOther = otherMembers[0];
+    const otherEmail = (firstOther.email || firstOther.userPrincipalName || firstOther.emailAddress?.address || '').toLowerCase().trim();
+    if (otherEmail.includes('@')) {
+      const domain = otherEmail.split('@')[1];
+      if (domain && !domain.includes('estatic-infotech.com') && !domain.includes('onmicrosoft.com')) {
+        const cleanDomain = domain.split('.')[0];
+        if (cleanDomain.includes('baywa')) detectedCompany = 'BayWa r.e.';
+        else if (cleanDomain.includes('schaer') || cleanDomain.includes('drschaer')) detectedCompany = 'DR SCHAER AG';
+        else if (cleanDomain.includes('kerry') || cleanDomain.includes('dines')) detectedCompany = 'Kerry Dines Ltd';
+        else if (cleanDomain.length >= 3) {
+          detectedCompany = cleanDomain.charAt(0).toUpperCase() + cleanDomain.slice(1);
+        }
+      }
+    }
+  }
+
   return {
     _id: graphChat.id,
     connectedAccountId,
     microsoftChatId: graphChat.id,
     participant: participantName,
     role: graphChat.chatType === 'oneOnOne' ? 'Direct Message' : graphChat.chatType === 'group' ? 'Group Chat' : 'Meeting Chat',
-    company,
-    accountBadge: company,
+    company: detectedCompany,
+    accountBadge: detectedCompany,
     chatType: graphChat.chatType || 'oneOnOne',
     isSelfChat,
     isLastMessageOutgoing: isFromMe,
