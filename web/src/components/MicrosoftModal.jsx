@@ -1,55 +1,27 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Info, X, LogIn, AlertCircle, Building2, Globe, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Info, X, LogIn, AlertCircle, Building2, Globe, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function MicrosoftModal({ isOpen, onClose }) {
   const { loginWithMicrosoft, authState, authError } = useAuth();
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'guest'
-  const [selectedGuestPreset, setSelectedGuestPreset] = useState('BayWa r.e.');
-  const [customTenantInput, setCustomTenantInput] = useState('');
+  const [guestOrgName, setGuestOrgName] = useState('');
+  const [guestTenantDomain, setGuestTenantDomain] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
-
-  const guestPresets = [
-    {
-      name: 'BayWa r.e.',
-      domain: 'baywa-re.com',
-      tenantId: 'baywa-re.com',
-      badge: 'Client Tenant'
-    },
-    {
-      name: 'DR SCHAER AG',
-      domain: 'drschaer.com',
-      tenantId: 'drschaer.com',
-      badge: 'Client Tenant'
-    },
-    {
-      name: 'Kerry Dines Ltd',
-      domain: 'kerrydines.com',
-      tenantId: 'kerrydines.com',
-      badge: 'Client Tenant'
-    }
-  ];
 
   const handleConnect = async () => {
     setIsSubmitting(true);
     let options = {};
 
     if (activeTab === 'guest') {
-      if (selectedGuestPreset === 'custom') {
-        const cleanInput = (customTenantInput || '').trim();
-        options = {
-          guestTenantId: cleanInput || 'organizations',
-          guestOrgName: cleanInput.split('.')[0] || 'Guest Organization'
-        };
-      } else {
-        const preset = guestPresets.find(p => p.name === selectedGuestPreset) || guestPresets[0];
-        options = {
-          guestTenantId: preset.tenantId || preset.domain,
-          guestOrgName: preset.name
-        };
-      }
+      const cleanTenant = (guestTenantDomain || '').trim();
+      const cleanOrg = (guestOrgName || '').trim();
+      options = {
+        guestTenantId: cleanTenant || 'organizations',
+        guestOrgName: cleanOrg || (cleanTenant ? cleanTenant.split('.')[0] : 'Guest Workspace')
+      };
     }
 
     const res = await loginWithMicrosoft(options);
@@ -61,13 +33,13 @@ export default function MicrosoftModal({ isOpen, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1000 }}>
-      <div className="modal-content glass-card-3d" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px', padding: '28px' }}>
+      <div className="modal-content glass-card-3d" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px', padding: '28px' }}>
         {/* Modal Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              width: '44px',
-              height: '44px',
+              width: '42px',
+              height: '42px',
               borderRadius: 'var(--radius-md)',
               backgroundColor: 'rgba(99, 102, 241, 0.15)',
               display: 'flex',
@@ -76,14 +48,14 @@ export default function MicrosoftModal({ isOpen, onClose }) {
               color: 'var(--accent-primary)',
               boxShadow: '0 0 16px rgba(99, 102, 241, 0.25)'
             }}>
-              <ShieldCheck size={24} />
+              <ShieldCheck size={22} />
             </div>
             <div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: '800', letterSpacing: '-0.02em', margin: 0 }}>
                 Connect Microsoft Teams
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
-                Multi-Tenant & Guest Organization Integration
+                Single & Multi-Tenant Integration
               </p>
             </div>
           </div>
@@ -95,7 +67,7 @@ export default function MicrosoftModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Mode Tabs: Home Account vs Guest Organization */}
+        {/* Mode Tabs: Home Account vs Guest Workspace */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
@@ -158,7 +130,7 @@ export default function MicrosoftModal({ isOpen, onClose }) {
         {activeTab === 'home' ? (
           <div>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '0.88rem', lineHeight: '1.5' }}>
-              Connect your primary <strong>ESTATIC INFOTECH</strong> or standard company Microsoft 365 work account.
+              Connect your primary Microsoft 365 company or enterprise work account.
             </p>
 
             <div style={{
@@ -179,110 +151,67 @@ export default function MicrosoftModal({ isOpen, onClose }) {
                 color: '#10b981',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
                 <CheckCircle2 size={20} />
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 <strong style={{ color: 'var(--text-primary)', display: 'block' }}>Direct Live Graph Sync</strong>
-                Reads chats, files, and colleague presence directly from your main tenant.
+                Reads chats, attachments, and colleague presence directly from your main tenant.
               </div>
             </div>
           </div>
         ) : (
-          /* Guest Organization Tab Content */
+          /* Guest Workspace Tab Content (Dynamic inputs without hardcoded names) */
           <div>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '12px', fontSize: '0.88rem', lineHeight: '1.5' }}>
-              Select your <strong>External Client / Guest Organization</strong> to authorize cross-tenant chats & files:
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '14px', fontSize: '0.88rem', lineHeight: '1.5' }}>
+              Enter your external client organization details to authorize guest tenant access:
             </p>
 
-            {/* Quick Guest Presets */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-              {guestPresets.map((preset) => {
-                const isSelected = selectedGuestPreset === preset.name;
-                return (
-                  <div
-                    key={preset.name}
-                    onClick={() => setSelectedGuestPreset(preset.name)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      borderRadius: 'var(--radius-md)',
-                      backgroundColor: isSelected ? 'var(--accent-light)' : 'var(--bg-secondary)',
-                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                      cursor: 'pointer',
-                      transition: 'all 0.18s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '10px',
-                        height: '10px',
-                        borderRadius: '50%',
-                        backgroundColor: '#22c55e',
-                        boxShadow: '0 0 6px rgba(34, 197, 94, 0.6)'
-                      }} />
-                      <div>
-                        <div style={{ fontWeight: isSelected ? '700' : '600', fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                          {preset.name}
-                        </div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                          Tenant: {preset.domain}
-                        </div>
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <div style={{
-                        padding: '2px 8px',
-                        borderRadius: 'var(--radius-full)',
-                        backgroundColor: 'var(--accent-primary)',
-                        color: '#fff',
-                        fontSize: '0.72rem',
-                        fontWeight: '700'
-                      }}>
-                        Selected
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Workspace / Organization Label
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Client Company Name"
+                  value={guestOrgName}
+                  onChange={(e) => setGuestOrgName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.86rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
 
-              {/* Custom Tenant Option */}
-              <div
-                onClick={() => setSelectedGuestPreset('custom')}
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: selectedGuestPreset === 'custom' ? 'var(--accent-light)' : 'var(--bg-secondary)',
-                  border: selectedGuestPreset === 'custom' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                  cursor: 'pointer',
-                  transition: 'all 0.18s ease'
-                }}
-              >
-                <div style={{ fontWeight: selectedGuestPreset === 'custom' ? '700' : '600', fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: selectedGuestPreset === 'custom' ? '8px' : '0' }}>
-                  + Other Client Organization (Custom Domain / Tenant ID)
-                </div>
-                {selectedGuestPreset === 'custom' && (
-                  <input
-                    type="text"
-                    placeholder="e.g. clientcorp.com or Tenant GUID"
-                    value={customTenantInput}
-                    onChange={(e) => setCustomTenantInput(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-primary)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.84rem',
-                      outline: 'none'
-                    }}
-                  />
-                )}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Client Domain or Tenant ID (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. companydomain.com or Tenant ID (leave blank for auto)"
+                  value={guestTenantDomain}
+                  onChange={(e) => setGuestTenantDomain(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.86rem',
+                    outline: 'none'
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -306,8 +235,8 @@ export default function MicrosoftModal({ isOpen, onClose }) {
           </div>
         )}
 
-        {/* Security & Action Buttons */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
           <button className="btn btn-secondary" onClick={onClose} disabled={isSubmitting} style={{ padding: '9px 18px' }}>
             Cancel
           </button>
@@ -317,7 +246,7 @@ export default function MicrosoftModal({ isOpen, onClose }) {
               {isSubmitting || authState === 'SIGNING_IN' 
                 ? 'Authenticating...' 
                 : activeTab === 'guest'
-                  ? `Connect ${selectedGuestPreset === 'custom' ? 'Guest Tenant' : selectedGuestPreset}`
+                  ? `Connect ${guestOrgName ? guestOrgName.trim() : 'Guest Workspace'}`
                   : 'Sign in with Microsoft'}
             </span>
           </button>
