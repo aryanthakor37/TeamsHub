@@ -1099,6 +1099,13 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewLoadError, setPreviewLoadError] = useState(false);
 
+  // Multi-File Batch Selection & ZIP state
+  const [selectedFileIds, setSelectedFileIds] = useState(new Set());
+  const [isZipping, setIsZipping] = useState(false);
+  const [zipProgress, setZipProgress] = useState(null);
+  const [shareFileModalTarget, setShareFileModalTarget] = useState(null);
+  const [shareToastMessage, setShareToastMessage] = useState(null);
+
   useEffect(() => {
     if (initialFile) {
       setTargetFile(initialFile);
