@@ -116,16 +116,38 @@ router.get('/', async (req, res) => {
           const graphFiles = await graphService.fetchGraphRecentFiles(token);
           const rawList = Array.isArray(graphFiles) ? graphFiles : (graphFiles?.value || []);
           const rawFiles = rawList.map(file => {
-            let category = file.category || 'Documents';
-            const mime = file.file?.mimeType || file.contentType || '';
-            const nameLower = (file.name || '').toLowerCase();
-            
-            if (mime.includes('pdf') || nameLower.endsWith('.pdf')) category = 'PDF';
-            else if (mime.includes('image') || nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp|bmp|ico|tif|tiff|heic)$/) || nameLower.startsWith('photo from') || nameLower.startsWith('image')) category = 'Images';
-            else if (mime.includes('video') || nameLower.match(/\.(mp4|mov|avi|mkv|webm|wmv|flv)$/)) category = 'Videos';
-            else if (mime.includes('zip') || mime.includes('compressed') || nameLower.match(/\.(zip|rar|7z|tar|gz)$/)) category = 'ZIP';
-            else if (mime.includes('excel') || mime.includes('spreadsheet') || nameLower.match(/\.(xls|xlsx|csv|tsv|ods)$/)) category = 'Excel';
-            else category = 'Documents';
+            const cleanName = (file.name || '').split('?')[0].split('#')[0].toLowerCase().trim();
+            const ext = cleanName.includes('.') ? cleanName.split('.').pop().toLowerCase() : '';
+            const mime = (file.file?.mimeType || file.contentType || file.mimeType || '').toLowerCase().trim();
+            let category = 'Documents';
+
+            if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext)) {
+              category = 'Images';
+            } else if (ext === 'pdf' || cleanName.endsWith('.pdf')) {
+              category = 'PDF';
+            } else if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext)) {
+              category = 'Videos';
+            } else if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext)) {
+              category = 'Excel';
+            } else if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext)) {
+              category = 'ZIP';
+            } else if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'cs', 'sql', 'log'].includes(ext)) {
+              category = 'Documents';
+            } else if (cleanName.startsWith('photo from') || cleanName.startsWith('image') || cleanName.startsWith('img_') || cleanName.startsWith('screenshot') || cleanName.includes('photo from')) {
+              category = 'Images';
+            } else if (mime.includes('image/')) {
+              category = 'Images';
+            } else if (mime.includes('pdf')) {
+              category = 'PDF';
+            } else if (mime.includes('video/')) {
+              category = 'Videos';
+            } else if (mime.includes('spreadsheet') || mime.includes('excel')) {
+              category = 'Excel';
+            } else if (mime.includes('zip') || mime.includes('compressed') || mime.includes('archive')) {
+              category = 'ZIP';
+            } else if (file.category) {
+              category = file.category;
+            }
 
             const sizeBytes = file.size || 0;
             let sizeStr = typeof file.size === 'string' ? file.size : `${sizeBytes} B`;

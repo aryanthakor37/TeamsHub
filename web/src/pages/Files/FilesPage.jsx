@@ -1322,73 +1322,47 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     const cleanName = name.split('?')[0].split('#')[0];
     const ext = cleanName.includes('.') ? cleanName.split('.').pop().toLowerCase() : '';
     const mime = (file.file?.mimeType || file.contentType || file.mimeType || '').toLowerCase().trim();
-    const rawCat = (file.category || '').toLowerCase().trim();
 
-    // 1. PDF
-    if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime.includes('pdf') || rawCat === 'pdf') {
+    // 1. EXTENSION IS ABSOLUTE (100% Guaranteed Exact Matching)
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext)) {
+      return 'Images';
+    }
+    if (ext === 'pdf' || cleanName.endsWith('.pdf')) {
       return 'PDF';
     }
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext)) {
+      return 'Videos';
+    }
+    if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext)) {
+      return 'Excel';
+    }
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext)) {
+      return 'ZIP';
+    }
+    if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'cs', 'sql', 'log', 'env'].includes(ext)) {
+      return 'Documents';
+    }
 
-    // 2. Images (strict extension & mime match)
-    if (
-      ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) ||
-      mime.includes('image/') ||
-      rawCat === 'images' ||
-      rawCat === 'image' ||
-      name.startsWith('photo from') ||
-      name.startsWith('image.') ||
-      name === 'image' ||
-      name.startsWith('img_') ||
-      name.startsWith('screenshot')
-    ) {
+    // 2. Name Pattern Matching
+    if (cleanName.startsWith('photo from') || cleanName.startsWith('image') || cleanName.startsWith('img_') || cleanName.startsWith('screenshot') || cleanName.includes('photo from')) {
       return 'Images';
     }
 
-    // 3. Videos
-    if (
-      ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) ||
-      mime.includes('video/') ||
-      rawCat === 'videos' ||
-      rawCat === 'video'
-    ) {
-      return 'Videos';
-    }
+    // 3. MIME Type Matching
+    if (mime.includes('image/')) return 'Images';
+    if (mime.includes('pdf')) return 'PDF';
+    if (mime.includes('video/')) return 'Videos';
+    if (mime.includes('spreadsheet') || mime.includes('excel')) return 'Excel';
+    if (mime.includes('zip') || mime.includes('compressed') || mime.includes('archive')) return 'ZIP';
+    if (mime.includes('word') || mime.includes('presentation') || mime.includes('text/')) return 'Documents';
 
-    // 4. Excel
-    if (
-      ['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) ||
-      mime.includes('spreadsheet') ||
-      mime.includes('excel') ||
-      rawCat === 'excel' ||
-      rawCat === 'spreadsheet'
-    ) {
-      return 'Excel';
-    }
-
-    // 5. ZIP / Archives
-    if (
-      ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) ||
-      mime.includes('zip') ||
-      mime.includes('compressed') ||
-      mime.includes('archive') ||
-      rawCat === 'zip' ||
-      rawCat === 'archive'
-    ) {
-      return 'ZIP';
-    }
-
-    // 6. Documents (Word, Text, Presentation, Code, Docs)
-    if (
-      ['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'cshtml', 'html', 'htm', 'json', 'xml', 'css', 'js', 'ts', 'cs', 'sql', 'log', 'env'].includes(ext) ||
-      mime.includes('word') ||
-      mime.includes('document') ||
-      mime.includes('presentation') ||
-      mime.includes('text/') ||
-      rawCat === 'documents' ||
-      rawCat === 'document'
-    ) {
-      return 'Documents';
-    }
+    // 4. Server raw category fallback
+    const rawCat = (file.category || '').toLowerCase().trim();
+    if (rawCat === 'images' || rawCat === 'image') return 'Images';
+    if (rawCat === 'pdf') return 'PDF';
+    if (rawCat === 'videos' || rawCat === 'video') return 'Videos';
+    if (rawCat === 'excel' || rawCat === 'spreadsheet') return 'Excel';
+    if (rawCat === 'zip' || rawCat === 'archive') return 'ZIP';
 
     return 'Documents';
   };
