@@ -308,10 +308,10 @@ export const useChats = () => {
   useEffect(() => {
     loadChats();
     
-    // Background polling every 15 seconds for Teams updates
+    // Fast background polling every 5 seconds for live Teams incoming messages
     const interval = setInterval(() => {
       loadChatsSilently();
-    }, 15000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [loadChats, loadChatsSilently]);
