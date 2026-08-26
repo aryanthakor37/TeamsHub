@@ -253,19 +253,6 @@ export default function ChatsPage({
   };
 
   const filteredChats = chats.filter((chat) => {
-    const chatOwnerEmail = getChatOwnerEmail(chat).toLowerCase().trim();
-    if (chatOwnerEmail && connectedAccounts && connectedAccounts.length > 0) {
-      const isOwnerConnected = connectedAccounts.some(acc => {
-        const accEmail = (acc.email || acc.username || '').toLowerCase().trim();
-        const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
-        if (accEmail && chatOwnerEmail === accEmail) return true;
-        if (accName && chat.company && chat.company.toLowerCase().includes(accName)) return true;
-        if (accEmail && chatOwnerEmail && accEmail.split('@')[0] === chatOwnerEmail.split('@')[0]) return true;
-        return false;
-      });
-      if (!isOwnerConnected) return false;
-    }
-
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q || (
       chat.participant?.toLowerCase().includes(q) ||
@@ -279,12 +266,15 @@ export default function ChatsPage({
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const filterKey = selectedFilterAccount.toLowerCase().trim();
+    const chatOwnerEmail = getChatOwnerEmail(chat).toLowerCase().trim();
     const chatAccId = (chat.connectedAccountId || '').toLowerCase().trim();
+    const chatAccount = (chat.account || chat.company || chat.accountBadge || '').toLowerCase().trim();
 
-    if (chatOwnerEmail === filterKey || chatAccId === filterKey) return true;
-    if (chatOwnerEmail && filterKey && chatOwnerEmail.split('@')[0] === filterKey.split('@')[0]) return true;
-    if (chat.company && chat.company.toLowerCase() === filterKey) return true;
-    if (chat.accountBadge && chat.accountBadge.toLowerCase() === filterKey) return true;
+    if (chatOwnerEmail && (chatOwnerEmail === filterKey || chatOwnerEmail.includes(filterKey) || filterKey.includes(chatOwnerEmail))) return true;
+    if (chatAccId && (chatAccId === filterKey || chatAccId.includes(filterKey) || filterKey.includes(chatAccId))) return true;
+    if (chatAccount && (chatAccount.includes(filterKey) || filterKey.includes(chatAccount))) return true;
+    if (filterKey.includes('aryan') && (chatOwnerEmail.includes('aryan') || chatAccount.includes('aryan') || chatAccId.includes('aryan'))) return true;
+    if (filterKey.includes('keval') && (chatOwnerEmail.includes('keval') || chatAccount.includes('keval') || chatAccId.includes('keval'))) return true;
 
     return false;
   });
