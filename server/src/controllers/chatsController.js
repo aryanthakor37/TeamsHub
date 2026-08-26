@@ -440,44 +440,40 @@ const getChatMessages = async (req, res) => {
     }
 
     const cleanChatId = decodeURIComponent(id);
+    const candidateTokens = [];
+    if (accessToken) candidateTokens.push(accessToken);
+    Object.values(accountTokensMap).forEach(t => {
+      if (t && !candidateTokens.includes(t)) candidateTokens.push(t);
+    });
 
-    if (accessToken && cleanChatId.startsWith('19:')) {
-      try {
-        let msEmail = (req.user?.email || req.headers['x-user-email'] || '').toLowerCase().trim();
-        let msDisplayName = (req.user?.name || req.user?.displayName || 'User').trim();
+    if (candidateTokens.length > 0 && cleanChatId.startsWith('19:')) {
+      for (const token of candidateTokens) {
+        try {
+          let msEmail = (req.user?.email || req.headers['x-user-email'] || '').toLowerCase().trim();
+          let msDisplayName = (req.user?.name || req.user?.displayName || 'User').trim();
 
-        if (!msEmail || msEmail.includes('teamshub.app') || msEmail.includes('companya.com')) {
-          if (dbAvailable) {
-            const acc = await ConnectedAccount.findOne({
-              microsoftAccessToken: { $exists: true, $ne: '' }
-            }).sort({ updatedAt: -1 }).select('email displayName');
-            if (acc) {
-              msEmail = acc.email;
-              msDisplayName = acc.displayName;
+          const graphResponse = await fetchGraphChatMessages(token, cleanChatId);
+          const rawMessages = graphResponse?.value || [];
+          const messages = rawMessages.map((m) =>
+            normalizeGraphMessage(m, cleanChatId, connectedAccountId || 'default', msEmail, msDisplayName)
+          );
+          messages.reverse(); // chronological order: oldest first, newest last
+
+          return res.status(200).json({
+            success: true,
+            source: 'graph',
+            data: {
+              items: messages,
+              page: 1,
+              limit: messages.length,
+              total: messages.length,
+              hasMore: !!graphResponse['@odata.nextLink'],
+              isReadOnly: true
             }
-          }
+          });
+        } catch (graphErr) {
+          console.warn('[getChatMessages] Multi-token retry notice:', graphErr.message);
         }
-        const graphResponse = await fetchGraphChatMessages(accessToken, cleanChatId);
-        const rawMessages = graphResponse?.value || [];
-        const messages = rawMessages.map((m) =>
-          normalizeGraphMessage(m, cleanChatId, connectedAccountId || 'default', msEmail, msDisplayName)
-        );
-        messages.reverse(); // chronological order: oldest first, newest last
-
-        return res.status(200).json({
-          success: true,
-          source: 'graph',
-          data: {
-            items: messages,
-            page: 1,
-            limit: messages.length,
-            total: messages.length,
-            hasMore: !!graphResponse['@odata.nextLink'],
-            isReadOnly: true
-          }
-        });
-      } catch (graphErr) {
-        console.warn('[getChatMessages] Graph API notice:', graphErr.message);
       }
     }
 

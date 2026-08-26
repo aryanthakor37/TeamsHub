@@ -32,34 +32,51 @@ const getAuthHeaders = async (accountId) => {
 
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
 
+  // Always attach all active account tokens to allow backend multi-account fallback
+  if (Object.keys(tokenMap).length > 0) {
+    headers['x-account-tokens'] = JSON.stringify(tokenMap);
+  }
+
+  if (allAccounts.length > 0) {
+    headers['x-user-emails'] = allAccounts.map(a => (a.username || '').toLowerCase().trim()).filter(Boolean).join(',');
+  }
+
   if (accountId && accountId !== 'all') {
     const cleanAcc = accountId.toString().toLowerCase().trim();
-    let token = tokenMap[cleanAcc] || localStorage.getItem(`teamshub_token_${cleanAcc}`) || (activeEmail === cleanAcc ? localStorage.getItem('teamshub_last_access_token') : null);
+    let token = tokenMap[cleanAcc] || localStorage.getItem(`teamshub_token_${cleanAcc}`);
+
     if (!token) {
-      token = await acquireGraphToken(accountId);
+      const matchKey = Object.keys(tokenMap).find(k => k.includes(cleanAcc) || cleanAcc.includes(k) || (cleanAcc.includes('aryan') && k.includes('aryan')) || (cleanAcc.includes('keval') && k.includes('keval')));
+      if (matchKey) token = tokenMap[matchKey];
     }
+
+    if (!token) {
+      const target = allAccounts.find(a => 
+        (a.username && a.username.toLowerCase() === cleanAcc) ||
+        (a.homeAccountId && a.homeAccountId.toLowerCase() === cleanAcc) ||
+        (a.localAccountId && a.localAccountId.toLowerCase() === cleanAcc) ||
+        (a.username && (a.username.toLowerCase().includes(cleanAcc) || cleanAcc.includes(a.username.toLowerCase())))
+      );
+      if (target?.username) {
+        token = tokenMap[target.username.toLowerCase()] || localStorage.getItem(`teamshub_token_${target.username.toLowerCase()}`);
+        headers['x-user-email'] = target.username;
+      }
+    }
+
+    if (!token) {
+      token = (activeEmail && tokenMap[activeEmail]) || localStorage.getItem('teamshub_last_access_token');
+    }
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const target = allAccounts.find(a => 
-      (a.username && a.username.toLowerCase() === cleanAcc) ||
-      (a.homeAccountId && a.homeAccountId.toLowerCase() === cleanAcc) ||
-      (a.localAccountId && a.localAccountId.toLowerCase() === cleanAcc) ||
-      (a.username && (a.username.toLowerCase().includes(cleanAcc) || cleanAcc.includes(a.username.toLowerCase())))
-    );
-    if (target?.username) {
-      headers['x-user-email'] = target.username;
-    } else if (cleanAcc.includes('@')) {
+    if (cleanAcc.includes('@') && !headers['x-user-email']) {
       headers['x-user-email'] = cleanAcc;
     }
   } else {
-    // When requesting all accounts, send cached tokens immediately (0ms)
-    if (Object.keys(tokenMap).length > 0) {
-      headers['x-account-tokens'] = JSON.stringify(tokenMap);
-    }
     let token = (activeEmail && tokenMap[activeEmail]) || localStorage.getItem('teamshub_last_access_token');
-    if (!token && activeEmail) {
-      token = await acquireGraphToken(activeEmail);
+    if (!token && Object.values(tokenMap).length > 0) {
+      token = Object.values(tokenMap)[0];
     }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
