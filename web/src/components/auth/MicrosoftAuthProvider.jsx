@@ -255,11 +255,11 @@ export const MicrosoftAuthProvider = ({ children }) => {
     window.dispatchEvent(new CustomEvent('teamshub:account-disconnected', { detail: { email: targetEmail, accId } }));
   };
 
-  const loginWithMicrosoft = async () => {
+  const loginWithMicrosoft = async (options = {}) => {
     setAuthState('SIGNING_IN');
     setAuthError(null);
 
-    const result = await loginMicrosoftAccount();
+    const result = await loginMicrosoftAccount(options);
 
     if (result.success && result.account) {
       setConnectedAccounts((prev) => {

@@ -64,15 +64,21 @@ export const initializeMsal = async () => {
         } catch (e) {}
       }
 
-      // HARDCODE ESTATIC INFOTECH Tenant ID to guarantee guest accounts get the correct token
-      const actualTenantId = '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
+      // Determine actual tenant ID (supporting Guest Tenant logins)
+      const pendingOrg = localStorage.getItem('teamshub_pending_guest_org');
+      const pendingTenant = localStorage.getItem('teamshub_pending_guest_tenant');
+      localStorage.removeItem('teamshub_pending_guest_org');
+      localStorage.removeItem('teamshub_pending_guest_tenant');
+
+      const actualTenantId = pendingTenant || account.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
       
       const accountPayload = {
         accountId: account.homeAccountId || account.localAccountId,
-        displayName: account.name || account.username.split('@')[0],
+        displayName: pendingOrg ? `${account.name || account.username.split('@')[0]} (${pendingOrg})` : (account.name || account.username.split('@')[0]),
         email: account.username,
         tenantId: actualTenantId,
-        accountType: 'Microsoft Work / Personal Account',
+        company: pendingOrg || 'ESTATIC INFOTECH',
+        accountType: pendingOrg ? `Guest Organization (${pendingOrg})` : 'Microsoft Work Account',
         scopes: response.scopes || ['User.Read', 'Chat.Read'],
         accessToken: response.accessToken
       };
@@ -330,12 +336,35 @@ export const acquireGraphToken = async (accountId) => {
  *
  * Uses loginRedirect so authentication happens directly inside the SAME TAB (no popup windows).
  */
-export const loginMicrosoftAccount = async () => {
+export const loginMicrosoftAccount = async (options = {}) => {
   if (isRealMsalConfigured()) {
     try {
       await msalInstance.initialize();
-      // Use loginRedirect so Microsoft authentication opens in the SAME TAB (same window)
-      await msalInstance.loginRedirect({ ...loginRequest, prompt: 'select_account' });
+      const { guestTenantId, guestOrgName, loginHint } = options || {};
+
+      if (guestOrgName) {
+        localStorage.setItem('teamshub_pending_guest_org', guestOrgName);
+      }
+      if (guestTenantId) {
+        localStorage.setItem('teamshub_pending_guest_tenant', guestTenantId);
+      }
+
+      const authority = guestTenantId
+        ? `https://login.microsoftonline.com/${guestTenantId}`
+        : `https://login.microsoftonline.com/common`;
+
+      const requestConfig = {
+        ...loginRequest,
+        authority,
+        prompt: 'select_account'
+      };
+
+      if (loginHint) {
+        requestConfig.loginHint = loginHint;
+      }
+
+      // Use loginRedirect so Microsoft authentication opens in the SAME TAB
+      await msalInstance.loginRedirect(requestConfig);
       return { success: true, isRealAuth: true };
     } catch (error) {
       console.error('[MSAL Redirect Error]', error);
