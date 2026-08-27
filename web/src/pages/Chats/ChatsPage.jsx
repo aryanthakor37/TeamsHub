@@ -359,9 +359,16 @@ export default function ChatsPage({
       return tA - tB;
     });
 
-    const activeUserEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
-    const activeUserName = (localStorage.getItem('teamshub_active_name') || 'Aryan Kumrecha').toLowerCase().trim();
-    const activeUserFirst = activeUserName ? activeUserName.split(' ')[0] : 'aryan';
+    // 1. Resolve Account Owner for Active Chat (Supports Keval Trivedi, Aryan Kumrecha, etc.)
+    const matchedAccount = (connectedAccounts || []).find((a) =>
+      (activeChat?.connectedAccountId && (a._id === activeChat.connectedAccountId || a.id === activeChat.connectedAccountId || a.accountId === activeChat.connectedAccountId)) ||
+      (activeChat?.accountEmail && a.email && a.email.toLowerCase() === activeChat.accountEmail.toLowerCase()) ||
+      (activeChat?.accountBadge && a.displayName && a.displayName.toLowerCase() === activeChat.accountBadge.toLowerCase())
+    );
+
+    const ownerEmail = (matchedAccount?.email || activeChat?.accountEmail || localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+    const ownerName = (matchedAccount?.displayName || matchedAccount?.name || activeChat?.accountBadge || activeChat?.company || localStorage.getItem('teamshub_active_name') || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
+    const ownerFirst = ownerName ? ownerName.split(' ')[0] : '';
 
     const pName = (activeChat?.participant || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
     const pFirst = pName ? pName.split(' ')[0] : '';
@@ -372,21 +379,27 @@ export default function ChatsPage({
       const sName = senderStr.toLowerCase().replace(/[`'"\\]/g, '').trim();
       const sEmail = (typeof m.senderEmail === 'string' ? m.senderEmail : getSenderString(m.senderEmail)).toLowerCase().trim();
 
-      // Check if message is from the logged-in user (Outgoing -> Right)
+      // Check if message is from the account owner (Outgoing -> Right) or participant (Incoming -> Left)
       let isOut = false;
+
+      // 1. If sender name is 'you' or matches account owner's email or name -> OUTGOING (Right side)
       if (
         sName === 'you' ||
-        (activeUserEmail && sEmail && sEmail === activeUserEmail) ||
-        (activeUserFirst && sName.includes(activeUserFirst)) ||
-        (activeUserName && sName.includes(activeUserName))
+        sName === 'me' ||
+        (ownerEmail && sEmail && sEmail === ownerEmail) ||
+        (ownerFirst && ownerFirst.length >= 2 && sName.includes(ownerFirst)) ||
+        (ownerName && ownerName.length >= 2 && (sName.includes(ownerName) || ownerName.includes(sName)))
       ) {
         isOut = true;
-      } else if (
-        pFirst &&
-        (sName.includes(pFirst) || pName.includes(sName))
+      }
+      // 2. If sender name matches the remote participant's name -> INCOMING (Left side)
+      else if (
+        pFirst && pFirst.length >= 2 && (sName.includes(pFirst) || (pName && sName.includes(pName)))
       ) {
         isOut = false;
-      } else {
+      }
+      // 3. Fallback to m.isOutgoing if set by Graph API
+      else {
         isOut = m.isOutgoing !== undefined ? m.isOutgoing : false;
       }
 
@@ -396,7 +409,7 @@ export default function ChatsPage({
         isOutgoing: isOut
       };
     });
-  }, [rawMessages, activeChat, activeEmail]);
+  }, [rawMessages, activeChat, connectedAccounts, activeEmail]);
 
   const prevChatIdRef = useRef(selectedChatId);
   const isChatSwitchRef = useRef(true);

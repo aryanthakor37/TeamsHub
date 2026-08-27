@@ -463,6 +463,16 @@ const getChatMessages = async (req, res) => {
           let msEmail = (req.user?.email || req.headers['x-user-email'] || '').toLowerCase().trim();
           let msDisplayName = (req.user?.name || req.user?.displayName || 'User').trim();
 
+          if (dbAvailable && connectedAccountId && connectedAccountId !== 'all') {
+            const accDoc = connectedAccountId.includes('@')
+              ? await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() })
+              : (mongoose.Types.ObjectId.isValid(connectedAccountId) ? await ConnectedAccount.findById(connectedAccountId) : await ConnectedAccount.findOne({ accountId: connectedAccountId }));
+            if (accDoc) {
+              if (accDoc.email) msEmail = accDoc.email.toLowerCase();
+              if (accDoc.displayName) msDisplayName = accDoc.displayName;
+            }
+          }
+
           const graphResponse = await fetchGraphChatMessages(token, cleanChatId);
           const rawMessages = graphResponse?.value || [];
           const messages = rawMessages
