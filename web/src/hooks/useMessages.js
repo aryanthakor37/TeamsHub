@@ -86,18 +86,20 @@ export const useMessages = (chatId, accountId) => {
     if (!chatId) return;
     try {
       const data = await fetchMessagesFromBackend(chatId, accountId);
+      const newItems = data.items || [];
+      if (newItems.length === 0) return;
+
       setMessages((prev) => {
-        const newItems = data.items || [];
-        if (newItems.length === 0) return prev;
+        const prevSig = prev.map(m => `${m.microsoftMessageId || m._id || m.id}_${(m.reactions || []).length}`).join('|');
+        const newSig = newItems.map(m => `${m.microsoftMessageId || m._id || m.id}_${(m.reactions || []).length}`).join('|');
 
-        const prevLast = prev.length > 0 ? prev[prev.length - 1] : null;
-        const newLast = newItems[newItems.length - 1];
-        const prevId = prevLast ? (prevLast._id || prevLast.id || prevLast.microsoftMessageId) : null;
-        const newId = newLast ? (newLast._id || newLast.id || newLast.microsoftMessageId) : null;
+        if (prevSig !== newSig) {
+          const prevLast = prev.length > 0 ? prev[prev.length - 1] : null;
+          const newLast = newItems[newItems.length - 1];
+          const prevId = prevLast ? (prevLast._id || prevLast.id || prevLast.microsoftMessageId) : null;
+          const newId = newLast ? (newLast._id || newLast.id || newLast.microsoftMessageId) : null;
 
-        // If new message arrived in active chat
-        if (newItems.length > prev.length || (prevId && newId && prevId !== newId)) {
-          if (newLast && !newLast.isOutgoing) {
+          if (newLast && !newLast.isOutgoing && prevId !== newId) {
             playTeamsNotificationSound();
           }
           return newItems;
@@ -162,10 +164,10 @@ export const useMessages = (chatId, accountId) => {
     socket.on('chat:message:received', handleRealtimeMsg);
     socket.on('reaction:updated', handleRealtimeReaction);
 
-    // Live Background Polling every 4 seconds for new incoming Teams messages
+    // Live Background Polling every 2.5 seconds for instant new incoming Teams messages
     const interval = setInterval(() => {
       loadMessagesSilently();
-    }, 4000);
+    }, 2500);
 
     return () => {
       socket.off('chat:message:received', handleRealtimeMsg);

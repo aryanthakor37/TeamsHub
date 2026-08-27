@@ -465,10 +465,16 @@ const getChatMessages = async (req, res) => {
 
           const graphResponse = await fetchGraphChatMessages(token, cleanChatId);
           const rawMessages = graphResponse?.value || [];
-          const messages = rawMessages.map((m) =>
-            normalizeGraphMessage(m, cleanChatId, connectedAccountId || 'default', msEmail, msDisplayName)
-          );
-          messages.reverse(); // chronological order: oldest first, newest last
+          const messages = rawMessages
+            .map((m) => normalizeGraphMessage(m, cleanChatId, connectedAccountId || 'default', msEmail, msDisplayName))
+            .filter(Boolean);
+
+          // Strictly sort in chronological order: oldest first (top), newest last (bottom)
+          messages.sort((a, b) => {
+            const timeA = new Date(a.createdDateTime).getTime() || 0;
+            const timeB = new Date(b.createdDateTime).getTime() || 0;
+            return timeA - timeB;
+          });
 
           return res.status(200).json({
             success: true,

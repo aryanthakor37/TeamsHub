@@ -344,31 +344,65 @@ export default function ChatsPage({
     return String(s);
   };
 
-  const safeMessages = rawMessages.map((m) => {
-    const rawSender = m.senderName || m.sender;
-    const senderStr = getSenderString(rawSender);
-    const sName = senderStr.toLowerCase().trim();
-    const sEmail = (typeof m.senderEmail === 'string' ? m.senderEmail : getSenderString(m.senderEmail)).toLowerCase().trim();
-    const pName = (activeChat?.participant || '').toLowerCase().trim();
+  const safeMessages = useMemo(() => {
+    const sorted = [...rawMessages].filter(Boolean).sort((a, b) => {
+      const tA = new Date(a.createdDateTime || a.timestamp || 0).getTime() || 0;
+      const tB = new Date(b.createdDateTime || b.timestamp || 0).getTime() || 0;
+      return tA - tB;
+    });
+
+    const activeUserEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+    const activeUserName = (localStorage.getItem('teamshub_active_name') || 'Aryan Kumrecha').toLowerCase().trim();
+    const activeUserFirst = activeUserName ? activeUserName.split(' ')[0] : 'aryan';
+
+    const pName = (activeChat?.participant || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
     const pFirst = pName ? pName.split(' ')[0] : '';
 
-    let isOut = m.isOutgoing;
+    return sorted.map((m) => {
+      const rawSender = m.senderName || m.sender;
+      const senderStr = getSenderString(rawSender);
+      const sName = senderStr.toLowerCase().replace(/[`'"\\]/g, '').trim();
+      const sEmail = (typeof m.senderEmail === 'string' ? m.senderEmail : getSenderString(m.senderEmail)).toLowerCase().trim();
 
-    // In a 1:1 conversation:
-    // If the message sender is the participant (e.g. "Hem Shah"), it MUST be on the LEFT side (isOutgoing = false).
-    // If the message sender is NOT the participant (e.g. "Aryan Kumrecha" / "You"), it MUST be on the RIGHT side (isOutgoing = true).
-    if (pFirst && pFirst.length >= 2 && (sName.includes(pFirst) || (pName && sName.includes(pName)))) {
-      isOut = false;
-    } else {
-      isOut = true;
+      // Check if message is from the logged-in user (Outgoing -> Right)
+      let isOut = false;
+      if (
+        sName === 'you' ||
+        (activeUserEmail && sEmail && sEmail === activeUserEmail) ||
+        (activeUserFirst && sName.includes(activeUserFirst)) ||
+        (activeUserName && sName.includes(activeUserName))
+      ) {
+        isOut = true;
+      } else if (
+        pFirst &&
+        (sName.includes(pFirst) || pName.includes(sName))
+      ) {
+        isOut = false;
+      } else {
+        isOut = m.isOutgoing !== undefined ? m.isOutgoing : false;
+      }
+
+      return {
+        ...m,
+        senderName: senderStr || (typeof m.senderName === 'string' ? m.senderName : '') || 'Teams User',
+        isOutgoing: isOut
+      };
+    });
+  }, [rawMessages, activeChat, activeEmail]);
+
+  // Automatically scroll to bottom when messages load or new message arrives
+  useEffect(() => {
+    if (safeMessages.length > 0 && !targetMessageId && !targetKeyword) {
+      const scrollTimer = setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        } else if (messagesThreadContainerRef.current) {
+          messagesThreadContainerRef.current.scrollTop = messagesThreadContainerRef.current.scrollHeight;
+        }
+      }, 100);
+      return () => clearTimeout(scrollTimer);
     }
-
-    return {
-      ...m,
-      senderName: senderStr || (typeof m.senderName === 'string' ? m.senderName : '') || 'Teams User',
-      isOutgoing: isOut
-    };
-  });
+  }, [safeMessages.length, selectedChatId, targetMessageId, targetKeyword]);
 
   // Smooth scroll & highlight targeted search message (Bright Yellow / Glow like Teams)
   useEffect(() => {
