@@ -112,7 +112,18 @@ const getChats = async (req, res) => {
       } catch (e) {}
     }
 
-    // 1. Populate all accounts from accountTokensMap
+    // 1. If caller sent a direct Bearer headerToken, ALWAYS include it as primary target account
+    if (headerToken) {
+      const primaryEmail = clientUserEmail || 'active-user';
+      targetAccounts.push({
+        _id: `acc-bearer-${primaryEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        email: primaryEmail,
+        displayName: primaryEmail.includes('@') ? primaryEmail.split('@')[0] : 'Microsoft User',
+        microsoftAccessToken: headerToken
+      });
+    }
+
+    // 2. Populate all accounts from accountTokensMap
     Object.entries(accountTokensMap).forEach(([email, token]) => {
       const cleanEmail = email.toLowerCase().trim();
       if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
@@ -125,20 +136,7 @@ const getChats = async (req, res) => {
       }
     });
 
-    // 2. Add from DB if available
-    if (dbAvailable) {
-      const dbAccs = await ConnectedAccount.find({
-        microsoftAccessToken: { $exists: true, $ne: '' }
-      }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      dbAccs.forEach(acc => {
-        const cleanEmail = (acc.email || '').toLowerCase().trim();
-        if (cleanEmail && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
-          targetAccounts.push(acc);
-        }
-      });
-    }
-
-    // 3. Include in-memory connected accounts (when MongoDB is offline)
+    // 3. Include in-memory connected accounts
     if (global.liveInMemoryAccounts) {
       global.liveInMemoryAccounts.forEach((memAcc, memEmail) => {
         const cleanEmail = memEmail.toLowerCase().trim();
@@ -148,22 +146,30 @@ const getChats = async (req, res) => {
       });
     }
 
-    // 4. Header token fallback
-    if (targetAccounts.length === 0 && headerToken) {
-      targetAccounts = [{
-        _id: 'active-user-session',
-        microsoftAccessToken: headerToken,
-        email: clientUserEmail || '',
-        displayName: clientUserEmail ? clientUserEmail.split('@')[0] : 'Microsoft User'
-      }];
+    // 4. Add from DB if available
+    if (dbAvailable) {
+      try {
+        const dbAccs = await ConnectedAccount.find({
+          microsoftAccessToken: { $exists: true, $ne: '' }
+        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+        dbAccs.forEach(acc => {
+          const cleanEmail = (acc.email || '').toLowerCase().trim();
+          if (cleanEmail && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
+            targetAccounts.push(acc);
+          }
+        });
+      } catch (dbErr) {}
     }
 
-    // Filter targetAccounts strictly by active connected accounts in current client session
-    if (activeEmailsList.length > 0) {
-      targetAccounts = targetAccounts.filter(acc => {
+    // Filter targetAccounts by active connected accounts in current client session if specified
+    if (activeEmailsList.length > 0 && targetAccounts.length > 1) {
+      const filtered = targetAccounts.filter(acc => {
         const accEmail = (acc.email || '').toLowerCase().trim();
         return activeEmailsList.some(clientEmail => clientEmail === accEmail || clientEmail.includes(accEmail) || accEmail.includes(clientEmail));
       });
+      if (filtered.length > 0) {
+        targetAccounts = filtered;
+      }
     }
 
     // Filter by specific connectedAccountId if requested
