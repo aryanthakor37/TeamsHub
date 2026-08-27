@@ -425,20 +425,28 @@ export default function ChatsPage({
   useLayoutEffect(() => {
     if (safeMessages.length > 0 && !targetMessageId && !targetKeyword) {
       const container = messagesThreadContainerRef.current;
+      if (!container) return;
+
       if (isChatSwitchRef.current) {
         // Direct instant jump to latest message on chat switch (like Teams)
-        if (container) {
-          container.scrollTop = container.scrollHeight;
-        }
+        container.scrollTop = container.scrollHeight;
         if (messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
         }
-        const timer = setTimeout(() => {
-          if (container) container.scrollTop = container.scrollHeight;
-          if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-          isChatSwitchRef.current = false;
-        }, 40);
-        return () => clearTimeout(timer);
+
+        let runs = 0;
+        const pinTimer = setInterval(() => {
+          if (container) {
+            container.scrollTop = container.scrollHeight;
+          }
+          runs++;
+          if (runs >= 16) {
+            clearInterval(pinTimer);
+            isChatSwitchRef.current = false;
+          }
+        }, 50);
+
+        return () => clearInterval(pinTimer);
       } else {
         // Smooth scroll for new message in the same chat
         if (messagesEndRef.current) {
@@ -1122,7 +1130,7 @@ export default function ChatsPage({
             </div>
 
             {/* Messages Thread List */}
-            <div ref={messagesThreadContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div ref={messagesThreadContainerRef} key={selectedChatId} style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {messagesLoading ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '40px' }}>Loading conversation history...</div>
               ) : messagesError ? (

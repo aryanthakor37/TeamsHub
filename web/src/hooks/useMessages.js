@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   fetchMessagesFromBackend,
   sendMessageToBackend,
@@ -11,6 +11,11 @@ import { joinChatRoom, leaveChatRoom, getSocket, emitChatMessage } from '../serv
 const messageMemoryCache = new Map();
 
 export const useMessages = (chatId, accountId) => {
+  const activeChatIdRef = useRef(chatId);
+  useEffect(() => {
+    activeChatIdRef.current = chatId;
+  }, [chatId]);
+
   const getInitialMessages = (id) => {
     if (!id) return [];
     if (messageMemoryCache.has(id)) return messageMemoryCache.get(id);
@@ -37,6 +42,7 @@ export const useMessages = (chatId, accountId) => {
 
   // Synchronously switch message view to cache (0ms instant Teams jump)
   useEffect(() => {
+    activeChatIdRef.current = chatId;
     if (!chatId) {
       setMessages([]);
       setLoading(false);
@@ -71,6 +77,9 @@ export const useMessages = (chatId, accountId) => {
 
     try {
       const data = await fetchMessagesFromBackend(chatId, accountId);
+      // Guard against race conditions when user switched chats quickly
+      if (activeChatIdRef.current !== chatId) return;
+
       const items = data?.items || [];
       if (items.length > 0) {
         setMessages(items);
@@ -80,12 +89,15 @@ export const useMessages = (chatId, accountId) => {
         } catch (e) {}
       }
     } catch (err) {
+      if (activeChatIdRef.current !== chatId) return;
       if (!cached || cached.length === 0) {
         setError(err.message || 'Failed to load conversation messages.');
         setMessages([]);
       }
     } finally {
-      setLoading(false);
+      if (activeChatIdRef.current === chatId) {
+        setLoading(false);
+      }
     }
   }, [chatId, accountId]);
 
@@ -93,10 +105,13 @@ export const useMessages = (chatId, accountId) => {
     if (!chatId) return;
     try {
       const data = await fetchMessagesFromBackend(chatId, accountId);
+      if (activeChatIdRef.current !== chatId) return;
+
       const newItems = data.items || [];
       if (newItems.length === 0) return;
 
       setMessages((prev) => {
+        if (activeChatIdRef.current !== chatId) return prev;
         const prevSig = prev.map(m => `${m.microsoftMessageId || m._id || m.id}_${(m.reactions || []).length}`).join('|');
         const newSig = newItems.map(m => `${m.microsoftMessageId || m._id || m.id}_${(m.reactions || []).length}`).join('|');
 
