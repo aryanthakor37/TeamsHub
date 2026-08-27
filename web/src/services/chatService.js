@@ -1,4 +1,4 @@
-import { acquireGraphToken, syncAllAccountsTokens } from './auth/authService';
+import { acquireGraphToken, syncAllAccountsTokens, isTokenExpired } from './auth/authService';
 import { msalInstance } from './auth/msalConfig';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
@@ -22,11 +22,11 @@ const getAuthHeaders = async (accountId) => {
     const email = (a.username || '').toLowerCase().trim();
     if (email) {
       let t = localStorage.getItem(`teamshub_token_${email}`);
-      if (!t) {
+      if (!t || isTokenExpired(t)) {
         t = await acquireGraphToken(a.homeAccountId || a.username);
         if (t) localStorage.setItem(`teamshub_token_${email}`, t);
       }
-      if (t) tokenMap[email] = t;
+      if (t && !isTokenExpired(t)) tokenMap[email] = t;
     }
   }));
 
@@ -119,10 +119,30 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
   const cleanName = accountDisplayName || cleanEmail.split('@')[0];
 
   let rawList = [];
+  let activeToken = token;
+
+  // Check if initial token is expired before calling
+  if (isTokenExpired(activeToken)) {
+    const refreshed = await acquireGraphToken(cleanEmail);
+    if (refreshed) activeToken = refreshed;
+  }
+
   try {
-    const res = await fetch('https://graph.microsoft.com/v1.0/me/chats?$expand=members,lastMessagePreview&$top=50', {
-      headers: { Authorization: `Bearer ${token}` }
+    let res = await fetch('https://graph.microsoft.com/v1.0/me/chats?$expand=members,lastMessagePreview&$top=50', {
+      headers: { Authorization: `Bearer ${activeToken}` }
     });
+
+    if (res.status === 401) {
+      localStorage.removeItem(`teamshub_token_${cleanEmail}`);
+      const freshToken = await acquireGraphToken(cleanEmail);
+      if (freshToken) {
+        activeToken = freshToken;
+        res = await fetch('https://graph.microsoft.com/v1.0/me/chats?$expand=members,lastMessagePreview&$top=50', {
+          headers: { Authorization: `Bearer ${activeToken}` }
+        });
+      }
+    }
+
     if (res.ok) {
       const data = await res.json();
       rawList = data.value || [];
@@ -131,9 +151,19 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
 
   if (rawList.length === 0) {
     try {
-      const res = await fetch('https://graph.microsoft.com/v1.0/me/chats?$top=50', {
-        headers: { Authorization: `Bearer ${token}` }
+      let res = await fetch('https://graph.microsoft.com/v1.0/me/chats?$top=50', {
+        headers: { Authorization: `Bearer ${activeToken}` }
       });
+      if (res.status === 401) {
+        localStorage.removeItem(`teamshub_token_${cleanEmail}`);
+        const freshToken = await acquireGraphToken(cleanEmail);
+        if (freshToken) {
+          activeToken = freshToken;
+          res = await fetch('https://graph.microsoft.com/v1.0/me/chats?$top=50', {
+            headers: { Authorization: `Bearer ${activeToken}` }
+          });
+        }
+      }
       if (res.ok) {
         const data = await res.json();
         rawList = data.value || [];
@@ -211,12 +241,32 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
  * Direct Client-Side Microsoft Graph API Message Fetcher (Resilient Fallback)
  */
 export const fetchMessagesDirectFromGraph = async (token, chatId, userEmail) => {
-  if (!token || !chatId) return [];
+  if (!chatId) return [];
   const cleanUserEmail = (userEmail || '').toLowerCase().trim();
+  let activeToken = token;
+
+  if (!activeToken || isTokenExpired(activeToken)) {
+    const refreshed = await acquireGraphToken(cleanUserEmail);
+    if (refreshed) activeToken = refreshed;
+  }
+  if (!activeToken) return [];
+
   try {
-    const res = await fetch(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`, {
-      headers: { Authorization: `Bearer ${token}` }
+    let res = await fetch(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`, {
+      headers: { Authorization: `Bearer ${activeToken}` }
     });
+
+    if (res.status === 401) {
+      localStorage.removeItem(`teamshub_token_${cleanUserEmail}`);
+      const freshToken = await acquireGraphToken(cleanUserEmail);
+      if (freshToken) {
+        activeToken = freshToken;
+        res = await fetch(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`, {
+          headers: { Authorization: `Bearer ${activeToken}` }
+        });
+      }
+    }
+
     if (res.ok) {
       const data = await res.json();
       const rawMsgs = data.value || [];

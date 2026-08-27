@@ -257,6 +257,22 @@ export const syncAllAccountsTokens = async () => {
 };
 
 /**
+ * Helper to check if a JWT access token is expired or close to expiry (within 60s)
+ */
+export const isTokenExpired = (tokenStr) => {
+  if (!tokenStr || typeof tokenStr !== 'string') return true;
+  try {
+    const parts = tokenStr.split('.');
+    if (parts.length !== 3) return true;
+    const payload = JSON.parse(atob(parts[1]));
+    if (!payload.exp) return false;
+    return (payload.exp * 1000) < (Date.now() + 60000);
+  } catch (e) {
+    return true;
+  }
+};
+
+/**
  * Acquire Microsoft Graph access token silently for an already-authenticated account.
  * Returns the access token string or null if silent acquisition fails.
  */
@@ -292,12 +308,12 @@ export const acquireGraphToken = async (accountId) => {
       const emailLower = (targetAccount.username || '').toLowerCase().trim();
       const storedToken = localStorage.getItem(`teamshub_token_${emailLower}`);
 
-      // If we already have stored token for this account, return immediately
-      if (storedToken) {
+      // If stored token exists AND is NOT expired, return immediately
+      if (storedToken && !isTokenExpired(storedToken)) {
         return storedToken;
       }
 
-      // Silent acquisition with loginHint to avoid multi-account iframe mismatch
+      // Token is missing or expired — acquire a fresh token silently
       try {
         const result = await msalInstance.acquireTokenSilent({
           ...graphTokenRequest,
@@ -312,15 +328,13 @@ export const acquireGraphToken = async (accountId) => {
         console.warn(`[acquireGraphToken] Silent refresh notice for ${emailLower}:`, silentErr?.message || 'Silent request');
       }
 
-      return storedToken || null;
+      if (storedToken && !isTokenExpired(storedToken)) {
+        return storedToken;
+      }
     }
 
     return null;
   } catch (error) {
-    if (accountId) {
-      const cleanTarget = accountId.toString().toLowerCase().trim();
-      return localStorage.getItem(`teamshub_token_${cleanTarget}`) || null;
-    }
     return null;
   }
 };
