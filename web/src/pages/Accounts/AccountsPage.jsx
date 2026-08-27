@@ -181,30 +181,6 @@ export default function AccountsPage({ onOpenMicrosoftModal }) {
                   </div>
                 </div>
 
-                {/* Guest Workspaces & Client Tenants */}
-                <div style={{
-                  backgroundColor: 'var(--bg-tertiary)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '12px',
-                  marginBottom: '16px',
-                  border: '1px solid var(--border-color)'
-                }}>
-                  <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.04em', marginBottom: '8px' }}>
-                    Connected Guest Workspaces (3)
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {['BayWa r.e.', 'DR SCHAER AG', 'Kerry Dines Ltd'].map((guestOrg) => (
-                      <div key={guestOrg} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                          <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{guestOrg}</span>
-                        </div>
-                        <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '600' }}>Active Guest</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
                   {!isActive && isConnected && (

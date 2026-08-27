@@ -287,24 +287,36 @@ export default function ChatsPage({
     return email;
   };
 
-  // Extract all unique Guest Workspaces / Organizations from chats & connected accounts
+  // Extract all unique verified Guest Workspaces / Organizations from actual chats
   const guestOrganizations = useMemo(() => {
     const orgs = new Set();
+    const homeDomains = (connectedAccounts || []).map(a => (a.email || '').split('@')[1]?.toLowerCase()).filter(Boolean);
     (chats || []).forEach(c => {
       const comp = (c.company || c.accountBadge || '').trim();
-      if (comp && !comp.toLowerCase().includes('microsoft account') && !comp.toLowerCase().includes('teams chat') && !comp.toLowerCase().includes('estatic')) {
+      const compLower = comp.toLowerCase();
+      if (
+        comp &&
+        !compLower.includes('microsoft account') &&
+        !compLower.includes('teams chat') &&
+        !homeDomains.some(d => compLower.includes(d.split('.')[0]))
+      ) {
         orgs.add(comp);
       }
     });
-    // Add active guest client organizations if Estatic Infotech user is connected
-    const hasEstatic = (connectedAccounts || []).some(a => (a.email || '').toLowerCase().includes('estatic-infotech.com'));
-    if (hasEstatic) {
-      orgs.add('BayWa r.e.');
-      orgs.add('DR SCHAER AG');
-      orgs.add('Kerry Dines Ltd');
-    }
     return Array.from(orgs);
   }, [chats, connectedAccounts]);
+
+  // Strictly deduplicate connected accounts by primary email
+  const uniqueConnectedAccounts = useMemo(() => {
+    const map = new Map();
+    (connectedAccounts || []).forEach(acc => {
+      const email = (acc.email || acc.username || '').toLowerCase().trim();
+      if (email && !map.has(email)) {
+        map.set(email, acc);
+      }
+    });
+    return Array.from(map.values());
+  }, [connectedAccounts]);
 
   const filteredChats = chats.filter((chat) => {
     // 1. Strictly verify chat belongs to currently CONNECTED accounts in this browser session
@@ -878,12 +890,12 @@ export default function ChatsPage({
                 fontSize: '0.7rem',
                 fontWeight: '700'
               }}>
-                {connectedAccounts.length}
+                {uniqueConnectedAccounts.length}
               </span>
             </button>
 
-            {connectedAccounts.map((acc) => {
-              const accEmailKey = (acc.email || acc.username || acc._id || acc.accountId || acc.id || '').toLowerCase().trim();
+            {uniqueConnectedAccounts.map((acc) => {
+              const accEmailKey = (acc.email || acc.username || '').toLowerCase().trim();
               const isSelected = selectedFilterAccount === accEmailKey || (selectedFilterAccount && (
                 selectedFilterAccount === (acc._id || '').toString() ||
                 selectedFilterAccount === (acc.accountId || '').toString() ||
