@@ -161,17 +161,28 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
 };
 
 /**
- * Send a Conversation Message
+ * Send a Conversation Message (with optional attachments, images)
  */
-export const sendMessageToBackend = async (chatId, content, accountId) => {
+export const sendMessageToBackend = async (chatId, payload, accountId) => {
   try {
     const headers = await getAuthHeaders(accountId);
+    
+    // Normalise payload if passed as string or object
+    const bodyData = typeof payload === 'string' 
+      ? { content: payload, connectedAccountId: accountId }
+      : { 
+          content: payload.content || '', 
+          attachments: payload.attachments || [], 
+          image: payload.image || null,
+          connectedAccountId: accountId 
+        };
+
     const response = await fetch(
       `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages`,
       {
         method: 'POST',
         headers,
-        body: JSON.stringify({ content, connectedAccountId: accountId })
+        body: JSON.stringify(bodyData)
       }
     );
 
@@ -186,6 +197,52 @@ export const sendMessageToBackend = async (chatId, content, accountId) => {
   } catch (error) {
     console.warn('[TeamsHub Chat API] Send Error:', error.message);
     throw error;
+  }
+};
+
+/**
+ * Set a Reaction on a Message
+ */
+export const setMessageReactionOnBackend = async (chatId, messageId, reactionType, accountId) => {
+  try {
+    const headers = await getAuthHeaders(accountId);
+    const response = await fetch(
+      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/reactions`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ reactionType, connectedAccountId: accountId })
+      }
+    );
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.warn('[TeamsHub Chat API] Set Reaction Error:', error.message);
+    return { success: false };
+  }
+};
+
+/**
+ * Unset a Reaction on a Message
+ */
+export const unsetMessageReactionOnBackend = async (chatId, messageId, reactionType, accountId) => {
+  try {
+    const headers = await getAuthHeaders(accountId);
+    const response = await fetch(
+      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/reactions`,
+      {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({ reactionType, connectedAccountId: accountId })
+      }
+    );
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.warn('[TeamsHub Chat API] Unset Reaction Error:', error.message);
+    return { success: false };
   }
 };
 

@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchMessagesFromBackend, sendMessageToBackend } from '../services/chatService';
+import {
+  fetchMessagesFromBackend,
+  sendMessageToBackend,
+  setMessageReactionOnBackend,
+  unsetMessageReactionOnBackend
+} from '../services/chatService';
 import { playTeamsNotificationSound } from '../utils/notificationUtils';
 import { joinChatRoom, leaveChatRoom, getSocket, emitChatMessage } from '../services/socketService';
 
@@ -121,24 +126,56 @@ export const useMessages = (chatId, accountId) => {
       });
     };
 
-    socket.on('chat:message:received', handleRealtimeMsg);
+    // Real-time Reaction listener
+    const handleRealtimeReaction = (data) => {
+      if (!data || !data.messageId) return;
+      setMessages((prev) =>
+        prev.map((msg) => {
+          const msgId = msg._id || msg.id || msg.microsoftMessageId;
+          if (msgId !== data.messageId) return msg;
 
-    // Live Background Polling every 3 seconds for new incoming Teams messages
+          const currentReactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
+          if (data.action === 'set') {
+            const hasSame = currentReactions.some(
+              (r) => r.reactionType === data.reactionType && (r.user?.displayName === data.user?.displayName || r.user?.email === data.user?.email)
+            );
+            if (!hasSame) {
+              currentReactions.push({ reactionType: data.reactionType, user: data.user, createdDateTime: new Date().toISOString() });
+            }
+          } else if (data.action === 'unset') {
+            const index = currentReactions.findIndex(
+              (r) => r.reactionType === data.reactionType && (r.user?.displayName === data.user?.displayName || r.user?.email === data.user?.email)
+            );
+            if (index !== -1) {
+              currentReactions.splice(index, 1);
+            }
+          }
+
+          return { ...msg, reactions: currentReactions };
+        })
+      );
+    };
+
+    socket.on('chat:message:received', handleRealtimeMsg);
+    socket.on('reaction:updated', handleRealtimeReaction);
+
+    // Live Background Polling every 4 seconds for new incoming Teams messages
     const interval = setInterval(() => {
       loadMessagesSilently();
-    }, 3000);
+    }, 4000);
 
     return () => {
       socket.off('chat:message:received', handleRealtimeMsg);
+      socket.off('reaction:updated', handleRealtimeReaction);
       leaveChatRoom(chatId);
       clearInterval(interval);
     };
   }, [chatId, loadMessages, loadMessagesSilently]);
 
-  const sendMessage = useCallback(async (content) => {
-    if (!chatId || !content) return;
+  const sendMessage = useCallback(async (contentOrPayload) => {
+    if (!chatId || !contentOrPayload) return;
     try {
-      const newMsg = await sendMessageToBackend(chatId, content, accountId);
+      const newMsg = await sendMessageToBackend(chatId, contentOrPayload, accountId);
       setMessages((prev) => [...prev, newMsg]);
       // Emit to Socket.IO room for instant delivery to other connected clients
       emitChatMessage(chatId, newMsg);
@@ -149,6 +186,51 @@ export const useMessages = (chatId, accountId) => {
     }
   }, [chatId, accountId]);
 
-  return { messages, loading, error, reload: loadMessages, sendMessage };
+  // Toggle a reaction (optimistic update + backend sync)
+  const toggleReaction = useCallback(async (messageId, reactionType, currentReactions = []) => {
+    if (!chatId || !messageId || !reactionType) return;
+
+    const userEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+    const hasAlreadyReacted = currentReactions.some(
+      (r) => (r.reactionType === reactionType || r === reactionType) && (!r.user?.email || r.user?.email.toLowerCase() === userEmail)
+    );
+
+    const action = hasAlreadyReacted ? 'unset' : 'set';
+
+    // 1. Optimistic local state update
+    setMessages((prev) =>
+      prev.map((msg) => {
+        const msgId = msg._id || msg.id || msg.microsoftMessageId;
+        if (msgId !== messageId) return msg;
+
+        let reactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
+        if (action === 'set') {
+          reactions.push({
+            reactionType,
+            user: { displayName: 'You', email: userEmail },
+            createdDateTime: new Date().toISOString()
+          });
+        } else {
+          reactions = reactions.filter(
+            (r) => (r.reactionType || r) !== reactionType
+          );
+        }
+        return { ...msg, reactions };
+      })
+    );
+
+    // 2. Call backend API
+    try {
+      if (action === 'set') {
+        await setMessageReactionOnBackend(chatId, messageId, reactionType, accountId);
+      } else {
+        await unsetMessageReactionOnBackend(chatId, messageId, reactionType, accountId);
+      }
+    } catch (err) {
+      console.warn('Failed to sync reaction to backend:', err.message);
+    }
+  }, [chatId, accountId]);
+
+  return { messages, loading, error, reload: loadMessages, sendMessage, toggleReaction };
 };
 

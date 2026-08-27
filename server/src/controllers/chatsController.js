@@ -9,6 +9,8 @@ const {
   fetchGraphChatsFromAPI,
   fetchGraphChatMessages,
   sendGraphChatMessage,
+  setGraphMessageReaction,
+  unsetGraphMessageReaction,
   fetchGraphMessageImage,
   normalizeGraphChat,
   normalizeGraphMessage,
@@ -511,13 +513,21 @@ const getChatMessages = async (req, res) => {
 const sendMessage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { content } = req.body;
+    const { content = '', attachments = [], image = null } = req.body;
 
-    if (!content || !content.trim()) {
+    if (!content.trim() && (!attachments || attachments.length === 0) && !image) {
       return res.status(400).json({
         success: false,
-        error: { code: 'INVALID_REQUEST', message: 'Message content is required.' }
+        error: { code: 'INVALID_REQUEST', message: 'Message content or attachment is required.' }
       });
+    }
+
+    // Format rich HTML content if images/attachments are present
+    let formattedContent = content ? content.trim() : '';
+    if (image && typeof image === 'string' && image.startsWith('data:image')) {
+      formattedContent += `<div><img src="${image}" alt="Attachment" style="max-width: 480px; max-height: 320px; border-radius: 8px; margin-top: 6px; display: block;" /></div>`;
+    } else if (image && image.dataUrl) {
+      formattedContent += `<div><img src="${image.dataUrl}" alt="${image.name || 'Attachment'}" style="max-width: 480px; max-height: 320px; border-radius: 8px; margin-top: 6px; display: block;" /></div>`;
     }
 
     // ── Mock Mode ──
@@ -527,10 +537,12 @@ const sendMessage = async (req, res) => {
         chatId: id,
         microsoftMessageId: `mock-${Date.now()}`,
         senderName: 'You',
-        senderEmail: req.user.email,
-        content: content.trim(),
-        contentType: 'text',
+        senderEmail: req.user?.email || 'user@example.com',
+        content: formattedContent || content.trim(),
+        contentType: 'html',
         isOutgoing: true,
+        attachments: attachments || [],
+        reactions: [],
         createdDateTime: new Date().toISOString()
       };
       return res.status(201).json({ success: true, source: 'mock', data: mockMsg });
@@ -578,12 +590,12 @@ const sendMessage = async (req, res) => {
     if (accessToken) {
       // Look up the microsoftChatId (it could be id or we fetch from DB)
       let microsoftChatId = id;
-      let connectedAccountId = 'default';
+      let targetAccountId = 'default';
       if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
         const chat = await Chat.findById(id);
         if (chat) {
           microsoftChatId = chat.microsoftChatId;
-          connectedAccountId = chat.connectedAccountId;
+          targetAccountId = chat.connectedAccountId;
         }
       }
 
@@ -592,8 +604,12 @@ const sendMessage = async (req, res) => {
         const msEmail = userProfile.mail || userProfile.userPrincipalName || req.user.email || '';
         const msId = userProfile.id;
 
-        const graphResponse = await sendGraphChatMessage(accessToken, microsoftChatId, content);
-        const normalizedMessage = normalizeGraphMessage(graphResponse, id, connectedAccountId, msEmail, msId);
+        const graphResponse = await sendGraphChatMessage(accessToken, microsoftChatId, formattedContent, attachments);
+        const normalizedMessage = normalizeGraphMessage(graphResponse, id, targetAccountId, msEmail, msId);
+
+        if (attachments && attachments.length > 0 && (!normalizedMessage.attachments || normalizedMessage.attachments.length === 0)) {
+          normalizedMessage.attachments = attachments;
+        }
 
         // Zero-Storage Mode: Pass-through response directly to browser RAM (NO DB storage)
         const io = req.app.get('io');
@@ -618,11 +634,12 @@ const sendMessage = async (req, res) => {
       microsoftMessageId: `msg-${Date.now()}`,
       senderName: req.user?.name || req.user?.displayName || 'Aryan Kumrecha',
       senderEmail: req.user?.email || 'aryan@companya.com',
-      content: content.trim(),
-      contentType: 'text',
+      content: formattedContent || content.trim(),
+      contentType: 'html',
       isOutgoing: true,
-      createdDateTime: new Date().toISOString(),
-      reactions: []
+      attachments: attachments || [],
+      reactions: [],
+      createdDateTime: new Date().toISOString()
     };
 
     const io = req.app.get('io');
@@ -635,10 +652,150 @@ const sendMessage = async (req, res) => {
       source: 'passthrough',
       data: passThroughMsg
     });
+  } catch (error) {
+    return sendGraphError(res, error);
+  }
+};
 
-    return res.status(401).json({
-      success: false,
-      error: { code: 'GRAPH_AUTH_REQUIRED', message: 'No Microsoft access token available.' }
+/**
+ * POST /api/chats/:id/messages/:msgId/reactions
+ * Set a reaction on a message
+ */
+const setMessageReaction = async (req, res) => {
+  try {
+    const { id, msgId } = req.params;
+    const { reactionType = 'like', connectedAccountId } = req.body;
+
+    const validReactions = ['like', 'heart', 'laugh', 'surprised', 'sad', 'applause'];
+    const cleanReaction = validReactions.includes(reactionType.toLowerCase()) ? reactionType.toLowerCase() : 'like';
+
+    let accessToken = req.microsoftAccessToken;
+    const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+
+    const dbAvailable = Chat.db && Chat.db.readyState === 1;
+    if (dbAvailable && !accessToken) {
+      let acc = null;
+      if (connectedAccountId && connectedAccountId !== 'all') {
+        if (connectedAccountId.includes('@')) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() }).select('+microsoftAccessToken');
+        } else if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken');
+        }
+      }
+      if (!acc && activeEmailHeader) {
+        acc = await ConnectedAccount.findOne({ email: activeEmailHeader }).select('+microsoftAccessToken');
+      }
+      if (acc?.microsoftAccessToken) {
+        accessToken = acc.microsoftAccessToken;
+      }
+    }
+
+    let microsoftChatId = id;
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
+      const chat = await Chat.findById(id);
+      if (chat) microsoftChatId = chat.microsoftChatId;
+    }
+
+    if (accessToken && !isMockMode()) {
+      try {
+        await setGraphMessageReaction(accessToken, microsoftChatId, msgId, cleanReaction);
+      } catch (err) {
+        console.warn('Graph setReaction warning:', err.message);
+      }
+    }
+
+    const reactionPayload = {
+      chatId: id,
+      messageId: msgId,
+      reactionType: cleanReaction,
+      action: 'set',
+      user: {
+        displayName: req.user?.displayName || req.user?.name || 'You',
+        email: req.user?.email || activeEmailHeader || ''
+      }
+    };
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`chat:${id}`).emit('reaction:updated', reactionPayload);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: reactionPayload
+    });
+  } catch (error) {
+    return sendGraphError(res, error);
+  }
+};
+
+/**
+ * DELETE /api/chats/:id/messages/:msgId/reactions or POST /unsetReaction
+ * Unset a reaction on a message
+ */
+const unsetMessageReaction = async (req, res) => {
+  try {
+    const { id, msgId } = req.params;
+    const reactionType = req.body?.reactionType || req.query?.reactionType || 'like';
+    const connectedAccountId = req.body?.connectedAccountId || req.query?.connectedAccountId;
+
+    const validReactions = ['like', 'heart', 'laugh', 'surprised', 'sad', 'applause'];
+    const cleanReaction = validReactions.includes(reactionType.toLowerCase()) ? reactionType.toLowerCase() : 'like';
+
+    let accessToken = req.microsoftAccessToken;
+    const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+
+    const dbAvailable = Chat.db && Chat.db.readyState === 1;
+    if (dbAvailable && !accessToken) {
+      let acc = null;
+      if (connectedAccountId && connectedAccountId !== 'all') {
+        if (connectedAccountId.includes('@')) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() }).select('+microsoftAccessToken');
+        } else if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken');
+        }
+      }
+      if (!acc && activeEmailHeader) {
+        acc = await ConnectedAccount.findOne({ email: activeEmailHeader }).select('+microsoftAccessToken');
+      }
+      if (acc?.microsoftAccessToken) {
+        accessToken = acc.microsoftAccessToken;
+      }
+    }
+
+    let microsoftChatId = id;
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
+      const chat = await Chat.findById(id);
+      if (chat) microsoftChatId = chat.microsoftChatId;
+    }
+
+    if (accessToken && !isMockMode()) {
+      try {
+        await unsetGraphMessageReaction(accessToken, microsoftChatId, msgId, cleanReaction);
+      } catch (err) {
+        console.warn('Graph unsetReaction warning:', err.message);
+      }
+    }
+
+    const reactionPayload = {
+      chatId: id,
+      messageId: msgId,
+      reactionType: cleanReaction,
+      action: 'unset',
+      user: {
+        displayName: req.user?.displayName || req.user?.name || 'You',
+        email: req.user?.email || activeEmailHeader || ''
+      }
+    };
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`chat:${id}`).emit('reaction:updated', reactionPayload);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: reactionPayload
     });
   } catch (error) {
     return sendGraphError(res, error);
@@ -894,6 +1051,8 @@ module.exports = {
   getChatById,
   getChatMessages,
   sendMessage,
+  setMessageReaction,
+  unsetMessageReaction,
   getMessageImage,
   refreshChats,
   markChatRead

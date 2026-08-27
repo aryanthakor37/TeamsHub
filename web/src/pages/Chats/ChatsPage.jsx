@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { Search, RefreshCw, Send, Lock, ShieldCheck, CheckCircle2, MessageSquare, AlertCircle, Sparkles, FileText, Paperclip, Download, X, ExternalLink, Eye, Smile, ThumbsUp, Heart, LogIn, Check, ArrowLeft } from 'lucide-react';
+import {
+  Search, RefreshCw, Send, Lock, ShieldCheck, CheckCircle2, MessageSquare,
+  AlertCircle, Sparkles, FileText, Paperclip, Image as ImageIcon, Download,
+  X, ExternalLink, Eye, Smile, ThumbsUp, Heart, LogIn, Check, ArrowLeft,
+  FileSpreadsheet, FileCode, FileArchive
+} from 'lucide-react';
 import { useChats } from '../../hooks/useChats';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../hooks/useAuth';
 import { acquireGraphToken } from '../../services/auth/authService';
 import { getInitials, getAvatarColor } from '../../utils/avatarUtils';
 import DocumentPreviewModal, { getFileCategoryMeta } from '../../components/DocumentPreviewModal';
+import EmojiPicker from '../../components/EmojiPicker';
+import MessageReactionsBar, { getEmojiForReactionType, getReactionTypeForEmoji } from '../../components/MessageReactionsBar';
 
 // Helper to format date divider headers like Teams
 const formatMessageDate = (dateStr) => {
@@ -310,9 +317,25 @@ export default function ChatsPage({
     : null;
   const activeChat = isAccountConnected ? chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) : null;
   const chatOwner = activeChat?.accountEmail || activeChat?.connectedAccountId;
-  const { messages, loading: messagesLoading, error: messagesError, sendMessage } = useMessages(selectedChatId, chatOwner);
+  const { messages, loading: messagesLoading, error: messagesError, sendMessage, toggleReaction } = useMessages(selectedChatId, chatOwner);
   const rawMessages = Array.isArray(messages) ? messages : [];
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+
+  // Chat Composer & Attachment States
+  const [draftMessage, setDraftMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [showComposerEmojiPicker, setShowComposerEmojiPicker] = useState(false);
+  const [hoveredMessageId, setHoveredMessageId] = useState(null);
+  const [selectedAttachments, setSelectedAttachments] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
+
+  const chatInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const messagesThreadContainerRef = useRef(null);
 
   const getSenderString = (s) => {
     if (!s) return '';
@@ -412,12 +435,6 @@ export default function ChatsPage({
       }
     }
   });
-  const [draftMessage, setDraftMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
-  const [previewAttachment, setPreviewAttachment] = useState(null);
-  const messagesEndRef = useRef(null);
-  const messagesThreadContainerRef = useRef(null);
 
   // Automatically mark currently opened chat as read
   useEffect(() => {
@@ -443,19 +460,148 @@ export default function ChatsPage({
     return () => clearTimeout(timer);
   }, [activeChatId, safeMessages.length]);
 
+  // Format file sizes into human-readable string
+  const formatFileSize = (bytes) => {
+    if (!bytes || isNaN(bytes)) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // Handle file picker selection
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    files.forEach((file) => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setSelectedImage({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            dataUrl: reader.result
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const attObj = {
+            id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            name: file.name,
+            size: file.size,
+            contentType: file.type || 'application/octet-stream',
+            contentUrl: reader.result,
+            dataUrl: reader.result
+          };
+          setSelectedAttachments((prev) => [...prev, attObj]);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    if (e.target) e.target.value = '';
+  };
+
+  // Handle drag and drop files onto the chat
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length === 0) return;
+
+    files.forEach((file) => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setSelectedImage({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            dataUrl: reader.result
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const attObj = {
+            id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            name: file.name,
+            size: file.size,
+            contentType: file.type || 'application/octet-stream',
+            contentUrl: reader.result,
+            dataUrl: reader.result
+          };
+          setSelectedAttachments((prev) => [...prev, attObj]);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
+  // Insert emoji at current caret position in draftMessage input
+  const handleInsertEmoji = (emojiChar) => {
+    const input = chatInputRef.current;
+    if (!input) {
+      setDraftMessage((prev) => prev + emojiChar);
+      return;
+    }
+
+    const start = input.selectionStart ?? draftMessage.length;
+    const end = input.selectionEnd ?? draftMessage.length;
+    const nextVal = draftMessage.substring(0, start) + emojiChar + draftMessage.substring(end);
+    setDraftMessage(nextVal);
+
+    setTimeout(() => {
+      input.focus();
+      const newCursorPos = start + emojiChar.length;
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    }, 10);
+  };
+
   const handleSendMessage = async () => {
-    if (!draftMessage.trim() || isSending) return;
+    if ((!draftMessage.trim() && selectedAttachments.length === 0 && !selectedImage) || isSending) return;
     const msgContent = draftMessage;
+    const attsToSend = [...selectedAttachments];
+    const imgToSend = selectedImage;
+
     setIsSending(true);
     try {
-      await sendMessage(msgContent);
+      const payload = {
+        content: msgContent,
+        attachments: attsToSend,
+        image: imgToSend ? (imgToSend.dataUrl || imgToSend) : null
+      };
+
+      await sendMessage(payload);
       setDraftMessage('');
+      setSelectedAttachments([]);
+      setSelectedImage(null);
+      setShowComposerEmojiPicker(false);
+
       // Immediately bump active chat to the top of the chat list with latest message preview
       if (selectedChatId) {
-        bumpChatToTop(selectedChatId, msgContent);
+        const previewText = msgContent || (imgToSend ? '📷 Photo' : '📎 Attachment');
+        bumpChatToTop(selectedChatId, previewText);
       }
     } catch (err) {
-      // Handle error gracefully
+      console.error('Failed to send message:', err);
     } finally {
       setIsSending(false);
     }
@@ -919,16 +1065,25 @@ export default function ChatsPage({
                 safeMessages.map((msg, index) => {
                   const prevMsg = index > 0 ? safeMessages[index - 1] : null;
                   const msgId = msg._id || msg.id || msg.microsoftMessageId || `msg-${index}`;
-                  const graphReactions = (msg.reactions || []).map((r) => {
-                    const type = (r.reactionType || r.type || '').toLowerCase();
-                    if (type === 'like' || type === 'thumbsup') return '👍';
-                    if (type === 'heart' || type === 'love') return '❤️';
-                    if (type === 'laugh') return '😂';
-                    if (type === 'surprised') return '😮';
-                    if (type === 'sad') return '😢';
-                    return '👍';
+                  
+                  // Group reactions by type for clean pill badges
+                  const rawReactions = Array.isArray(msg.reactions) ? msg.reactions : [];
+                  const groupedReactions = {};
+                  rawReactions.forEach((r) => {
+                    const type = (typeof r === 'string' ? r : r.reactionType || 'like').toLowerCase();
+                    const emoji = getEmojiForReactionType(type);
+                    if (!groupedReactions[type]) {
+                      groupedReactions[type] = { type, emoji, count: 0, users: [], hasUserReacted: false };
+                    }
+                    groupedReactions[type].count += 1;
+                    const userName = r.user?.displayName || r.user?.name || (r.user?.email ? r.user.email.split('@')[0] : 'User');
+                    groupedReactions[type].users.push(userName);
+                    if (r.user?.email?.toLowerCase() === activeEmail || userName === 'You') {
+                      groupedReactions[type].hasUserReacted = true;
+                    }
                   });
-                  const currentReactions = graphReactions;
+                  const reactionList = Object.values(groupedReactions);
+                  const activeUserReactions = reactionList.filter((r) => r.hasUserReacted).map((r) => r.type);
                   
                   // Date divider check
                   const prevDate = prevMsg ? new Date(prevMsg.createdDateTime).toDateString() : null;
@@ -979,7 +1134,7 @@ export default function ChatsPage({
                           flexDirection: 'row',
                           alignItems: 'flex-start',
                           justifyContent: msg.isOutgoing ? 'flex-end' : 'flex-start',
-                          marginTop: showHeader && index !== 0 ? '14px' : '3px',
+                          marginTop: showHeader && index !== 0 ? '14px' : '4px',
                           width: '100%',
                           gap: '10px'
                         }}
@@ -1022,9 +1177,24 @@ export default function ChatsPage({
                             </div>
                           )}
 
-                          <div style={{ position: 'relative', width: 'fit-content', maxWidth: '100%' }}>
+                          <div
+                            style={{ position: 'relative', width: 'fit-content', maxWidth: '100%' }}
+                            onMouseEnter={() => setHoveredMessageId(msgId)}
+                            onMouseLeave={() => setHoveredMessageId((curr) => (curr === msgId ? null : curr))}
+                          >
+                            {/* Floating Hover Reactions Bar (Microsoft Teams Parity) */}
+                            {hoveredMessageId === msgId && (
+                              <MessageReactionsBar
+                                isOutgoing={msg.isOutgoing}
+                                activeUserReactions={activeUserReactions}
+                                onSelectReaction={(reactionType) => {
+                                  toggleReaction(msgId, reactionType, rawReactions);
+                                }}
+                              />
+                            )}
+
                             <div 
-                              id={`msg-bubble-${msg._id || msg.id || msg.microsoftMessageId || `msg-${index}`}`}
+                              id={`msg-bubble-${msgId}`}
                               className={msg.isOutgoing ? 'teams-msg-outgoing' : 'teams-msg-incoming'}
                               style={{
                                 padding: '10px 14px',
@@ -1039,154 +1209,138 @@ export default function ChatsPage({
                                 overflow: 'hidden'
                               }}
                             >
-                            {/* Quoted Message Reference Box (Teams-style Reply) */}
-                            {msg.quoteReply && msg.quoteReply.text && !msg.content?.includes('<blockquote') && (
-                              <div className="teams-quote-box">
-                                <div className="teams-quote-header">
-                                  <span>{msg.quoteReply.sender}</span>
-                                  {msg.quoteReply.date && (
-                                    <span style={{ fontSize: '0.74rem', opacity: 0.8, marginLeft: '8px', fontWeight: 'normal' }}>
-                                      {new Date(msg.quoteReply.date).toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })} {new Date(msg.quoteReply.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  )}
+                              {/* Quoted Message Reference Box (Teams-style Reply) */}
+                              {msg.quoteReply && msg.quoteReply.text && !msg.content?.includes('<blockquote') && (
+                                <div className="teams-quote-box">
+                                  <div className="teams-quote-header">
+                                    <span>{msg.quoteReply.sender}</span>
+                                    {msg.quoteReply.date && (
+                                      <span style={{ fontSize: '0.74rem', opacity: 0.8, marginLeft: '8px', fontWeight: 'normal' }}>
+                                        {new Date(msg.quoteReply.date).toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })} {new Date(msg.quoteReply.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ color: 'var(--text-secondary)', marginTop: '2px', wordBreak: 'break-word' }}>
+                                    {msg.quoteReply.text}
+                                  </div>
                                 </div>
-                                <div style={{ color: 'var(--text-secondary)', marginTop: '2px', wordBreak: 'break-word' }}>
-                                  {msg.quoteReply.text}
+                              )}
+
+                              {msg.contentType === 'html' ? (
+                                <div
+                                  className="message-html-content"
+                                  dangerouslySetInnerHTML={{
+                                    __html: (() => {
+                                      if (!msg.content) return '';
+                                      const apiBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
+                                        ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
+                                        : '';
+                                      return apiBase ? msg.content.replace(/src=["'](?:\/api\/chats\/)/gi, `src="${apiBase}/api/chats/`) : msg.content;
+                                    })()
+                                  }}
+                                  style={{ margin: 0 }}
+                                  onClick={(e) => {
+                                    if (e.target.tagName === 'IMG' && e.target.src) {
+                                      setLightboxImage(e.target.src);
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <div>{msg.content}</div>
+                              )}
+
+                              {/* Teams-Style Document Cards Grid */}
+                              {msg.attachments && msg.attachments.length > 0 && (
+                                <div style={{
+                                  marginTop: (msg.content && msg.content.trim()) ? '10px' : '0',
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: '12px'
+                                }}>
+                                  {msg.attachments.map((att) => (
+                                    <TeamsAttachmentCard
+                                      key={att.id || att.name}
+                                      attachment={att}
+                                      onClick={(a) => {
+                                        setPreviewDocModal({
+                                          name: a.name,
+                                          contentType: a.contentType,
+                                          previewUrl: a.contentUrl || a.dataUrl,
+                                          webUrl: a.contentUrl || a.dataUrl,
+                                          downloadUrl: a.contentUrl || a.dataUrl
+                                        });
+                                      }}
+                                    />
+                                  ))}
                                 </div>
+                              )}
+                            </div>
+
+                            {/* Teams Read Receipt Status (Eye ONLY on last seen message, CheckCircle ONLY on unread message) */}
+                            {msg.isOutgoing && (index === lastSeenIndex || index === lastUnreadIndex) && (
+                              <div
+                                title={index === lastSeenIndex ? "Seen by recipient" : "Sent"}
+                                style={{
+                                  position: 'absolute',
+                                  bottom: '4px',
+                                  right: '-24px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                {index === lastSeenIndex ? (
+                                  <Eye size={15} color="#4f46e5" style={{ filter: 'drop-shadow(0 1px 2px rgba(79, 70, 229, 0.3))' }} />
+                                ) : (
+                                  <CheckCircle2 size={15} color="#64748b" style={{ filter: 'drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1))' }} />
+                                )}
                               </div>
                             )}
 
-                            {msg.contentType === 'html' ? (
-                              <div
-                                className="message-html-content"
-                                dangerouslySetInnerHTML={{
-                                  __html: (() => {
-                                    if (!msg.content) return '';
-                                    const apiBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
-                                      ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
-                                      : '';
-                                    return apiBase ? msg.content.replace(/src=["'](?:\/api\/chats\/)/gi, `src="${apiBase}/api/chats/`) : msg.content;
-                                  })()
-                                }}
-                                style={{ margin: 0 }}
-                                onClick={(e) => {
-                                  if (e.target.tagName === 'IMG' && e.target.src) {
-                                    setPreviewDocModal({
-                                      name: 'Image Attachment',
-                                      contentType: 'image/jpeg',
-                                      previewUrl: e.target.src,
-                                      webUrl: e.target.src,
-                                      category: 'Images'
-                                    });
-                                  }
-                                }}
-                              />
-                            ) : (
-                              msg.content
-                            )}
-
-                            {/* Teams-Style Document Cards Grid */}
-                            {msg.attachments && msg.attachments.length > 0 && (
+                            {/* Teams Reaction Pills Attached to Corner of Bubble */}
+                            {reactionList.length > 0 && (
                               <div style={{
-                                marginTop: (msg.content && msg.content.trim()) ? '10px' : '0',
                                 display: 'flex',
+                                alignItems: 'center',
                                 flexWrap: 'wrap',
-                                gap: '12px'
+                                gap: '4px',
+                                position: 'absolute',
+                                bottom: '-12px',
+                                right: msg.isOutgoing ? '12px' : 'auto',
+                                left: msg.isOutgoing ? 'auto' : '12px',
+                                zIndex: 10
                               }}>
-                                {msg.attachments.map((att) => (
-                                  <TeamsAttachmentCard
-                                    key={att.id}
-                                    attachment={att}
-                                    onClick={(a) => {
-                                      setPreviewDocModal({
-                                        name: a.name,
-                                        contentType: a.contentType,
-                                        previewUrl: a.contentUrl,
-                                        webUrl: a.contentUrl,
-                                        downloadUrl: a.contentUrl
-                                      });
+                                {reactionList.map((r) => (
+                                  <div
+                                    key={r.type}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleReaction(msgId, r.type, rawReactions);
                                     }}
-                                  />
+                                    title={`Reacted by: ${r.users.join(', ')} (Click to toggle)`}
+                                    style={{
+                                      backgroundColor: r.hasUserReacted ? 'var(--accent-light)' : 'var(--bg-secondary)',
+                                      border: r.hasUserReacted ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                      borderRadius: '12px',
+                                      padding: '2px 7px',
+                                      fontSize: '0.78rem',
+                                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      transition: 'all 0.15s ease',
+                                      userSelect: 'none'
+                                    }}
+                                  >
+                                    <span>{r.emoji}</span>
+                                    <span style={{ fontSize: '0.74rem', fontWeight: '700', color: r.hasUserReacted ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                                      {r.count}
+                                    </span>
+                                  </div>
                                 ))}
                               </div>
                             )}
-                          </div>
-
-                          {/* Teams Read Receipt Status (Eye ONLY on last seen message, CheckCircle ONLY on unread message) */}
-                          {msg.isOutgoing && (index === lastSeenIndex || index === lastUnreadIndex) && (
-                            <div
-                              title={index === lastSeenIndex ? "Seen by recipient" : "Sent"}
-                              style={{
-                                position: 'absolute',
-                                bottom: '4px',
-                                right: '-24px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                            >
-                              {index === lastSeenIndex ? (
-                                <Eye size={15} color="#4f46e5" style={{ filter: 'drop-shadow(0 1px 2px rgba(79, 70, 229, 0.3))' }} />
-                              ) : (
-                                <CheckCircle2 size={15} color="#64748b" style={{ filter: 'drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1))' }} />
-                              )}
-                            </div>
-                          )}
-
-                          {/* Teams Reaction Pills Attached to Corner of Bubble */}
-                          {currentReactions.length > 0 && (
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              position: 'absolute',
-                              bottom: '-12px',
-                              right: msg.isOutgoing ? '12px' : 'auto',
-                              left: msg.isOutgoing ? 'auto' : '12px',
-                              zIndex: 10
-                            }}>
-                              {currentReactions.map((emoji) => (
-                                <div
-                                  key={emoji}
-                                  onClick={() => handleToggleReaction(msgId, emoji, graphReactions)}
-                                  style={{
-                                    backgroundColor: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border-color)',
-                                    borderRadius: '12px',
-                                    padding: '2px 6px',
-                                    fontSize: '0.78rem',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '2px'
-                                  }}
-                                >
-                                  <span>{emoji}</span>
-                                </div>
-                              ))}
-
-                              <button
-                                onClick={() => handleToggleReaction(msgId, '👍', graphReactions)}
-                                style={{
-                                  backgroundColor: '#ffffff',
-                                  border: '1px solid #cbd5e1',
-                                  borderRadius: '50%',
-                                  width: '22px',
-                                  height: '22px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer',
-                                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                                  color: '#64748b'
-                                }}
-                                title="Add reaction"
-                              >
-                                <Smile size={13} />
-                              </button>
-                            </div>
-                          )}
                           </div>
                         </div>
                       </div>
@@ -1197,48 +1351,303 @@ export default function ChatsPage({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Phase 5 Chat Composer */}
-            <div style={{
-              padding: '16px 24px',
-              backgroundColor: 'var(--bg-secondary)',
-              borderTop: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
+            {/* Advanced Teams Chat Composer */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              style={{
+                position: 'relative',
+                padding: '14px 20px',
+                backgroundColor: 'var(--bg-secondary)',
+                borderTop: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}
+            >
+              {/* Hidden File / Image Pickers */}
               <input
-                type="text"
-                value={draftMessage}
-                onChange={(e) => setDraftMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSendMessage();
-                }}
-                placeholder="Type a new message..."
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-primary)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.92rem',
-                  outline: 'none'
-                }}
-                disabled={isSending}
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                multiple
+                accept=".pdf,.docx,.xlsx,.pptx,.txt,.zip,.csv"
+                style={{ display: 'none' }}
               />
-              <button
-                onClick={handleSendMessage}
-                disabled={!draftMessage.trim() || isSending}
-                className="btn btn-primary"
-                style={{ padding: '10px 20px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                {isSending ? (
-                  <RefreshCw size={16} className="spin" />
-                ) : (
-                  <Send size={16} />
-                )}
-                <span>Send</span>
-              </button>
+              <input
+                type="file"
+                ref={imageInputRef}
+                accept="image/*"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+
+              {/* Attachment Preview Tray */}
+              {(selectedImage || selectedAttachments.length > 0) && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  overflowX: 'auto',
+                  paddingBottom: '6px',
+                  borderBottom: '1px solid var(--border-color)'
+                }}>
+                  {/* Selected Image Card */}
+                  {selectedImage && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '6px 12px 6px 6px',
+                      position: 'relative'
+                    }}>
+                      <img
+                        src={selectedImage.dataUrl}
+                        alt="Preview"
+                        style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '6px',
+                          objectFit: 'cover',
+                          border: '1px solid var(--border-color)'
+                        }}
+                      />
+                      <div style={{ maxWidth: '140px' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {selectedImage.name}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {formatFileSize(selectedImage.size)}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSelectedImage(null)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'flex'
+                        }}
+                        title="Remove photo"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Selected Document Cards */}
+                  {selectedAttachments.map((att) => {
+                    const meta = getFileCategoryMeta(att.name, att.contentType);
+                    const Icon = meta.icon;
+                    return (
+                      <div
+                        key={att.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          backgroundColor: 'var(--bg-primary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '10px',
+                          padding: '6px 12px',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          backgroundColor: meta.color,
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <Icon size={16} />
+                        </div>
+                        <div style={{ maxWidth: '150px' }}>
+                          <div style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {att.name}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            {formatFileSize(att.size)}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSelectedAttachments((prev) => prev.filter((a) => a.id !== att.id))}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            display: 'flex'
+                          }}
+                          title="Remove document"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Input Action Controls & Text Field */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+                {/* Paperclip Button */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach File (PDF, DOCX, XLSX, ZIP)"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                    e.currentTarget.style.color = 'var(--accent-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
+                >
+                  <Paperclip size={19} />
+                </button>
+
+                {/* Photo / Image Upload Button */}
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  title="Attach Photo / Screenshot"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                    e.currentTarget.style.color = 'var(--accent-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
+                >
+                  <ImageIcon size={19} />
+                </button>
+
+                {/* Emoji Selector Trigger */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowComposerEmojiPicker((prev) => !prev)}
+                    title="Insert Emoji"
+                    style={{
+                      background: showComposerEmojiPicker ? 'var(--accent-light)' : 'transparent',
+                      border: 'none',
+                      color: showComposerEmojiPicker ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!showComposerEmojiPicker) {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                        e.currentTarget.style.color = 'var(--accent-primary)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!showComposerEmojiPicker) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--text-secondary)';
+                      }
+                    }}
+                  >
+                    <Smile size={19} />
+                  </button>
+
+                  {showComposerEmojiPicker && (
+                    <EmojiPicker
+                      position="bottom"
+                      onSelectEmoji={(emojiChar) => {
+                        handleInsertEmoji(emojiChar);
+                      }}
+                      onClose={() => setShowComposerEmojiPicker(false)}
+                    />
+                  )}
+                </div>
+
+                {/* Chat Input Field */}
+                <input
+                  ref={chatInputRef}
+                  type="text"
+                  value={draftMessage}
+                  onChange={(e) => setDraftMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder={
+                    selectedImage || selectedAttachments.length > 0
+                      ? 'Add a caption...'
+                      : 'Type a new message (or drop files/photos here)...'
+                  }
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.92rem',
+                    outline: 'none',
+                    transition: 'border-color 0.15s ease'
+                  }}
+                  disabled={isSending}
+                />
+
+                {/* Send Button */}
+                <button
+                  onClick={handleSendMessage}
+                  disabled={(!draftMessage.trim() && selectedAttachments.length === 0 && !selectedImage) || isSending}
+                  className="btn btn-primary"
+                  style={{ padding: '10px 20px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  {isSending ? (
+                    <RefreshCw size={16} className="spin" />
+                  ) : (
+                    <Send size={16} />
+                  )}
+                  <span>Send</span>
+                </button>
+              </div>
             </div>
           </>
         ) : (
@@ -1267,13 +1676,104 @@ export default function ChatsPage({
         )}
       </div>
 
-      {/* Shared Interactive Document Preview Modal (Word, Excel, PDF, Images) */}
+      {/* Shared Interactive Document Preview Modal (Word, Excel, PDF, Documents) */}
       {previewDocModal && (
         <DocumentPreviewModal
           file={previewDocModal}
           accountId={activeChat?.connectedAccountId}
           onClose={() => setPreviewDocModal(null)}
         />
+      )}
+
+      {/* Full-Screen Image Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          onClick={() => setLightboxImage(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.82)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}
+          >
+            <div style={{
+              position: 'absolute',
+              top: '-44px',
+              right: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <a
+                href={lightboxImage}
+                download="teamshub-image.png"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  color: '#fff',
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  textDecoration: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <Download size={14} /> Download
+              </a>
+              <button
+                onClick={() => setLightboxImage(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  color: '#fff',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <img
+              src={lightboxImage}
+              alt="Full resolution"
+              style={{
+                maxWidth: '90vw',
+                maxHeight: '85vh',
+                borderRadius: '12px',
+                boxShadow: '0 24px 48px rgba(0, 0, 0, 0.5)',
+                objectFit: 'contain'
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

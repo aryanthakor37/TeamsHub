@@ -5,6 +5,8 @@ const {
   getChatById,
   getChatMessages,
   sendMessage,
+  setMessageReaction,
+  unsetMessageReaction,
   getMessageImage,
   refreshChats,
   markChatRead
@@ -17,6 +19,9 @@ router.get('/:id', protect, getChatById);
 router.post('/:id/read', protect, markChatRead);
 router.get('/:id/messages', protect, getChatMessages);
 router.post('/:id/messages', protect, sendMessage);
+router.post('/:id/messages/:msgId/reactions', protect, setMessageReaction);
+router.delete('/:id/messages/:msgId/reactions', protect, unsetMessageReaction);
+router.post('/:id/messages/:msgId/unsetReaction', protect, unsetMessageReaction);
 router.get('/:id/messages/:msgId/hostedContents/:contentId', protect, getMessageImage);
 router.get('/:id/messages/:msgId/hostedContents/:contentId/\\$value', protect, getMessageImage);
 

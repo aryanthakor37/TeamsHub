@@ -246,16 +246,45 @@ const fetchGraphChatMessages = async (accessToken, chatId) => {
 
 /**
  * Send a chat message — POST /v1.0/chats/{chatId}/messages
+ * Supports optional attachments and rich HTML payloads.
  */
-const sendGraphChatMessage = async (accessToken, chatId, content) => {
+const sendGraphChatMessage = async (accessToken, chatId, content, attachments = []) => {
+  const payload = {
+    body: {
+      content: content,
+      contentType: 'html'
+    }
+  };
+
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    payload.attachments = attachments;
+  }
+
   return await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages`, {
     method: 'POST',
-    body: JSON.stringify({
-      body: {
-        content: content,
-        contentType: 'html'
-      }
-    })
+    body: JSON.stringify(payload)
+  });
+};
+
+/**
+ * Set a reaction on a message — POST /v1.0/chats/{chatId}/messages/{messageId}/setReaction
+ * reactionType: 'like' | 'heart' | 'laugh' | 'surprised' | 'sad' | 'applause'
+ */
+const setGraphMessageReaction = async (accessToken, chatId, messageId, reactionType) => {
+  return await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/setReaction`, {
+    method: 'POST',
+    body: JSON.stringify({ reactionType })
+  });
+};
+
+/**
+ * Unset a reaction on a message — POST /v1.0/chats/{chatId}/messages/{messageId}/unsetReaction
+ * reactionType: 'like' | 'heart' | 'laugh' | 'surprised' | 'sad' | 'applause'
+ */
+const unsetGraphMessageReaction = async (accessToken, chatId, messageId, reactionType) => {
+  return await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/unsetReaction`, {
+    method: 'POST',
+    body: JSON.stringify({ reactionType })
   });
 };
 
@@ -1746,6 +1775,8 @@ module.exports = {
   fetchGraphChatsFromAPI,
   fetchGraphChatMessages,
   sendGraphChatMessage,
+  setGraphMessageReaction,
+  unsetGraphMessageReaction,
   fetchGraphMessageImage,
   fetchGraphRecentFiles,
   normalizeGraphChat,
