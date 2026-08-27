@@ -265,35 +265,37 @@ export default function ChatsPage({
     const email = (c.accountEmail || '').toLowerCase().trim();
     if (email && email.includes('@')) return email;
 
-    // Check connectedAccountId match against any connected account
     const accId = (c.connectedAccountId || '').toLowerCase().trim();
+    if (accId && accId.includes('@')) return accId;
+
     const foundByAccId = (connectedAccounts || []).find(a => {
       const id = (a._id || a.accountId || a.id || '').toString().toLowerCase().trim();
       return id && (id === accId || accId.includes(id));
     });
     if (foundByAccId && foundByAccId.email) return foundByAccId.email.toLowerCase().trim();
 
-    // Check company/accountBadge against connected account display names or emails
-    const badge = (c.company || c.accountBadge || '').toLowerCase().trim();
-    const foundByBadge = (connectedAccounts || []).find(a => {
-      const aName = (a.displayName || a.name || '').toLowerCase().trim();
-      const aEmail = (a.email || '').toLowerCase().trim();
-      const aUser = aEmail.split('@')[0];
-      return (aName && (badge.includes(aName) || aName.includes(badge))) ||
-             (aUser && (badge.includes(aUser) || aUser.includes(badge)));
-    });
-    if (foundByBadge && foundByBadge.email) return foundByBadge.email.toLowerCase().trim();
-
-    return email;
+    return email || accId;
   };
+
+  // Strictly deduplicate connected accounts by primary email
+  const uniqueConnectedAccounts = useMemo(() => {
+    const map = new Map();
+    (connectedAccounts || []).forEach(acc => {
+      const email = (acc.email || acc.username || '').toLowerCase().trim();
+      if (email && !map.has(email)) {
+        map.set(email, acc);
+      }
+    });
+    return Array.from(map.values());
+  }, [connectedAccounts]);
 
   // Extract all unique verified Guest Workspaces / Organizations from actual chats
   const guestOrganizations = useMemo(() => {
     const orgs = new Set();
-    const connectedEmails = (connectedAccounts || []).map(a => (a.email || a.username || '').toLowerCase().trim());
+    const connectedEmails = (uniqueConnectedAccounts || connectedAccounts || []).map(a => (a.email || a.username || '').toLowerCase().trim());
     const connectedUsers = connectedEmails.map(e => e.split('@')[0]);
-    const connectedNames = (connectedAccounts || []).map(a => (a.displayName || a.name || '').toLowerCase().trim());
-    const homeDomains = (connectedAccounts || []).map(a => (a.email || '').split('@')[1]?.toLowerCase()).filter(Boolean);
+    const connectedNames = (uniqueConnectedAccounts || connectedAccounts || []).map(a => (a.displayName || a.name || '').toLowerCase().trim());
+    const homeDomains = (uniqueConnectedAccounts || connectedAccounts || []).map(a => (a.email || '').split('@')[1]?.toLowerCase()).filter(Boolean);
 
     (chats || []).forEach(c => {
       const comp = (c.company || c.accountBadge || '').trim();
@@ -317,19 +319,7 @@ export default function ChatsPage({
       }
     });
     return Array.from(orgs);
-  }, [chats, connectedAccounts]);
-
-  // Strictly deduplicate connected accounts by primary email
-  const uniqueConnectedAccounts = useMemo(() => {
-    const map = new Map();
-    (connectedAccounts || []).forEach(acc => {
-      const email = (acc.email || acc.username || '').toLowerCase().trim();
-      if (email && !map.has(email)) {
-        map.set(email, acc);
-      }
-    });
-    return Array.from(map.values());
-  }, [connectedAccounts]);
+  }, [chats, connectedAccounts, uniqueConnectedAccounts]);
 
   const filteredChats = chats.filter((chat) => {
     const q = searchQuery.toLowerCase().trim();
@@ -345,15 +335,24 @@ export default function ChatsPage({
     if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
 
     const filterKey = selectedFilterAccount.toLowerCase().trim();
-    const filterUser = filterKey.split('@')[0];
     const chatOwnerEmail = getChatOwnerEmail(chat).toLowerCase().trim();
     const chatAccId = (chat.connectedAccountId || '').toLowerCase().trim();
-    const chatAccount = (chat.account || chat.company || chat.accountBadge || '').toLowerCase().trim();
 
-    if (chatOwnerEmail && (chatOwnerEmail === filterKey || chatOwnerEmail.includes(filterKey) || filterKey.includes(chatOwnerEmail))) return true;
+    // 1. Strict Owner Account Match — NEVER match against participant!
+    if (chatOwnerEmail) {
+      if (chatOwnerEmail === filterKey || chatOwnerEmail.includes(filterKey) || filterKey.includes(chatOwnerEmail)) return true;
+      const ownerUser = chatOwnerEmail.split('@')[0];
+      const filterUser = filterKey.includes('@') ? filterKey.split('@')[0] : filterKey;
+      if (ownerUser && filterUser && (ownerUser === filterUser || ownerUser.includes(filterUser) || filterUser.includes(ownerUser))) return true;
+    }
     if (chatAccId && (chatAccId === filterKey || chatAccId.includes(filterKey) || filterKey.includes(chatAccId))) return true;
-    if (chatAccount && (chatAccount.includes(filterKey) || filterKey.includes(chatAccount))) return true;
-    if (filterUser && (chatOwnerEmail.includes(filterUser) || chatAccount.includes(filterUser) || chatAccId.includes(filterUser))) return true;
+
+    // 2. Organization filter (e.g. BayWa r.e., DR SCHAER AG)
+    const isGuestOrg = guestOrganizations.some(org => org.toLowerCase() === filterKey);
+    if (isGuestOrg) {
+      const chatCompany = (chat.company || chat.accountBadge || '').toLowerCase().trim();
+      return chatCompany === filterKey || chatCompany.includes(filterKey);
+    }
 
     return false;
   });
