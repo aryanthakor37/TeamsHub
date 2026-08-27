@@ -159,6 +159,32 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
       participantName = gc.chatType === 'oneOnOne' ? 'Direct Message' : 'Group Chat';
     }
 
+    // Dynamically detect real external client guest organizations from member domains
+    let detectedCompany = cleanName;
+    if (gc.members && gc.members.length > 0) {
+      const homeDomain = cleanEmail.includes('@') ? cleanEmail.split('@')[1] : '';
+      const externalMember = gc.members.find(m => {
+        const mEmail = (m.email || m.userPrincipalName || m.emailAddress?.address || '').toLowerCase().trim();
+        if (mEmail && mEmail.includes('@')) {
+          const domain = mEmail.split('@')[1];
+          return domain && domain !== homeDomain && !domain.includes('onmicrosoft.com');
+        }
+        return false;
+      });
+
+      if (externalMember) {
+        const mEmail = (externalMember.email || externalMember.userPrincipalName || externalMember.emailAddress?.address || '').toLowerCase().trim();
+        const domain = mEmail.split('@')[1] || '';
+        if (domain.includes('baywa')) detectedCompany = 'BayWa r.e.';
+        else if (domain.includes('schaer') || domain.includes('drschaer')) detectedCompany = 'DR SCHAER AG';
+        else if (domain.includes('kerry') || domain.includes('dines')) detectedCompany = 'Kerry Dines Ltd';
+        else {
+          const base = domain.split('.')[0];
+          if (base.length >= 3) detectedCompany = base.charAt(0).toUpperCase() + base.slice(1);
+        }
+      }
+    }
+
     const lastMsgContent = gc.lastMessagePreview?.body?.content
       ? gc.lastMessagePreview.body.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
       : '';
@@ -170,8 +196,8 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
       accountEmail: cleanEmail,
       participant: participantName,
       role: gc.chatType === 'oneOnOne' ? 'Direct Message' : 'Group Chat',
-      company: cleanName,
-      accountBadge: cleanName,
+      company: detectedCompany,
+      accountBadge: detectedCompany,
       chatType: gc.chatType || 'oneOnOne',
       lastMessagePreview: lastMsgContent,
       lastMessageTimestamp: gc.lastMessagePreview?.createdDateTime || gc.lastUpdatedDateTime || new Date().toISOString(),
