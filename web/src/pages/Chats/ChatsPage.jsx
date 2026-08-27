@@ -525,20 +525,36 @@ export default function ChatsPage({
   }, [targetMessageId, targetKeyword, messagesLoading, safeMessages]);
   const lastOutgoingMsgIndex = safeMessages.map(m => m.isOutgoing).lastIndexOf(true);
 
-  // Microsoft Teams Read Receipt & Delivery Status Indices
+  // Microsoft Teams Read Receipt & Delivery Status Indices (Exact Teams Parity)
+  const outgoingIndices = [];
+  safeMessages.forEach((m, idx) => {
+    if (m.isOutgoing) outgoingIndices.push(idx);
+  });
+
   let lastSeenIndex = -1;
   let lastUnreadIndex = -1;
-  safeMessages.forEach((m, idx) => {
-    if (m.isOutgoing) {
-      const hasLaterIncoming = safeMessages.slice(idx + 1).some(other => !other.isOutgoing);
-      const isRead = m.isRead === true || m.seen === true || m.status === 'read' || hasLaterIncoming;
-      if (isRead) {
-        lastSeenIndex = idx;
-      } else {
-        lastUnreadIndex = idx;
+
+  if (outgoingIndices.length > 0) {
+    const lastOutgoingIdx = outgoingIndices[outgoingIndices.length - 1];
+    const lastMsg = safeMessages[lastOutgoingIdx];
+
+    // Check if the very latest outgoing message is considered read
+    const hasIncomingAfterLast = safeMessages.slice(lastOutgoingIdx + 1).some(m => !m.isOutgoing);
+    const isLastOutgoingSeen = lastMsg.isRead === true || lastMsg.seen === true || hasIncomingAfterLast;
+
+    if (isLastOutgoingSeen) {
+      // The latest outgoing message is seen -> gets Eye icon!
+      lastSeenIndex = lastOutgoingIdx;
+    } else {
+      // The latest outgoing message is NOT seen yet -> gets Sent Checkmark icon!
+      lastUnreadIndex = lastOutgoingIdx;
+
+      // The previous outgoing message before this one was seen -> gets Eye icon!
+      if (outgoingIndices.length > 1) {
+        lastSeenIndex = outgoingIndices[outgoingIndices.length - 2];
       }
     }
-  });
+  }
 
   // Automatically mark currently opened chat as read
   useEffect(() => {
