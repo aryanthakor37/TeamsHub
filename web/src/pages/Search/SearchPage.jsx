@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MessageSquare, FileText, User, ShieldCheck, Loader2 } from 'lucide-react';
-import { mockChats, mockMessages, mockFiles, mockAccounts } from '../../services/mockDataService';
+import { mockChats, mockMessages, mockFiles } from '../../services/mockDataService';
 import { useAuth } from '../../hooks/useAuth';
 import { useChats } from '../../hooks/useChats';
 import DocumentPreviewModal from '../../components/DocumentPreviewModal';
@@ -65,9 +65,11 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
              (isPhotoQuery && (f.category === 'Images' || f.name.toLowerCase().includes('photo') || f.name.toLowerCase().includes('image') || f.name.toLowerCase().endsWith('.jpg') || f.name.toLowerCase().endsWith('.png')))
     );
 
-    const matchedAccounts = mockAccounts.filter(
-      (a) => (a.company && a.company.toLowerCase().includes(qLower)) ||
-             (a.email && a.email.toLowerCase().includes(qLower))
+    const matchedAccounts = (connectedAccounts || []).filter(
+      (a) => (a.displayName && a.displayName.toLowerCase().includes(qLower)) ||
+             (a.name && a.name.toLowerCase().includes(qLower)) ||
+             (a.email && a.email.toLowerCase().includes(qLower)) ||
+             (a.company && a.company.toLowerCase().includes(qLower))
     );
 
     const matchedMessages = [];
@@ -344,19 +346,22 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
           )}
 
           {/* Connected Accounts */}
-          {(activeFilter === 'All' || activeFilter === 'Accounts') && accounts.length > 0 && (
+          {((activeFilter === 'All' && accounts.length > 0) || activeFilter === 'Accounts') && (
             <div>
               <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px', letterSpacing: '0.05em', fontWeight: '700' }}>
-                Connected Accounts & Workspaces ({accounts.length})
+                Connected Accounts & Workspaces ({(query.trim() ? accounts : (connectedAccounts || [])).length})
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {accounts.map((acc) => (
-                  <div key={acc._id || acc.id} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRadius: 'var(--radius-md)' }}>
+                {(query.trim() ? accounts : (connectedAccounts || [])).map((acc) => (
+                  <div key={acc._id || acc.id || acc.email} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRadius: 'var(--radius-md)' }}>
                     <ShieldCheck size={24} color="var(--accent-primary)" />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '700', fontSize: '0.95rem' }}>{acc.displayName || acc.company}</div>
+                      <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)' }}>{acc.displayName || acc.name || 'Microsoft Account'}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{acc.email} • Microsoft Teams</div>
                     </div>
+                    <span style={{ fontSize: '0.74rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', fontWeight: '700' }}>
+                      Active
+                    </span>
                   </div>
                 ))}
               </div>
