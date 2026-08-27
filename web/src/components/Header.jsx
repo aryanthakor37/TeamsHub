@@ -260,7 +260,16 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
                   unreadChats.map((chat) => {
                     const chatId = chat._id || chat.id || chat.microsoftChatId;
                     const participant = chat.participant || 'Teams User';
-                    const preview = chat.lastMessagePreview || 'Sent you a new message';
+                    const preview = (chat.lastMessagePreview || '')
+                      .replace(/<[^>]*>/g, '')
+                      .replace(/&nbsp;/gi, ' ')
+                      .replace(/&amp;/gi, '&')
+                      .replace(/&lt;/gi, '<')
+                      .replace(/&gt;/gi, '>')
+                      .replace(/&quot;/gi, '"')
+                      .replace(/&#39;/gi, "'")
+                      .replace(/\s+/g, ' ')
+                      .trim() || 'Sent you a new message';
                     const badge = chat.company || chat.accountBadge || 'Teams';
 
                     return (

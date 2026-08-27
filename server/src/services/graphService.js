@@ -680,7 +680,7 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     isSelfChat,
     isLastMessageOutgoing: isFromMe,
     lastMessagePreview: graphChat.lastMessagePreview?.body?.content
-      ? graphChat.lastMessagePreview.body.content.replace(/<[^>]*>/g, '').substring(0, 120)
+      ? cleanPreviewHtml(graphChat.lastMessagePreview.body.content).substring(0, 120)
       : '',
     lastMessageTimestamp,
     unreadCount: isFromMe ? 0 : unreadCount,

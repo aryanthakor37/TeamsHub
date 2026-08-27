@@ -31,6 +31,22 @@ const formatMessageDate = (dateStr) => {
   return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 };
 
+// Helper to decode HTML entities like &nbsp;, &amp;, etc. for clean preview display
+export const formatChatPreview = (str) => {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 // Teams-style Attachment Card Component
 function TeamsAttachmentCard({ attachment, onClick }) {
   const fileName = attachment.name || 'Attachment';
@@ -1028,7 +1044,7 @@ export default function ChatsPage({
                       </div>
 
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '4px' }}>
-                        {chat.lastMessagePreview}
+                        {formatChatPreview(chat.lastMessagePreview)}
                       </div>
 
                       {/* Parent Company Account Badge */}
