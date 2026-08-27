@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   Search, RefreshCw, Send, Lock, ShieldCheck, CheckCircle2, MessageSquare,
   AlertCircle, Sparkles, FileText, Paperclip, Image as ImageIcon, Download,
