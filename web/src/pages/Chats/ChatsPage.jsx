@@ -398,17 +398,42 @@ export default function ChatsPage({
     });
   }, [rawMessages, activeChat, activeEmail]);
 
-  // Automatically scroll to bottom when messages load or new message arrives
+  const prevChatIdRef = useRef(selectedChatId);
+  const isChatSwitchRef = useRef(true);
+
   useEffect(() => {
+    if (prevChatIdRef.current !== selectedChatId) {
+      prevChatIdRef.current = selectedChatId;
+      isChatSwitchRef.current = true;
+    }
+  }, [selectedChatId]);
+
+  // Instantly snap to the bottom on chat switch, or smooth scroll on new message
+  useLayoutEffect(() => {
     if (safeMessages.length > 0 && !targetMessageId && !targetKeyword) {
-      const scrollTimer = setTimeout(() => {
+      const container = messagesThreadContainerRef.current;
+      if (isChatSwitchRef.current) {
+        // Direct instant jump to latest message on chat switch (like Teams)
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+        }
+        const timer = setTimeout(() => {
+          if (container) container.scrollTop = container.scrollHeight;
+          if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+          isChatSwitchRef.current = false;
+        }, 40);
+        return () => clearTimeout(timer);
+      } else {
+        // Smooth scroll for new message in the same chat
         if (messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        } else if (messagesThreadContainerRef.current) {
-          messagesThreadContainerRef.current.scrollTop = messagesThreadContainerRef.current.scrollHeight;
+        } else if (container) {
+          container.scrollTop = container.scrollHeight;
         }
-      }, 100);
-      return () => clearTimeout(scrollTimer);
+      }
     }
   }, [safeMessages.length, selectedChatId, targetMessageId, targetKeyword]);
 

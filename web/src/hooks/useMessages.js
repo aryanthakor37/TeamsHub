@@ -18,8 +18,10 @@ export const useMessages = (chatId, accountId) => {
       const stored = localStorage.getItem(`teamshub_msgs_${id}`);
       if (stored) {
         const parsed = JSON.parse(stored);
-        messageMemoryCache.set(id, parsed);
-        return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          messageMemoryCache.set(id, parsed);
+          return parsed;
+        }
       }
     } catch (e) {}
     return [];
@@ -57,8 +59,11 @@ export const useMessages = (chatId, accountId) => {
       return;
     }
 
-    const cached = messageMemoryCache.get(chatId);
-    if (!cached || cached.length === 0) {
+    const cached = messageMemoryCache.get(chatId) || getInitialMessages(chatId);
+    if (cached && cached.length > 0) {
+      setMessages(cached);
+      setLoading(false);
+    } else {
       setLoading(true);
     }
 
@@ -67,11 +72,13 @@ export const useMessages = (chatId, accountId) => {
     try {
       const data = await fetchMessagesFromBackend(chatId, accountId);
       const items = data?.items || [];
-      setMessages(items);
-      messageMemoryCache.set(chatId, items);
-      try {
-        localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(items.slice(-50)));
-      } catch (e) {}
+      if (items.length > 0) {
+        setMessages(items);
+        messageMemoryCache.set(chatId, items);
+        try {
+          localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(items.slice(-50)));
+        } catch (e) {}
+      }
     } catch (err) {
       if (!cached || cached.length === 0) {
         setError(err.message || 'Failed to load conversation messages.');
