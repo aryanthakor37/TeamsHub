@@ -290,15 +290,28 @@ export default function ChatsPage({
   // Extract all unique verified Guest Workspaces / Organizations from actual chats
   const guestOrganizations = useMemo(() => {
     const orgs = new Set();
+    const connectedEmails = (connectedAccounts || []).map(a => (a.email || a.username || '').toLowerCase().trim());
+    const connectedUsers = connectedEmails.map(e => e.split('@')[0]);
+    const connectedNames = (connectedAccounts || []).map(a => (a.displayName || a.name || '').toLowerCase().trim());
     const homeDomains = (connectedAccounts || []).map(a => (a.email || '').split('@')[1]?.toLowerCase()).filter(Boolean);
+
     (chats || []).forEach(c => {
       const comp = (c.company || c.accountBadge || '').trim();
       const compLower = comp.toLowerCase();
+      const isOwnerIdentity =
+        connectedEmails.includes(compLower) ||
+        connectedUsers.includes(compLower) ||
+        connectedNames.includes(compLower) ||
+        connectedUsers.some(u => u && (compLower.includes(u) || u.includes(compLower))) ||
+        connectedNames.some(n => n && (compLower.includes(n) || n.includes(compLower)));
+
       if (
         comp &&
+        !isOwnerIdentity &&
         !compLower.includes('microsoft account') &&
         !compLower.includes('teams chat') &&
-        !homeDomains.some(d => compLower.includes(d.split('.')[0]))
+        !compLower.includes('estatic') &&
+        !homeDomains.some(d => d && compLower.includes(d.split('.')[0]))
       ) {
         orgs.add(comp);
       }
