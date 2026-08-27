@@ -80,7 +80,7 @@ export const useMessages = (chatId, accountId) => {
       // Guard against race conditions when user switched chats quickly
       if (activeChatIdRef.current !== chatId) return;
 
-      const items = data?.items || [];
+      const items = data?.items || data?.messages || (Array.isArray(data) ? data : []);
       if (items.length > 0) {
         setMessages(items);
         messageMemoryCache.set(chatId, items);
@@ -107,7 +107,7 @@ export const useMessages = (chatId, accountId) => {
       const data = await fetchMessagesFromBackend(chatId, accountId);
       if (activeChatIdRef.current !== chatId) return;
 
-      const newItems = data.items || [];
+      const newItems = data?.items || data?.messages || (Array.isArray(data) ? data : []);
       if (newItems.length === 0) return;
 
       setMessages((prev) => {

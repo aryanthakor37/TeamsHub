@@ -295,8 +295,17 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
 
     const result = await response.json();
 
-    if (response.ok && result.data && Array.isArray(result.data.messages) && result.data.messages.length > 0) {
-      return result.data;
+    const responseItems = result.data?.items || result.data?.messages || [];
+    if (response.ok && Array.isArray(responseItems) && responseItems.length > 0) {
+      return {
+        chatId: chatId,
+        items: responseItems,
+        messages: responseItems,
+        page: 1,
+        limit: 50,
+        total: responseItems.length,
+        hasMore: false
+      };
     }
 
     // Direct Graph fallback
@@ -310,6 +319,7 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
         if (directMsgs.length > 0) {
           return {
             chatId: chatId,
+            items: directMsgs,
             messages: directMsgs,
             page: 1,
             limit: 50,
@@ -320,7 +330,7 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
       }
     }
 
-    return result.data || { messages: [] };
+    return { chatId: chatId, items: responseItems, messages: responseItems, total: responseItems.length, hasMore: false };
   } catch (error) {
     console.warn('[TeamsHub Chat API] Direct messages fallback:', error.message);
     const allAccounts = msalInstance.getAllAccounts() || [];
@@ -331,7 +341,7 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
       if (token) {
         const directMsgs = await fetchMessagesDirectFromGraph(token, chatId, target.username);
         if (directMsgs.length > 0) {
-          return { chatId: chatId, messages: directMsgs, page: 1, limit: 50, total: directMsgs.length, hasMore: false };
+          return { chatId: chatId, items: directMsgs, messages: directMsgs, page: 1, limit: 50, total: directMsgs.length, hasMore: false };
         }
       }
     }
