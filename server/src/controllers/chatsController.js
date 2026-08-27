@@ -11,6 +11,7 @@ const {
   sendGraphChatMessage,
   setGraphMessageReaction,
   unsetGraphMessageReaction,
+  getUnicodeReaction,
   fetchGraphMessageImage,
   normalizeGraphChat,
   normalizeGraphMessage,

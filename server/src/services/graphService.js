@@ -276,44 +276,77 @@ const sendGraphChatMessage = async (accessToken, chatId, content, attachments = 
   });
 };
 
+const EMOJI_TO_UNICODE_MAP = {
+  'like': '👍',
+  'thumbsup': '👍',
+  '👍': '👍',
+  'heart': '❤️',
+  'love': '❤️',
+  '❤️': '❤️',
+  'laugh': '😂',
+  '😂': '😂',
+  'surprised': '😮',
+  '😮': '😮',
+  'sad': '😢',
+  '😢': '😢',
+  'applause': '👏',
+  'clap': '👏',
+  '👏': '👏',
+  'angry': '😡',
+  '😡': '😡'
+};
+
+const getUnicodeReaction = (reaction) => {
+  if (!reaction) return '👍';
+  if (EMOJI_TO_UNICODE_MAP[reaction]) return EMOJI_TO_UNICODE_MAP[reaction];
+  if (typeof reaction === 'string' && EMOJI_TO_UNICODE_MAP[reaction.toLowerCase()]) {
+    return EMOJI_TO_UNICODE_MAP[reaction.toLowerCase()];
+  }
+  return reaction;
+};
+
 /**
  * Set a reaction on a message — POST /v1.0/chats/{chatId}/messages/{messageId}/setReaction
- * reactionType: 'like' | 'heart' | 'laugh' | 'surprised' | 'sad' | 'applause' | 'angry'
+ * Microsoft Graph exclusively expects a Unicode emoji character (e.g. 👍, ❤️, 😂, 😮, 😢, 👏, 😡)
  */
 const setGraphMessageReaction = async (accessToken, chatId, messageId, reactionType) => {
   const cleanChatId = decodeURIComponent(chatId);
   const cleanMsgId = decodeURIComponent(messageId);
+  const unicodeEmoji = getUnicodeReaction(reactionType);
+
   try {
     return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/setReaction`, {
       method: 'POST',
-      body: JSON.stringify({ reactionType })
+      body: JSON.stringify({ reactionType: unicodeEmoji })
     });
   } catch (err) {
     console.warn('[Graph setReaction v1.0 failed, trying beta]', err.message);
     return await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/setReaction`, {
       method: 'POST',
-      body: JSON.stringify({ reactionType })
+      body: JSON.stringify({ reactionType: unicodeEmoji })
     });
   }
 };
 
 /**
  * Unset a reaction on a message — POST /v1.0/chats/{chatId}/messages/{messageId}/unsetReaction
- * reactionType: 'like' | 'heart' | 'laugh' | 'surprised' | 'sad' | 'applause' | 'angry'
+ * Microsoft Graph exclusively expects a Unicode emoji character (e.g. 👍, ❤️, 😂, 😮, 😢, 👏, 😡)
  */
 const unsetGraphMessageReaction = async (accessToken, chatId, messageId, reactionType) => {
   const cleanChatId = decodeURIComponent(chatId);
   const cleanMsgId = decodeURIComponent(messageId);
+  const unicodeEmoji = getUnicodeReaction(reactionType);
+
   try {
     return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/unsetReaction`, {
       method: 'POST',
-      body: JSON.stringify({ reactionType })
+      body: JSON.stringify({ reactionType: unicodeEmoji })
     });
   } catch (err) {
     console.warn('[Graph unsetReaction v1.0 failed, trying beta]', err.message);
     return await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/unsetReaction`, {
       method: 'POST',
-      body: JSON.stringify({ reactionType })
+      body: JSON.stringify({ reactionType: unicodeEmoji })
     });
   }
 };
@@ -782,7 +815,14 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     isOutgoing,
     attachments,
     quoteReply,
-    reactions: graphMessage.reactions || [],
+    reactions: (graphMessage.reactions || []).map((r) => ({
+      reactionType: r.reactionType || '👍',
+      createdDateTime: r.createdDateTime,
+      user: {
+        displayName: r.user?.user?.displayName || r.user?.displayName || (r.user?.email ? r.user.email.split('@')[0] : 'User'),
+        email: r.user?.user?.email || r.user?.email || ''
+      }
+    })),
     createdDateTime: graphMessage.createdDateTime || new Date().toISOString()
   };
 };
@@ -1807,6 +1847,7 @@ module.exports = {
   sendGraphChatMessage,
   setGraphMessageReaction,
   unsetGraphMessageReaction,
+  getUnicodeReaction,
   fetchGraphMessageImage,
   fetchGraphRecentFiles,
   normalizeGraphChat,

@@ -12,13 +12,15 @@ export const TEAMS_REACTIONS = [
 ];
 
 export const getEmojiForReactionType = (type) => {
-  const match = TEAMS_REACTIONS.find((r) => r.type === type);
-  return match ? match.emoji : '👍';
+  if (!type) return '👍';
+  const match = TEAMS_REACTIONS.find((r) => r.type === type.toLowerCase() || r.emoji === type);
+  return match ? match.emoji : type;
 };
 
 export const getReactionTypeForEmoji = (emoji) => {
-  const match = TEAMS_REACTIONS.find((r) => r.emoji === emoji);
-  return match ? match.type : 'like';
+  if (!emoji) return 'like';
+  const match = TEAMS_REACTIONS.find((r) => r.emoji === emoji || r.type === emoji.toLowerCase());
+  return match ? match.type : emoji;
 };
 
 export default function MessageReactionsBar({
