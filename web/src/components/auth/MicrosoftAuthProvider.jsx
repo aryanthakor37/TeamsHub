@@ -278,6 +278,7 @@ export const MicrosoftAuthProvider = ({ children }) => {
         avatar: result.account.avatar || ''
       });
       setAuthState('AUTHENTICATED');
+      window.dispatchEvent(new CustomEvent('teamshub:account-connected', { detail: { account: result.account } }));
       return { success: true, isDuplicate: result.isDuplicate };
     } else {
       setAuthState('ERROR');

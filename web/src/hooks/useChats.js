@@ -136,15 +136,21 @@ export const useChats = () => {
       setTimeout(() => loadChats(true), 300);
     };
 
+    const handleAccountConnected = () => {
+      loadChats(true);
+    };
+
     window.addEventListener('teamshub:chat-marked-read', handleReadEvent);
     window.addEventListener('teamshub:logout', handleLogoutEvent);
     window.addEventListener('teamshub:account-switched', handleAccountSwitched);
     window.addEventListener('teamshub:account-disconnected', handleAccountDisconnected);
+    window.addEventListener('teamshub:account-connected', handleAccountConnected);
     return () => {
       window.removeEventListener('teamshub:chat-marked-read', handleReadEvent);
       window.removeEventListener('teamshub:logout', handleLogoutEvent);
       window.removeEventListener('teamshub:account-switched', handleAccountSwitched);
       window.removeEventListener('teamshub:account-disconnected', handleAccountDisconnected);
+      window.removeEventListener('teamshub:account-connected', handleAccountConnected);
     };
   }, []);
 
@@ -166,7 +172,19 @@ export const useChats = () => {
   };
 
   const loadChats = useCallback(async (isUserRefresh = false) => {
-    if (isUserRefresh || chats.length === 0) {
+    let activeAccounts = [];
+    try {
+      activeAccounts = msalInstance.getAllAccounts() || [];
+    } catch (e) {}
+    const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+
+    if (activeAccounts.length === 0 && !activeEmail) {
+      setChats([]);
+      setLoading(false);
+      return;
+    }
+
+    if (isUserRefresh) {
       setLoading(true);
     }
     setError(null);
@@ -193,13 +211,10 @@ export const useChats = () => {
       isInitialLoad.current = false;
     } catch (err) {
       console.warn('[useChats] load error:', err.message);
-      if (chats.length === 0) {
-        setError(err.message || 'Failed to load Microsoft Graph chats.');
-      }
     } finally {
       setLoading(false);
     }
-  }, [chats.length]);
+  }, []);
 
   const loadChatsSilently = useCallback(async () => {
     try {
@@ -306,13 +321,13 @@ export const useChats = () => {
   useEffect(() => {
     loadChats();
     
-    // Fast background polling every 5 seconds for live Teams incoming messages
+    // Background polling every 5 seconds for live Teams incoming messages
     const interval = setInterval(() => {
       loadChatsSilently();
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [loadChats, loadChatsSilently]);
+  }, []);
 
   const refresh = async () => {
     setRefreshing(true);
