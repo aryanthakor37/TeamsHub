@@ -968,16 +968,28 @@ const unsetMessageReaction = async (req, res) => {
 // GET /api/chats/:id/messages/:msgId/hostedContents/:contentId
 // ============================================================
 
+const hostedImageCache = new Map();
+
 const getMessageImage = async (req, res) => {
   try {
     const { id, msgId, contentId } = req.params;
     const clientEmail = (req.query.email || req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
-    let accessToken = req.microsoftAccessToken;
-
     const rawId = decodeURIComponent(id);
     let microsoftChatId = rawId;
+
+    const cacheKey = `${microsoftChatId}:${msgId}:${contentId}`;
+    if (hostedImageCache.has(cacheKey)) {
+      const cached = hostedImageCache.get(cacheKey);
+      res.set('Content-Type', cached.contentType || 'image/jpeg');
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.send(cached.buffer);
+    }
+
+    const candidateTokens = [];
+    if (req.query.token) candidateTokens.push(req.query.token);
+    if (req.microsoftAccessToken) candidateTokens.push(req.microsoftAccessToken);
+
     const dbAvailable = Chat.db && Chat.db.readyState === 1;
-    let targetAccount = null;
 
     if (dbAvailable) {
       let chatDoc = null;
@@ -999,60 +1011,41 @@ const getMessageImage = async (req, res) => {
         } else if (chatDoc.chatId && chatDoc.chatId.startsWith('19:')) {
           microsoftChatId = chatDoc.chatId;
         }
+      }
 
-        if (chatDoc.connectedAccountId) {
-          if (/^[0-9a-fA-F]{24}$/.test(chatDoc.connectedAccountId)) {
-            targetAccount = await ConnectedAccount.findById(chatDoc.connectedAccountId).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+      const allAccounts = await ConnectedAccount.find({
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken email displayName');
+
+      allAccounts.forEach(acc => {
+        if (acc.microsoftAccessToken && !candidateTokens.includes(acc.microsoftAccessToken)) {
+          if (clientEmail && acc.email && acc.email.toLowerCase() === clientEmail) {
+            candidateTokens.unshift(acc.microsoftAccessToken);
           } else {
-            targetAccount = await ConnectedAccount.findOne({
-              $or: [
-                { accountId: chatDoc.connectedAccountId },
-                { email: chatDoc.connectedAccountId.toLowerCase() }
-              ]
-            }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
+            candidateTokens.push(acc.microsoftAccessToken);
           }
         }
-      }
+      });
     }
 
-    if (!accessToken && dbAvailable) {
-      if (!targetAccount && clientEmail) {
-        targetAccount = await ConnectedAccount.findOne({
-          email: clientEmail,
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
-      if (!targetAccount && req.user?._id) {
-        targetAccount = await ConnectedAccount.findOne({
-          userId: req.user._id,
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
-      if (!targetAccount) {
-        targetAccount = await ConnectedAccount.findOne({
-          microsoftAccessToken: { $exists: true, $ne: '' }
-        }).sort({ updatedAt: -1 }).select('+microsoftAccessToken +tokenExpiresAt email displayName');
-      }
-      if (targetAccount && targetAccount.microsoftAccessToken) {
-        accessToken = targetAccount.microsoftAccessToken;
-      }
-    }
+    if (candidateTokens.length > 0 && microsoftChatId) {
+      const decodedContentId = decodeURIComponent(contentId);
+      for (const token of candidateTokens) {
+        try {
+          const { buffer, contentType } = await fetchGraphMessageImage(
+            token,
+            microsoftChatId,
+            msgId,
+            decodedContentId
+          );
 
-    if (accessToken && microsoftChatId) {
-      try {
-        const decodedContentId = decodeURIComponent(contentId);
-        const { buffer, contentType } = await fetchGraphMessageImage(
-          accessToken,
-          microsoftChatId,
-          msgId,
-          decodedContentId
-        );
-
-        res.set('Content-Type', contentType || 'image/jpeg');
-        res.set('Cache-Control', 'public, max-age=86400');
-        return res.send(buffer);
-      } catch (graphErr) {
-        console.warn('[TeamsHub getMessageImage Graph fetch warning]:', graphErr.message);
+          if (buffer && buffer.length > 0) {
+            hostedImageCache.set(cacheKey, { buffer, contentType: contentType || 'image/jpeg' });
+            res.set('Content-Type', contentType || 'image/jpeg');
+            res.set('Cache-Control', 'public, max-age=31536000, immutable');
+            return res.send(buffer);
+          }
+        } catch (graphErr) {}
       }
     }
 
@@ -1061,7 +1054,6 @@ const getMessageImage = async (req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=86400');
     return res.status(200).send(svgPhotoCard);
   } catch (error) {
-    console.warn('[TeamsHub getMessageImage Error]:', error.message);
     const svgPhotoCard = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320"><defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e0e7ff"/><stop offset="100%" stop-color="#c7d2fe"/></linearGradient><linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4f46e5"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#bgGrad)" rx="16"/><circle cx="240" cy="130" r="48" fill="url(#iconGrad)" opacity="0.9"/><path d="M216 142l16-20 14 16 22-28 24 32H216z" fill="#ffffff"/><circle cx="232" cy="116" r="6" fill="#ffffff"/><text x="240" y="215" dominant-baseline="middle" text-anchor="middle" fill="#3730a3" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16">Teams Photo Attachment</text><text x="240" y="240" dominant-baseline="middle" text-anchor="middle" fill="#4338ca" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="12">Shared via Microsoft Teams</text></svg>`;
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Cache-Control', 'public, max-age=86400');
