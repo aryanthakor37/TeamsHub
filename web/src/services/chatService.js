@@ -111,7 +111,117 @@ const parseApiError = (responseData) => {
 };
 
 /**
- * Fetch Microsoft Graph Chats from Backend API
+ * Direct Client-Side Microsoft Graph API Chat Fetcher (Resilient Fallback)
+ */
+export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisplayName) => {
+  if (!token) return [];
+  const cleanEmail = (accountEmail || '').toLowerCase().trim();
+  const cleanName = accountDisplayName || cleanEmail.split('@')[0];
+
+  let rawList = [];
+  try {
+    const res = await fetch('https://graph.microsoft.com/v1.0/me/chats?$expand=members,lastMessagePreview&$top=50', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      rawList = data.value || [];
+    }
+  } catch (e) {}
+
+  if (rawList.length === 0) {
+    try {
+      const res = await fetch('https://graph.microsoft.com/v1.0/me/chats?$top=50', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        rawList = data.value || [];
+      }
+    } catch (e) {}
+  }
+
+  if (rawList.length === 0) return [];
+
+  return rawList.map(gc => {
+    let participantName = '';
+    if (gc.chatType === 'group' && gc.topic) {
+      participantName = gc.topic;
+    } else if (gc.members && gc.members.length > 0) {
+      const others = gc.members.filter(m => (m.email || m.userPrincipalName || '').toLowerCase().trim() !== cleanEmail);
+      if (others.length > 0) {
+        participantName = others.map(m => m.displayName || m.email?.split('@')[0]).join(', ');
+      } else {
+        participantName = `${gc.members[0]?.displayName || 'You'} (You)`;
+      }
+    }
+    if (!participantName) {
+      participantName = gc.chatType === 'oneOnOne' ? 'Direct Message' : 'Group Chat';
+    }
+
+    const lastMsgContent = gc.lastMessagePreview?.body?.content
+      ? gc.lastMessagePreview.body.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
+      : '';
+
+    return {
+      _id: gc.id,
+      microsoftChatId: gc.id,
+      connectedAccountId: cleanEmail,
+      accountEmail: cleanEmail,
+      participant: participantName,
+      role: gc.chatType === 'oneOnOne' ? 'Direct Message' : 'Group Chat',
+      company: cleanName,
+      accountBadge: cleanName,
+      chatType: gc.chatType || 'oneOnOne',
+      lastMessagePreview: lastMsgContent,
+      lastMessageTimestamp: gc.lastMessagePreview?.createdDateTime || gc.lastUpdatedDateTime || new Date().toISOString(),
+      unreadCount: 0,
+      onlineStatus: 'online'
+    };
+  });
+};
+
+/**
+ * Direct Client-Side Microsoft Graph API Message Fetcher (Resilient Fallback)
+ */
+export const fetchMessagesDirectFromGraph = async (token, chatId, userEmail) => {
+  if (!token || !chatId) return [];
+  const cleanUserEmail = (userEmail || '').toLowerCase().trim();
+  try {
+    const res = await fetch(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const rawMsgs = data.value || [];
+      return rawMsgs.map(m => {
+        const senderEmail = (m.from?.user?.email || m.from?.user?.userPrincipalName || '').toLowerCase().trim();
+        const senderName = m.from?.user?.displayName || senderEmail || 'Unknown';
+        const isFromMe = !!(cleanUserEmail && senderEmail && (senderEmail === cleanUserEmail || senderEmail.includes(cleanUserEmail.split('@')[0])));
+
+        return {
+          _id: m.id,
+          microsoftMessageId: m.id,
+          chatId: chatId,
+          senderName: senderName,
+          senderEmail: senderEmail,
+          isFromMe: isFromMe,
+          content: m.body?.content || '',
+          contentType: m.body?.contentType || 'text',
+          timestamp: m.createdDateTime || new Date().toISOString(),
+          createdDateTime: m.createdDateTime || new Date().toISOString(),
+          attachments: m.attachments || [],
+          reactions: m.reactions || [],
+          status: 'delivered'
+        };
+      });
+    }
+  } catch (e) {}
+  return [];
+};
+
+/**
+ * Fetch Microsoft Graph Chats from Backend API with Instant Direct Graph Fallback
  */
 export const fetchChatsFromBackend = async (accountId = 'all', page = 1, limit = 20) => {
   try {
@@ -123,20 +233,56 @@ export const fetchChatsFromBackend = async (accountId = 'all', page = 1, limit =
 
     const result = await response.json();
 
-    if (!response.ok) {
-      const error = parseApiError(result);
-      throw new Error(`[${error.code}] ${error.message}`);
+    if (response.ok && result.data && Array.isArray(result.data.items) && result.data.items.length > 0) {
+      return result.data;
     }
 
-    return result.data;
+    // Direct Microsoft Graph fallback if backend returned empty array
+    let directChats = [];
+    const allAccounts = msalInstance.getAllAccounts() || [];
+    for (const acc of allAccounts) {
+      const email = (acc.username || '').toLowerCase().trim();
+      let token = localStorage.getItem(`teamshub_token_${email}`);
+      if (!token) token = await acquireGraphToken(acc.homeAccountId || acc.username);
+      if (token) {
+        const accountChats = await fetchChatsDirectFromGraph(token, email, acc.name || email.split('@')[0]);
+        directChats.push(...accountChats);
+      }
+    }
+
+    if (directChats.length > 0) {
+      return {
+        items: directChats,
+        page: 1,
+        limit: 50,
+        total: directChats.length,
+        hasMore: false
+      };
+    }
+
+    return result.data || { items: [] };
   } catch (error) {
-    console.warn('[TeamsHub Chat API]', error.message);
+    console.warn('[TeamsHub Chat API] Trying direct fallback:', error.message);
+    let directChats = [];
+    const allAccounts = msalInstance.getAllAccounts() || [];
+    for (const acc of allAccounts) {
+      const email = (acc.username || '').toLowerCase().trim();
+      let token = localStorage.getItem(`teamshub_token_${email}`);
+      if (!token) token = await acquireGraphToken(acc.homeAccountId || acc.username);
+      if (token) {
+        const accountChats = await fetchChatsDirectFromGraph(token, email, acc.name || email.split('@')[0]);
+        directChats.push(...accountChats);
+      }
+    }
+    if (directChats.length > 0) {
+      return { items: directChats, page: 1, limit: 50, total: directChats.length, hasMore: false };
+    }
     throw error;
   }
 };
 
 /**
- * Fetch Conversation Message History
+ * Fetch Conversation Message History with Direct Graph Fallback
  */
 export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limit = 50) => {
   try {
@@ -149,14 +295,46 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
 
     const result = await response.json();
 
-    if (!response.ok) {
-      const error = parseApiError(result);
-      throw new Error(`[${error.code}] ${error.message}`);
+    if (response.ok && result.data && Array.isArray(result.data.messages) && result.data.messages.length > 0) {
+      return result.data;
     }
 
-    return result.data;
+    // Direct Graph fallback
+    const allAccounts = msalInstance.getAllAccounts() || [];
+    const target = allAccounts.find(a => (a.username && a.username.toLowerCase() === accountId?.toLowerCase())) || allAccounts[0];
+    if (target) {
+      let token = localStorage.getItem(`teamshub_token_${target.username.toLowerCase()}`);
+      if (!token) token = await acquireGraphToken(target.homeAccountId || target.username);
+      if (token) {
+        const directMsgs = await fetchMessagesDirectFromGraph(token, chatId, target.username);
+        if (directMsgs.length > 0) {
+          return {
+            chatId: chatId,
+            messages: directMsgs,
+            page: 1,
+            limit: 50,
+            total: directMsgs.length,
+            hasMore: false
+          };
+        }
+      }
+    }
+
+    return result.data || { messages: [] };
   } catch (error) {
-    console.warn('[TeamsHub Chat API]', error.message);
+    console.warn('[TeamsHub Chat API] Direct messages fallback:', error.message);
+    const allAccounts = msalInstance.getAllAccounts() || [];
+    const target = allAccounts[0];
+    if (target) {
+      let token = localStorage.getItem(`teamshub_token_${target.username?.toLowerCase()}`);
+      if (!token) token = await acquireGraphToken(target.homeAccountId || target.username);
+      if (token) {
+        const directMsgs = await fetchMessagesDirectFromGraph(token, chatId, target.username);
+        if (directMsgs.length > 0) {
+          return { chatId: chatId, messages: directMsgs, page: 1, limit: 50, total: directMsgs.length, hasMore: false };
+        }
+      }
+    }
     throw error;
   }
 };
