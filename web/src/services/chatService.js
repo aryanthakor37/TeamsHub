@@ -46,7 +46,11 @@ const getAuthHeaders = async (accountId) => {
     let token = tokenMap[cleanAcc] || localStorage.getItem(`teamshub_token_${cleanAcc}`);
 
     if (!token) {
-      const matchKey = Object.keys(tokenMap).find(k => k.includes(cleanAcc) || cleanAcc.includes(k) || (cleanAcc.includes('aryan') && k.includes('aryan')) || (cleanAcc.includes('keval') && k.includes('keval')));
+      const matchUser = cleanAcc.split('@')[0];
+      const matchKey = Object.keys(tokenMap).find(k => {
+        const kUser = k.split('@')[0];
+        return k.includes(cleanAcc) || cleanAcc.includes(k) || (matchUser && (k.includes(matchUser) || matchUser.includes(kUser)));
+      });
       if (matchKey) token = tokenMap[matchKey];
     }
 

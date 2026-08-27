@@ -93,13 +93,15 @@ router.get('/', async (req, res) => {
     // Filter by specific connectedAccountId if requested
     if (connectedAccountId && connectedAccountId !== 'all' && connectedAccountId !== '[object Object]') {
       const filterKey = connectedAccountId.toLowerCase().trim();
+      const filterUser = filterKey.split('@')[0];
       const matched = targetAccounts.filter(a => {
         const aEmail = (a.email || '').toLowerCase().trim();
         const aId = (a._id || a.accountId || '').toString().toLowerCase().trim();
+        const aName = (a.displayName || a.name || '').toLowerCase().trim();
+        const aUser = aEmail.split('@')[0];
         return aEmail === filterKey || aId === filterKey || aEmail.includes(filterKey) || filterKey.includes(aEmail) ||
-               (filterKey.includes('aryan') && aEmail.includes('aryan')) ||
-               (filterKey.includes('keval') && aEmail.includes('keval')) ||
-               (filterKey.includes('laxay') && aEmail.includes('laxay'));
+               (aName && (aName.includes(filterKey) || filterKey.includes(aName))) ||
+               (filterUser && (aEmail.includes(filterUser) || aId.includes(filterUser) || (aUser && (aUser.includes(filterUser) || filterUser.includes(aUser)))));
       });
       if (matched.length > 0) {
         targetAccounts = matched;
@@ -262,13 +264,13 @@ const handleFileContentStream = async (req, res) => {
           const emailClean = (email || '').toLowerCase().trim();
           const accIdClean = (acc._id || '').toLowerCase().trim();
           const msIdClean = (acc.accountId || '').toLowerCase().trim();
+          const userClean = emailClean.split('@')[0];
           if (
             accIdClean === cleanAcc ||
             msIdClean === cleanAcc ||
             emailClean === cleanAcc ||
             cleanAcc.includes(emailClean.replace(/[^a-zA-Z0-9]/g, '_')) ||
-            cleanAcc.includes('aryan') && emailClean.includes('aryan') ||
-            cleanAcc.includes('keval') && emailClean.includes('keval')
+            (userClean && (cleanAcc.includes(userClean) || userClean.includes(cleanAcc)))
           ) {
             accessToken = acc.microsoftAccessToken;
             break;
@@ -282,11 +284,11 @@ const handleFileContentStream = async (req, res) => {
           const map = JSON.parse(req.headers['x-account-tokens']);
           for (const [email, token] of Object.entries(map)) {
             const emailClean = (email || '').toLowerCase().trim();
+            const userClean = emailClean.split('@')[0];
             if (
               emailClean === cleanAcc ||
               cleanAcc.includes(emailClean.replace(/[^a-zA-Z0-9]/g, '_')) ||
-              cleanAcc.includes('aryan') && emailClean.includes('aryan') ||
-              cleanAcc.includes('keval') && emailClean.includes('keval')
+              (userClean && (cleanAcc.includes(userClean) || userClean.includes(cleanAcc)))
             ) {
               accessToken = token;
               break;

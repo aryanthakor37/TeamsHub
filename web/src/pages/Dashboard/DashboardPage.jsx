@@ -72,9 +72,24 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
     if (!c) return '';
     const email = (c.accountEmail || '').toLowerCase().trim();
     if (email && email.includes('@')) return email;
+
+    const accId = (c.connectedAccountId || '').toLowerCase().trim();
+    const foundByAccId = (connectedAccounts || []).find(a => {
+      const id = (a._id || a.accountId || a.id || '').toString().toLowerCase().trim();
+      return id && (id === accId || accId.includes(id));
+    });
+    if (foundByAccId && foundByAccId.email) return foundByAccId.email.toLowerCase().trim();
+
     const badge = (c.company || c.accountBadge || '').toLowerCase().trim();
-    if (badge.includes('aryan') || badge.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
-    if (badge.includes('keval') || badge.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
+    const foundByBadge = (connectedAccounts || []).find(a => {
+      const aName = (a.displayName || a.name || '').toLowerCase().trim();
+      const aEmail = (a.email || '').toLowerCase().trim();
+      const aUser = aEmail.split('@')[0];
+      return (aName && (badge.includes(aName) || aName.includes(badge))) ||
+             (aUser && (badge.includes(aUser) || aUser.includes(badge)));
+    });
+    if (foundByBadge && foundByBadge.email) return foundByBadge.email.toLowerCase().trim();
+
     return email;
   };
 
@@ -106,10 +121,10 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
     return connectedAccounts.some(acc => {
       const accEmail = (acc.email || '').toLowerCase().trim();
       const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
-      if (accEmail && chatOwnerEmail === accEmail) return true;
-      if (accName && chat.company && chat.company.toLowerCase().includes(accName)) return true;
-      if (accEmail.includes('aryan') && chatOwnerEmail.includes('aryan')) return true;
-      if (accEmail.includes('keval') && chatOwnerEmail.includes('keval')) return true;
+      const accUser = accEmail.split('@')[0];
+      if (accEmail && (chatOwnerEmail === accEmail || chatOwnerEmail.includes(accEmail) || accEmail.includes(chatOwnerEmail))) return true;
+      if (accName && chat.company && (chat.company.toLowerCase().includes(accName) || accName.includes(chat.company.toLowerCase()))) return true;
+      if (accUser && (chatOwnerEmail.includes(accUser) || (chat.company && chat.company.toLowerCase().includes(accUser)))) return true;
       return false;
     });
   });
@@ -121,10 +136,10 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
     return connectedAccounts.some(acc => {
       const accEmail = (acc.email || '').toLowerCase().trim();
       const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
-      if (accEmail && fileOwnerEmail === accEmail) return true;
-      if (accName && file.account && file.account.toLowerCase().includes(accName)) return true;
-      if (accEmail.includes('aryan') && fileOwnerEmail.includes('aryan')) return true;
-      if (accEmail.includes('keval') && fileOwnerEmail.includes('keval')) return true;
+      const accUser = accEmail.split('@')[0];
+      if (accEmail && (fileOwnerEmail === accEmail || fileOwnerEmail.includes(accEmail) || accEmail.includes(fileOwnerEmail))) return true;
+      if (accName && file.account && (file.account.toLowerCase().includes(accName) || accName.includes(file.account.toLowerCase()))) return true;
+      if (accUser && (fileOwnerEmail.includes(accUser) || (file.account && file.account.toLowerCase().includes(accUser)))) return true;
       return false;
     });
   });

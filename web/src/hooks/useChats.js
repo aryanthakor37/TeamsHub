@@ -125,10 +125,8 @@ export const useChats = () => {
         const cleanEmail = email.toLowerCase().trim();
         setChats((prev) => {
           const filtered = prev.filter((c) => {
-            const owner = (c.accountEmail || c.company || c.accountBadge || '').toLowerCase().trim();
-            if (owner === cleanEmail) return false;
-            if (cleanEmail.includes('keval') && owner.includes('keval')) return false;
-            if (cleanEmail.includes('aryan') && owner.includes('aryan')) return false;
+            const userClean = cleanEmail.split('@')[0];
+            if (owner === cleanEmail || owner.includes(cleanEmail) || (userClean && owner.includes(userClean))) return false;
             return true;
           });
           saveStoredLocalChats(filtered);

@@ -169,13 +169,15 @@ const getChats = async (req, res) => {
     // Filter by specific connectedAccountId if requested
     if (connectedAccountId && connectedAccountId !== 'all' && connectedAccountId !== '[object Object]') {
       const filterKey = connectedAccountId.toLowerCase().trim();
+      const filterUser = filterKey.split('@')[0];
       const matched = targetAccounts.filter(a => {
         const aEmail = (a.email || '').toLowerCase().trim();
         const aId = (a._id || a.accountId || '').toString().toLowerCase().trim();
+        const aName = (a.displayName || a.name || '').toLowerCase().trim();
+        const aUser = aEmail.split('@')[0];
         return aEmail === filterKey || aId === filterKey || aEmail.includes(filterKey) || filterKey.includes(aEmail) ||
-               (filterKey.includes('aryan') && aEmail.includes('aryan')) ||
-               (filterKey.includes('keval') && aEmail.includes('keval')) ||
-               (filterKey.includes('laxay') && aEmail.includes('laxay'));
+               (aName && (aName.includes(filterKey) || filterKey.includes(aName))) ||
+               (filterUser && (aEmail.includes(filterUser) || aId.includes(filterUser) || (aUser && (aUser.includes(filterUser) || filterUser.includes(aUser)))));
       });
       if (matched.length > 0) {
         targetAccounts = matched;

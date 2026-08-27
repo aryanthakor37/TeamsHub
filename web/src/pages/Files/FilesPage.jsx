@@ -1223,9 +1223,8 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
         const cleanEmail = email.toLowerCase().trim();
         setFiles(prev => prev.filter(f => {
           const owner = getFileOwnerEmail(f).toLowerCase().trim();
-          if (owner === cleanEmail) return false;
-          if (cleanEmail.includes('keval') && owner.includes('keval')) return false;
-          if (cleanEmail.includes('aryan') && owner.includes('aryan')) return false;
+          const userClean = cleanEmail.split('@')[0];
+          if (owner === cleanEmail || owner.includes(cleanEmail) || (userClean && owner.includes(userClean))) return false;
           return true;
         }));
       }
@@ -1425,14 +1424,24 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     if (!f) return '';
     const email = (f.accountEmail || '').toLowerCase().trim();
     if (email && email.includes('@')) return email;
-    const badge = (f.account || f.accountBadge || '').toLowerCase().trim();
-    if (badge.includes('aryan') || badge.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
-    if (badge.includes('keval') || badge.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
-    if (badge.includes('kaushal') || badge.includes('nimavat')) return 'kaushal.nimavat@estatic-infotech.com';
+
     const accId = (f.connectedAccountId || '').toLowerCase().trim();
-    if (accId.includes('aryan') || accId.includes('kumrecha')) return 'aryankumar.kumrecha@estatic-infotech.com';
-    if (accId.includes('keval') || accId.includes('trivedi')) return 'keval.trivedi@estatic-infotech.com';
-    if (accId.includes('kaushal') || badge.includes('nimavat')) return 'kaushal.nimavat@estatic-infotech.com';
+    const foundByAccId = (connectedAccounts || []).find(a => {
+      const id = (a._id || a.accountId || a.id || '').toString().toLowerCase().trim();
+      return id && (id === accId || accId.includes(id));
+    });
+    if (foundByAccId && foundByAccId.email) return foundByAccId.email.toLowerCase().trim();
+
+    const badge = (f.account || f.accountBadge || '').toLowerCase().trim();
+    const foundByBadge = (connectedAccounts || []).find(a => {
+      const aName = (a.displayName || a.name || '').toLowerCase().trim();
+      const aEmail = (a.email || '').toLowerCase().trim();
+      const aUser = aEmail.split('@')[0];
+      return (aName && (badge.includes(aName) || aName.includes(badge))) ||
+             (aUser && (badge.includes(aUser) || aUser.includes(badge)));
+    });
+    if (foundByBadge && foundByBadge.email) return foundByBadge.email.toLowerCase().trim();
+
     return email;
   };
 
