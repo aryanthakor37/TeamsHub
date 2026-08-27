@@ -291,27 +291,29 @@ export default function ChatsPage({
 
   // Extract all unique verified Guest Workspaces / Organizations from actual chats
   const guestOrganizations = useMemo(() => {
+    if (!isAccountConnected || uniqueConnectedAccounts.length === 0) return [];
     const orgs = new Set();
-    const connectedEmails = (uniqueConnectedAccounts || connectedAccounts || []).map(a => (a.email || a.username || '').toLowerCase().trim());
+    const connectedEmails = uniqueConnectedAccounts.map(a => (a.email || a.username || '').toLowerCase().trim());
     const connectedUsers = connectedEmails.map(e => e.split('@')[0]);
-    const connectedNames = (uniqueConnectedAccounts || connectedAccounts || []).map(a => (a.displayName || a.name || '').toLowerCase().trim());
-    const homeDomains = (uniqueConnectedAccounts || connectedAccounts || []).map(a => (a.email || '').split('@')[1]?.toLowerCase()).filter(Boolean);
+    const connectedNames = uniqueConnectedAccounts.map(a => (a.displayName || a.name || '').toLowerCase().trim().replace(/[`'"]/g, ''));
+    const homeDomains = uniqueConnectedAccounts.map(a => (a.email || '').split('@')[1]?.toLowerCase()).filter(Boolean);
 
     (chats || []).forEach(c => {
       const comp = (c.company || c.accountBadge || '').trim();
-      const compLower = comp.toLowerCase();
+      const compLower = comp.toLowerCase().replace(/[`'"]/g, '');
       const isOwnerIdentity =
         connectedEmails.includes(compLower) ||
         connectedUsers.includes(compLower) ||
         connectedNames.includes(compLower) ||
-        connectedUsers.some(u => u && (compLower.includes(u) || u.includes(compLower))) ||
-        connectedNames.some(n => n && (compLower.includes(n) || n.includes(compLower)));
+        connectedUsers.some(u => u && (compLower === u || compLower.includes(u) || u.includes(compLower))) ||
+        connectedNames.some(n => n && (compLower === n || compLower.includes(n) || n.includes(compLower)));
 
       if (
         comp &&
         !isOwnerIdentity &&
         !compLower.includes('microsoft account') &&
         !compLower.includes('teams chat') &&
+        !compLower.includes('direct message') &&
         !compLower.includes('estatic') &&
         !homeDomains.some(d => d && compLower.includes(d.split('.')[0]))
       ) {
@@ -319,7 +321,7 @@ export default function ChatsPage({
       }
     });
     return Array.from(orgs);
-  }, [chats, connectedAccounts, uniqueConnectedAccounts]);
+  }, [chats, uniqueConnectedAccounts, isAccountConnected]);
 
   const filteredChats = chats.filter((chat) => {
     const q = searchQuery.toLowerCase().trim();
@@ -844,152 +846,154 @@ export default function ChatsPage({
             </div>
           </div>
 
-          {/* Account Filter Chips Bar */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '6px',
-            alignItems: 'center',
-            paddingBottom: '4px'
-          }}>
-            <button
-              onClick={() => setSelectedFilterAccount('all')}
-              title="Show chats from all connected accounts"
-              style={{
-                padding: '5px 10px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.75rem',
-                fontWeight: selectedFilterAccount === 'all' ? '700' : '600',
-                backgroundColor: selectedFilterAccount === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                color: selectedFilterAccount === 'all' ? '#ffffff' : 'var(--text-secondary)',
-                border: selectedFilterAccount === 'all' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                boxShadow: selectedFilterAccount === 'all' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.18s ease'
-              }}
-            >
-              <span>✨</span>
-              <span>All Accounts</span>
-              <span style={{
-                backgroundColor: selectedFilterAccount === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-secondary)',
-                padding: '1px 5px',
-                borderRadius: '10px',
-                fontSize: '0.7rem',
-                fontWeight: '700'
-              }}>
-                {uniqueConnectedAccounts.length}
-              </span>
-            </button>
+          {/* Account Filter Chips Bar (Rendered only when accounts are connected) */}
+          {isAccountConnected && uniqueConnectedAccounts.length > 0 && (
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '6px',
+              alignItems: 'center',
+              paddingBottom: '4px'
+            }}>
+              <button
+                onClick={() => setSelectedFilterAccount('all')}
+                title="Show chats from all connected accounts"
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.75rem',
+                  fontWeight: selectedFilterAccount === 'all' ? '700' : '600',
+                  backgroundColor: selectedFilterAccount === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                  color: selectedFilterAccount === 'all' ? '#ffffff' : 'var(--text-secondary)',
+                  border: selectedFilterAccount === 'all' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                  boxShadow: selectedFilterAccount === 'all' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.18s ease'
+                }}
+              >
+                <span>✨</span>
+                <span>All Accounts</span>
+                <span style={{
+                  backgroundColor: selectedFilterAccount === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-secondary)',
+                  padding: '1px 5px',
+                  borderRadius: '10px',
+                  fontSize: '0.7rem',
+                  fontWeight: '700'
+                }}>
+                  {uniqueConnectedAccounts.length}
+                </span>
+              </button>
 
-            {uniqueConnectedAccounts.map((acc) => {
-              const accEmailKey = (acc.email || acc.username || '').toLowerCase().trim();
-              const isSelected = selectedFilterAccount === accEmailKey || (selectedFilterAccount && (
-                selectedFilterAccount === (acc._id || '').toString() ||
-                selectedFilterAccount === (acc.accountId || '').toString() ||
-                selectedFilterAccount === (acc.email || '').toLowerCase() ||
-                selectedFilterAccount === (acc.username || '').toLowerCase()
-              ));
-              const rawName = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
-              const name = rawName.replace(/[`'"]/g, '').trim();
-              const initial = (name[0] || 'A').toUpperCase();
-              return (
-                <button
-                  key={acc._id || acc.email || acc.accountId}
-                  onClick={() => {
-                    setSelectedFilterAccount(accEmailKey);
-                  }}
-                  title={`${name} (${acc.email || ''})`}
-                  style={{
-                    padding: '4px 10px 4px 6px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.75rem',
-                    fontWeight: isSelected ? '700' : '600',
-                    backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                    border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                    boxShadow: isSelected ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.18s ease'
-                  }}
-                >
-                  <span style={{
-                    width: '18px',
-                    height: '18px',
-                    borderRadius: '50%',
-                    backgroundColor: isSelected ? 'rgba(255,255,255,0.3)' : getAvatarColor(name),
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.65rem',
-                    fontWeight: '700',
-                    flexShrink: 0
-                  }}>
-                    {initial}
-                  </span>
-                  <span style={{
-                    maxWidth: '130px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {name}
-                  </span>
-                </button>
-              );
-            })}
+              {uniqueConnectedAccounts.map((acc) => {
+                const accEmailKey = (acc.email || acc.username || '').toLowerCase().trim();
+                const isSelected = selectedFilterAccount === accEmailKey || (selectedFilterAccount && (
+                  selectedFilterAccount === (acc._id || '').toString() ||
+                  selectedFilterAccount === (acc.accountId || '').toString() ||
+                  selectedFilterAccount === (acc.email || '').toLowerCase() ||
+                  selectedFilterAccount === (acc.username || '').toLowerCase()
+                ));
+                const rawName = acc.displayName || acc.company || acc.email?.split('@')[0] || 'Account';
+                const name = rawName.replace(/[`'"]/g, '').trim();
+                const initial = (name[0] || 'A').toUpperCase();
+                return (
+                  <button
+                    key={acc._id || acc.email || acc.accountId}
+                    onClick={() => {
+                      setSelectedFilterAccount(accEmailKey);
+                    }}
+                    title={`${name} (${acc.email || ''})`}
+                    style={{
+                      padding: '4px 10px 4px 6px',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '0.75rem',
+                      fontWeight: isSelected ? '700' : '600',
+                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      boxShadow: isSelected ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.18s ease'
+                    }}
+                  >
+                    <span style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      backgroundColor: isSelected ? 'rgba(255,255,255,0.3)' : getAvatarColor(name),
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.65rem',
+                      fontWeight: '700',
+                      flexShrink: 0
+                    }}>
+                      {initial}
+                    </span>
+                    <span style={{
+                      maxWidth: '130px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {name}
+                    </span>
+                  </button>
+                );
+              })}
 
-            {/* Guest Client Organization / External Workspace Filter Pills */}
-            {guestOrganizations.map((org) => {
-              const isSelected = selectedFilterAccount === org.toLowerCase();
-              return (
-                <button
-                  key={org}
-                  onClick={() => {
-                    setSelectedFilterAccount(isSelected ? 'all' : org.toLowerCase());
-                  }}
-                  title={`Guest Organization: ${org}`}
-                  style={{
-                    padding: '4px 10px 4px 8px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.75rem',
-                    fontWeight: isSelected ? '700' : '600',
-                    backgroundColor: isSelected ? '#10b981' : 'var(--bg-tertiary)',
-                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                    border: isSelected ? '1px solid #10b981' : '1px solid var(--border-color)',
-                    boxShadow: isSelected ? '0 2px 8px rgba(16, 185, 129, 0.28)' : 'none',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.18s ease'
-                  }}
-                >
-                  <span style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    backgroundColor: isSelected ? '#ffffff' : '#10b981',
-                    flexShrink: 0
-                  }} />
-                  <span style={{
-                    maxWidth: '120px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {org}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+              {/* Guest Client Organization / External Workspace Filter Pills */}
+              {guestOrganizations.map((org) => {
+                const isSelected = selectedFilterAccount === org.toLowerCase();
+                return (
+                  <button
+                    key={org}
+                    onClick={() => {
+                      setSelectedFilterAccount(isSelected ? 'all' : org.toLowerCase());
+                    }}
+                    title={`Guest Organization: ${org}`}
+                    style={{
+                      padding: '4px 10px 4px 8px',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '0.75rem',
+                      fontWeight: isSelected ? '700' : '600',
+                      backgroundColor: isSelected ? '#10b981' : 'var(--bg-tertiary)',
+                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                      border: isSelected ? '1px solid #10b981' : '1px solid var(--border-color)',
+                      boxShadow: isSelected ? '0 2px 8px rgba(16, 185, 129, 0.28)' : 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.18s ease'
+                    }}
+                  >
+                    <span style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: isSelected ? '#ffffff' : '#10b981',
+                      flexShrink: 0
+                    }} />
+                    <span style={{
+                      maxWidth: '120px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {org}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           
           {/* Search Bar */}
           <div style={{ marginTop: '12px', position: 'relative' }}>
