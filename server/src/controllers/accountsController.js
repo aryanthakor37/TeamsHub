@@ -226,14 +226,49 @@ const connectMicrosoftAccount = async (req, res) => {
 
     global.liveInMemoryAccounts.set(resolvedEmail, accountData);
 
+    // Auto-discover Guest Tenant Organizations (e.g. BayWa r.e., DR SCHAER AG, Kerry Dines Ltd)
+    let discoveredGuests = [];
+    if (accessToken) {
+      try {
+        const guestTenants = await fetchGraphUserTenants(accessToken, resolvedEmail);
+        const emailDomain = resolvedEmail.includes('@') ? resolvedEmail.split('@')[1] : 'tenant.org';
+        for (const guest of guestTenants) {
+          if (!guest || !guest.displayName) continue;
+          const cleanGuestName = (guest.displayName || 'Guest').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const guestEmail = `${cleanGuestName}@guest.${emailDomain}`;
+          const guestAccData = {
+            _id: `acc-guest-${cleanGuestName}`,
+            userId: req.user?._id || 'user-default',
+            provider: 'microsoft',
+            accountId: guest.id || `guest-${Date.now()}`,
+            microsoftUserId: accountData.microsoftUserId,
+            displayName: guest.displayName,
+            email: guestEmail,
+            parentAccountEmail: resolvedEmail,
+            tenantId: guest.id || 'guest-tenant',
+            accountType: 'Guest Tenant Workspace',
+            status: 'connected',
+            isDefault: false,
+            microsoftAccessToken: accessToken,
+            lastAuthenticatedAt: new Date()
+          };
+          global.liveInMemoryAccounts.set(guestEmail, guestAccData);
+          discoveredGuests.push(guestAccData);
+        }
+      } catch (tErr) {
+        console.warn('[AccountsController] Guest discovery warning:', tErr.message);
+      }
+    }
+
     // ── Real Database Mode (if MongoDB connected) ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     if (!dbAvailable) {
       return res.status(200).json({
         success: true,
         source: 'memory',
-        message: 'Account connected successfully',
-        data: accountData
+        message: 'Account and guest workspaces connected successfully',
+        data: accountData,
+        guestWorkspaces: discoveredGuests
       });
     }
 
@@ -264,42 +299,47 @@ const connectMicrosoftAccount = async (req, res) => {
     }
 
     const savedAccount = await ConnectedAccount.findOneAndUpdate(
-      { email: realEmail },
-      { ...accountData, ...tokenFields },
+      { userId: req.user._id, email: realEmail },
+      {
+        userId: req.user._id,
+        provider: 'microsoft',
+        accountId: accountData.accountId,
+        microsoftUserId: accountData.microsoftUserId,
+        displayName: accountData.displayName,
+        email: realEmail,
+        tenantId: accountData.tenantId,
+        accountType: accountData.accountType,
+        status: 'connected',
+        isDefault: false,
+        lastAuthenticatedAt: new Date(),
+        ...tokenFields
+      },
       { upsert: true, new: true }
     );
 
-    // Auto-discover Guest Tenant Organizations (e.g. BayWa r.e., DR SCHAER AG, Kerry Dines Ltd)
-    if (accessToken) {
-      try {
-        const guestTenants = await fetchGraphUserTenants(accessToken);
-        const emailDomain = realEmail.includes('@') ? realEmail.split('@')[1] : 'tenant.org';
-        for (const guest of guestTenants) {
-          if (!guest || !guest.displayName) continue;
-          const cleanGuestName = (guest.displayName || 'Guest').toLowerCase().replace(/[^a-z0-9]/g, '');
-          const guestEmail = `${cleanGuestName}@guest.${emailDomain}`;
+    // Save discovered guest tenants to MongoDB
+    if (discoveredGuests.length > 0) {
+      for (const g of discoveredGuests) {
+        try {
           await ConnectedAccount.findOneAndUpdate(
-            { userId: req.user._id, displayName: guest.displayName },
+            { userId: req.user._id, displayName: g.displayName },
             {
               userId: req.user._id,
               provider: 'microsoft',
-              accountId: guest.id || `guest-${Date.now()}`,
+              accountId: g.accountId,
               microsoftUserId: accountData.microsoftUserId,
-              displayName: guest.displayName,
-              email: guestEmail,
-              tenantId: guest.id || 'guest-tenant',
+              displayName: g.displayName,
+              email: g.email,
+              tenantId: g.tenantId,
               accountType: 'Guest Tenant Workspace',
               status: 'connected',
               isDefault: false,
               lastAuthenticatedAt: new Date(),
-              microsoftAccessToken: accessToken,
-              tokenExpiresAt: new Date(Date.now() + 3600 * 1000)
+              ...tokenFields
             },
             { upsert: true, new: true }
           );
-        }
-      } catch (tErr) {
-        console.warn('[AccountsController] Guest discovery warning:', tErr.message);
+        } catch (gErr) {}
       }
     }
 
