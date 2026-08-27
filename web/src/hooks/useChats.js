@@ -50,6 +50,14 @@ const saveStoredLocalChats = (items) => {
   } catch (e) {}
 };
 
+// Helper: unique composite key for multi-account chat isolation
+const getChatUniqueKey = (c) => {
+  if (!c) return '';
+  const acc = (c.accountEmail || c.connectedAccountId || '').toLowerCase().trim();
+  const id = (c.microsoftChatId || c._id || c.id || '').toString().trim();
+  return acc ? `${acc}_${id}` : id;
+};
+
 // Helper: merge fresh incoming chats with existing cached multi-account chats
 const mergeMultiAccountChats = (freshItems = [], existingItems = []) => {
   const map = new Map();
@@ -57,14 +65,14 @@ const mergeMultiAccountChats = (freshItems = [], existingItems = []) => {
   // 1. Seed with existing cached chats
   existingItems.forEach((c) => {
     if (!c) return;
-    const key = (c.microsoftChatId || c._id || c.id || '').toString();
+    const key = getChatUniqueKey(c);
     if (key) map.set(key, c);
   });
 
   // 2. Fresh items take priority and update existing items
   freshItems.forEach((c) => {
     if (!c) return;
-    const key = (c.microsoftChatId || c._id || c.id || '').toString();
+    const key = getChatUniqueKey(c);
     if (key) map.set(key, c);
   });
 

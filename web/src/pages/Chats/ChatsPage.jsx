@@ -364,7 +364,10 @@ export default function ChatsPage({
   const selectedChatId = isAccountConnected 
     ? (isSelectedChatInFiltered ? activeChatId : (filteredChats.length > 0 ? (filteredChats[0]._id || filteredChats[0].microsoftChatId || filteredChats[0].id) : null))
     : null;
-  const activeChat = isAccountConnected ? chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) : null;
+  const activeChat = isAccountConnected 
+    ? (filteredChats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) ||
+       chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)))
+    : null;
   const chatOwner = activeChat?.accountEmail || activeChat?.connectedAccountId;
   const { messages, loading: messagesLoading, error: messagesError, sendMessage, toggleReaction } = useMessages(selectedChatId, chatOwner);
   const rawMessages = Array.isArray(messages) ? messages : [];
@@ -1067,10 +1070,11 @@ export default function ChatsPage({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {filteredChats.map((chat) => {
                 const chatId = chat._id || chat.microsoftChatId || chat.id;
+                const chatUniqueKey = `${chat.accountEmail || chat.connectedAccountId || 'acc'}_${chatId}`;
                 const isSelected = selectedChatId === chatId;
                 return (
                   <div
-                    key={chatId}
+                    key={chatUniqueKey}
                     onClick={() => {
                       setActiveChatId(chatId);
                       markChatAsRead(chatId, chat.connectedAccountId);
