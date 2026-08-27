@@ -241,12 +241,6 @@ export const syncAllAccountsTokens = async () => {
           if (token) {
             tokenMap[email] = token;
             localStorage.setItem(`teamshub_token_${email}`, token);
-            syncAccountToBackend({
-              accountId: acc.homeAccountId || acc.localAccountId,
-              displayName: acc.name || email.split('@')[0],
-              email: acc.username,
-              accessToken: token
-            }).catch(() => { });
           } else {
             const fallback = localStorage.getItem(`teamshub_token_${email}`);
             if (fallback) {

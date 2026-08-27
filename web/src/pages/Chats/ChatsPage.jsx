@@ -332,28 +332,6 @@ export default function ChatsPage({
   }, [connectedAccounts]);
 
   const filteredChats = chats.filter((chat) => {
-    // 1. Strictly verify chat belongs to currently CONNECTED accounts in this browser session
-    if (connectedAccounts && connectedAccounts.length > 0) {
-      const chatOwnerEmail = getChatOwnerEmail(chat).toLowerCase().trim();
-      const chatAccId = (chat.connectedAccountId || '').toLowerCase().trim();
-      const chatAccount = (chat.account || chat.company || chat.accountBadge || '').toLowerCase().trim();
-
-      const isConnected = connectedAccounts.some(acc => {
-        const accEmail = (acc.email || acc.username || '').toLowerCase().trim();
-        const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
-        const accId = (acc._id || acc.accountId || acc.id || '').toString().toLowerCase().trim();
-        const accUser = accEmail.split('@')[0];
-
-        if (accEmail && (chatOwnerEmail === accEmail || chatOwnerEmail.includes(accEmail) || accEmail.includes(chatOwnerEmail))) return true;
-        if (accId && (chatAccId === accId || chatAccId.includes(accId))) return true;
-        if (accName && (chatAccount.includes(accName) || accName.includes(chatAccount))) return true;
-        if (accUser && (chatAccount.includes(accUser) || chatOwnerEmail.includes(accUser) || chatAccId.includes(accUser))) return true;
-        return false;
-      });
-
-      if (!isConnected) return false;
-    }
-
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q || (
       chat.participant?.toLowerCase().includes(q) ||

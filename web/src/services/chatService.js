@@ -88,9 +88,6 @@ const getAuthHeaders = async (accountId) => {
     if (activeEmail) {
       headers['x-user-email'] = activeEmail;
     }
-
-    // Refresh any expiring tokens in background without blocking this request
-    syncAllAccountsTokens().catch(() => {});
   }
 
   if (allAccounts.length > 0) {
