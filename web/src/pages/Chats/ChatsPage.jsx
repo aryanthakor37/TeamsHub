@@ -1064,7 +1064,7 @@ export default function ChatsPage({
               <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>Try a different search term.</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {filteredChats.map((chat) => {
                 const chatId = chat._id || chat.microsoftChatId || chat.id;
                 const isSelected = selectedChatId === chatId;
@@ -1075,20 +1075,22 @@ export default function ChatsPage({
                       setActiveChatId(chatId);
                       markChatAsRead(chatId, chat.connectedAccountId);
                     }}
+                    className={isSelected ? 'chat-item-3d active' : 'chat-item-3d'}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      padding: '12px',
-                      borderRadius: 'var(--radius-sm)',
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius-md)',
                       backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
-                      borderLeft: isSelected ? '3px solid var(--accent-primary)' : '3px solid transparent',
+                      borderLeft: isSelected ? '3.5px solid var(--accent-primary)' : '3.5px solid transparent',
+                      boxShadow: isSelected ? '0 4px 14px -2px rgba(79, 70, 229, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.7)' : 'none',
                       cursor: 'pointer',
-                      transition: 'background-color var(--transition-fast)'
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}
                   >
-                    <div style={{ position: 'relative' }}>
-                      <div style={{
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <div className="avatar-3d" style={{
                         width: '42px',
                         height: '42px',
                         borderRadius: '50%',
@@ -1097,20 +1099,21 @@ export default function ChatsPage({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontWeight: '600',
-                        fontSize: '1rem',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        fontWeight: '700',
+                        fontSize: '0.95rem',
+                        boxShadow: '0 3px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)',
+                        border: '1.5px solid rgba(255,255,255,0.6)'
                       }}>
                         {getInitials(chat.participant)}
                       </div>
-                      {/* Online Status Indicator */}
-                      <div style={{
+                      {/* 3D Live Online Pulsing Status Indicator */}
+                      <div className="live-pulse-dot" style={{
                         position: 'absolute',
-                        bottom: '-2px',
-                        right: '-2px',
-                        width: '14px',
-                        height: '14px',
-                        backgroundColor: '#22c55e',
+                        bottom: '0px',
+                        right: '0px',
+                        width: '12px',
+                        height: '12px',
+                        backgroundColor: '#10b981',
                         border: '2px solid var(--bg-secondary)',
                         borderRadius: '50%'
                       }} />
@@ -1120,8 +1123,8 @@ export default function ChatsPage({
                         <span style={{ fontWeight: isSelected ? '700' : '600', fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {chat.participant}
                         </span>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                          <span style={{ fontSize: '0.72rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: isSelected ? '600' : '500', color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
                             {chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                           {chat.unreadCount > 0 && (
@@ -1129,12 +1132,12 @@ export default function ChatsPage({
                               backgroundColor: '#ef4444',
                               color: '#fff',
                               fontSize: '0.65rem',
-                              fontWeight: 'bold',
-                              padding: '1px 6px',
+                              fontWeight: '800',
+                              padding: '1px 7px',
                               borderRadius: '10px',
-                              minWidth: '16px',
+                              minWidth: '18px',
                               textAlign: 'center',
-                              boxShadow: '0 1px 2px rgba(239, 68, 68, 0.3)'
+                              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.45), inset 0 1px 0 rgba(255,255,255,0.35)'
                             }}>
                               {chat.unreadCount}
                             </div>
@@ -1146,8 +1149,13 @@ export default function ChatsPage({
                         {formatChatPreview(chat.lastMessagePreview)}
                       </div>
 
-                      {/* Parent Company Account Badge */}
-                      <span className={`badge ${chat.accountBadge || 'badge-company-a'}`} style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
+                      {/* Parent Company Account Badge with 3D Depth */}
+                      <span className={`badge ${chat.accountBadge || 'badge-company-a'}`} style={{
+                        fontSize: '0.68rem',
+                        padding: '1px 8px',
+                        width: 'fit-content',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+                      }}>
                         {chat.company}
                       </span>
                     </div>
@@ -1165,15 +1173,19 @@ export default function ChatsPage({
           <>
             {/* Conversation Header */}
             <div style={{
-              height: '64px',
+              height: '66px',
               padding: '0 24px',
               borderBottom: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-secondary)',
+              backgroundColor: 'var(--bg-glass)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxShadow: 'var(--shadow-sm)',
+              zIndex: 5
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <button
                   className="mobile-back-btn"
                   onClick={() => setActiveChatId(null)}
@@ -1183,47 +1195,50 @@ export default function ChatsPage({
                   <span>Back</span>
                 </button>
                 <div style={{ position: 'relative' }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
+                  <div className="avatar-3d" style={{
+                    width: '42px',
+                    height: '42px',
                     borderRadius: '50%',
                     backgroundColor: getAvatarColor(activeChat.participant),
                     color: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: '600',
+                    fontWeight: '700',
                     fontSize: '1rem',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)',
+                    border: '2px solid rgba(255,255,255,0.7)'
                   }}>
                     {getInitials(activeChat.participant)}
                   </div>
-                  {/* Online Status Indicator */}
-                  <div style={{
+                  {/* 3D Live Status Pulse Indicator */}
+                  <div className="live-pulse-dot" style={{
                     position: 'absolute',
-                    bottom: '-2px',
-                    right: '-2px',
+                    bottom: '0px',
+                    right: '0px',
                     width: '12px',
                     height: '12px',
-                    backgroundColor: '#22c55e',
+                    backgroundColor: '#10b981',
                     border: '2px solid var(--bg-secondary)',
                     borderRadius: '50%'
                   }} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: '700', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ fontWeight: '800', fontSize: '1.02rem', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '-0.01em' }}>
                     {activeChat.participant}
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: '4px',
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e',
-                      padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '700'
+                      display: 'flex', alignItems: 'center', gap: '5px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.14)', color: '#10b981',
+                      padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.68rem', fontWeight: '800',
+                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      boxShadow: '0 1px 4px rgba(16, 185, 129, 0.15)'
                     }}>
-                      <div style={{ width: '6px', height: '6px', backgroundColor: '#22c55e', borderRadius: '50%', boxShadow: '0 0 6px #22c55e' }} />
+                      <div style={{ width: '6px', height: '6px', backgroundColor: '#10b981', borderRadius: '50%', boxShadow: '0 0 6px #10b981' }} />
                       LIVE
                     </div>
                   </div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {activeChat.role} • <strong style={{ color: 'var(--accent-primary)' }}>{activeChat.company}</strong>
+                    {activeChat.role} • <strong style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>{activeChat.company}</strong>
                   </div>
                 </div>
               </div>
@@ -1232,12 +1247,14 @@ export default function ChatsPage({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '4px 10px',
+                padding: '5px 12px',
                 borderRadius: 'var(--radius-full)',
                 backgroundColor: 'rgba(99, 102, 241, 0.12)',
                 color: 'var(--accent-primary)',
                 fontSize: '0.78rem',
-                fontWeight: '600'
+                fontWeight: '700',
+                border: '1px solid rgba(99, 102, 241, 0.22)',
+                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
               }}>
                 <ShieldCheck size={14} />
                 <span>Microsoft Graph Connected</span>
@@ -1554,19 +1571,22 @@ export default function ChatsPage({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Advanced Teams Chat Composer */}
+            {/* Advanced Teams Chat Composer with 3D Glass Effect */}
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               style={{
                 position: 'relative',
-                padding: '14px 20px',
-                backgroundColor: 'var(--bg-secondary)',
+                padding: '16px 24px',
+                backgroundColor: 'var(--bg-glass)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
                 borderTop: '1px solid var(--border-color)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '10px'
+                gap: '10px',
+                boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.03)'
               }}
             >
               {/* Hidden File / Image Pickers */}
