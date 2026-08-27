@@ -6,11 +6,11 @@ export const getActiveMsalAccounts = async () => {
     await msalInstance.initialize();
     const accounts = msalInstance.getAllAccounts();
     const activeAcc = msalInstance.getActiveAccount();
-    
+
     let disconnectedList = [];
     try {
       disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
-    } catch (e) {}
+    } catch (e) { }
 
     const list = [];
     for (const acc of accounts) {
@@ -19,7 +19,7 @@ export const getActiveMsalAccounts = async () => {
 
       const token = await acquireGraphToken(acc.homeAccountId || acc.username);
       const actualTenantId = acc.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
-      
+
       list.push({
         _id: acc.homeAccountId || acc.localAccountId,
         accountId: acc.homeAccountId || acc.localAccountId,
@@ -61,7 +61,7 @@ export const initializeMsal = async () => {
           let disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
           disconnectedList = disconnectedList.filter(e => e.toLowerCase() !== loggedInEmail);
           localStorage.setItem('teamshub_disconnected_emails', JSON.stringify(disconnectedList));
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // Determine actual tenant ID (supporting Guest Tenant logins)
@@ -71,7 +71,7 @@ export const initializeMsal = async () => {
       localStorage.removeItem('teamshub_pending_guest_tenant');
 
       const actualTenantId = pendingTenant || account.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
-      
+
       const accountPayload = {
         accountId: account.homeAccountId || account.localAccountId,
         displayName: pendingOrg ? `${account.name || account.username.split('@')[0]} (${pendingOrg})` : (account.name || account.username.split('@')[0]),
@@ -229,7 +229,7 @@ export const syncAllAccountsTokens = async () => {
     let disconnectedList = [];
     try {
       disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
-    } catch (e) {}
+    } catch (e) { }
 
     const tokenMap = {};
     await Promise.all(
@@ -246,14 +246,14 @@ export const syncAllAccountsTokens = async () => {
               displayName: acc.name || email.split('@')[0],
               email: acc.username,
               accessToken: token
-            }).catch(() => {});
+            }).catch(() => { });
           } else {
             const fallback = localStorage.getItem(`teamshub_token_${email}`);
             if (fallback) {
               tokenMap[email] = fallback;
             }
           }
-        } catch (err) {}
+        } catch (err) { }
       })
     );
     return tokenMap;

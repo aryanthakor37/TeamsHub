@@ -80,7 +80,7 @@ const graphRequest = async (accessToken, endpoint, options = {}, maxRetries = 3)
         let errorDetails = '';
         try {
           errorDetails = await response.text();
-        } catch (e) {}
+        } catch (e) { }
         console.warn(`[Graph API Error HTTP ${response.status}] ${endpoint}:`, errorDetails);
         throw classifyGraphError(response.status, headersObj);
       }
@@ -140,17 +140,7 @@ const fetchGraphUserTenants = async (accessToken, userEmail = '') => {
   const discoveredOrgs = new Map();
   const cleanEmail = (userEmail || '').toLowerCase().trim();
 
-  // Tier 1: /me/account/tenants API endpoint
-  try {
-    const res = await graphRequest(accessToken, '/me/account/tenants');
-    if (res && res.value && Array.isArray(res.value)) {
-      res.value.forEach(t => {
-        if (t.displayName) discoveredOrgs.set(t.displayName.toLowerCase(), { id: t.id || t.tenantId, displayName: t.displayName, tenantType: 'Guest' });
-      });
-    }
-  } catch (e) {}
-
-  // Tier 2: /me/joinedTeams API endpoint
+  // Tier 1: /me/joinedTeams API endpoint
   try {
     const res = await graphRequest(accessToken, '/me/joinedTeams');
     if (res && res.value && Array.isArray(res.value)) {
@@ -161,7 +151,7 @@ const fetchGraphUserTenants = async (accessToken, userEmail = '') => {
         }
       });
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // Tier 3: Scan /me/chats member domains for external client organizations
   try {
@@ -188,7 +178,7 @@ const fetchGraphUserTenants = async (accessToken, userEmail = '') => {
         }
       });
     });
-  } catch (e) {}
+  } catch (e) { }
 
   // Tier 4: Known guest organization mapping for verified multi-tenant users
   if (cleanEmail.includes('kaushal') || cleanEmail.includes('nimavat')) {
@@ -207,20 +197,20 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
   try {
     const res = await graphRequest(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
     if (res && res.value && res.value.length > 0) return res;
-  } catch (err) {}
+  } catch (err) { }
 
   // Tier 2: Basic v1.0 me/chats
   try {
     const res = await graphRequest(accessToken, '/me/chats?$top=50');
     if (res && res.value && res.value.length > 0) items = res.value;
-  } catch (err) {}
+  } catch (err) { }
 
   // Tier 3: v1.0 oneOnOne filter for personal consumer accounts
   if (items.length === 0) {
     try {
       const res = await graphRequest(accessToken, "/me/chats?$filter=chatType eq 'oneOnOne'");
       if (res && res.value && res.value.length > 0) items = res.value;
-    } catch (err) {}
+    } catch (err) { }
   }
 
   // Tier 4: Graph Beta Consumer API endpoint for Personal Microsoft Accounts
@@ -228,7 +218,7 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
     try {
       const res = await graphRequestBeta(accessToken, '/me/chats?$expand=members,lastMessagePreview&$top=50');
       if (res && res.value && res.value.length > 0) return res;
-    } catch (err) {}
+    } catch (err) { }
   }
 
   // Tier 5: Graph Beta Basic Consumer API endpoint
@@ -236,7 +226,7 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
     try {
       const res = await graphRequestBeta(accessToken, '/me/chats?$top=50');
       if (res && res.value && res.value.length > 0) items = res.value;
-    } catch (err) {}
+    } catch (err) { }
   }
 
   // Tier 6: Direct /chats endpoint
@@ -244,7 +234,7 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
     try {
       const res = await graphRequest(accessToken, '/chats?$top=50');
       if (res && res.value && res.value.length > 0) items = res.value;
-    } catch (err) {}
+    } catch (err) { }
   }
 
   // For personal account chats, enrich members & lastMessagePreview if missing
@@ -262,7 +252,7 @@ const fetchGraphChatsFromAPI = async (accessToken) => {
               c.lastMessagePreview = msgRes.value[0];
             }
           }
-        } catch (e) {}
+        } catch (e) { }
         return c;
       })
     );
@@ -574,7 +564,7 @@ const fetchGraphRecentFiles = async (accessToken) => {
                       const p = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
                       contentUrl = p.downloadUrl || p.webUrl;
                       thumb = thumb || p.thumbnailUrl;
-                    } catch (e) {}
+                    } catch (e) { }
                   }
                   addFile({
                     id: att.id || `att-${Math.random().toString(36).substring(2, 9)}`,
@@ -607,21 +597,6 @@ const fetchGraphRecentFiles = async (accessToken) => {
 // ============================================================
 // Graph Response Normalization
 // ============================================================
-
-const cleanPreviewHtml = (html) => {
-  if (!html || typeof html !== 'string') return '';
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&apos;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-};
 
 /**
  * Normalize Graph chat response into TeamsHub Chat schema
@@ -828,17 +803,17 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
         try {
           const parsed = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
           const senderName = parsed.messageFrom?.user?.displayName ||
-                             parsed.from?.user?.displayName ||
-                             parsed.sender?.displayName ||
-                             parsed.sender ||
-                             parsed.user?.displayName ||
-                             parsed.author ||
-                             '';
+            parsed.from?.user?.displayName ||
+            parsed.sender?.displayName ||
+            parsed.sender ||
+            parsed.user?.displayName ||
+            parsed.author ||
+            '';
           let quotedContent = parsed.messageBody?.content ||
-                              parsed.body?.content ||
-                              parsed.content ||
-                              parsed.text ||
-                              '';
+            parsed.body?.content ||
+            parsed.content ||
+            parsed.text ||
+            '';
           if (typeof quotedContent === 'string') {
             quotedContent = quotedContent.replace(/<[^>]*>/g, '').trim();
           }
@@ -852,7 +827,7 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
               date: quotedDate
             };
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       return; // Do NOT render quote as a file attachment!
     }
