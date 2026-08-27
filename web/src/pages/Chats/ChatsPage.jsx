@@ -536,23 +536,26 @@ export default function ChatsPage({
 
   if (outgoingIndices.length > 0) {
     const lastOutgoingIdx = outgoingIndices[outgoingIndices.length - 1];
-    const lastMsg = safeMessages[lastOutgoingIdx];
 
-    // Check if the very latest outgoing message is considered read
-    const hasIncomingAfterLast = safeMessages.slice(lastOutgoingIdx + 1).some(m => !m.isOutgoing);
-    const isLastOutgoingSeen = lastMsg.isRead === true || lastMsg.seen === true || hasIncomingAfterLast;
+    // Find the highest outgoing message index that is strictly confirmed as seen
+    outgoingIndices.forEach((idx) => {
+      const msg = safeMessages[idx];
+      const hasLaterIncoming = safeMessages.slice(idx + 1).some(m => !m.isOutgoing);
+      const hasRecipientReaction = (msg.reactions || []).some(r => {
+        const uEmail = (r.user?.email || '').toLowerCase().trim();
+        const uName = (r.user?.displayName || r.user?.name || '').toLowerCase().trim();
+        return uEmail !== activeEmail && uName !== 'you';
+      });
+      const isExplicitlyRead = msg.isRead === true || msg.seen === true || msg.status === 'read';
 
-    if (isLastOutgoingSeen) {
-      // The latest outgoing message is seen -> gets Eye icon!
-      lastSeenIndex = lastOutgoingIdx;
-    } else {
-      // The latest outgoing message is NOT seen yet -> gets Sent Checkmark icon!
-      lastUnreadIndex = lastOutgoingIdx;
-
-      // The previous outgoing message before this one was seen -> gets Eye icon!
-      if (outgoingIndices.length > 1) {
-        lastSeenIndex = outgoingIndices[outgoingIndices.length - 2];
+      if (hasLaterIncoming || hasRecipientReaction || isExplicitlyRead) {
+        lastSeenIndex = idx;
       }
+    });
+
+    // If the latest outgoing message has not been confirmed read, show Sent Checkmark on it
+    if (lastSeenIndex !== lastOutgoingIdx) {
+      lastUnreadIndex = lastOutgoingIdx;
     }
   }
 
