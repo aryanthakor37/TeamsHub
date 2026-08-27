@@ -287,6 +287,25 @@ export default function ChatsPage({
     return email;
   };
 
+  // Extract all unique Guest Workspaces / Organizations from chats & connected accounts
+  const guestOrganizations = useMemo(() => {
+    const orgs = new Set();
+    (chats || []).forEach(c => {
+      const comp = (c.company || c.accountBadge || '').trim();
+      if (comp && !comp.toLowerCase().includes('microsoft account') && !comp.toLowerCase().includes('teams chat') && !comp.toLowerCase().includes('estatic')) {
+        orgs.add(comp);
+      }
+    });
+    // Add active guest client organizations if Estatic Infotech user is connected
+    const hasEstatic = (connectedAccounts || []).some(a => (a.email || '').toLowerCase().includes('estatic-infotech.com'));
+    if (hasEstatic) {
+      orgs.add('BayWa r.e.');
+      orgs.add('DR SCHAER AG');
+      orgs.add('Kerry Dines Ltd');
+    }
+    return Array.from(orgs);
+  }, [chats, connectedAccounts]);
+
   const filteredChats = chats.filter((chat) => {
     // 1. Strictly verify chat belongs to currently CONNECTED accounts in this browser session
     if (connectedAccounts && connectedAccounts.length > 0) {
@@ -919,6 +938,51 @@ export default function ChatsPage({
                     whiteSpace: 'nowrap'
                   }}>
                     {name}
+                  </span>
+                </button>
+              );
+            })}
+
+            {/* Guest Client Organization / External Workspace Filter Pills */}
+            {guestOrganizations.map((org) => {
+              const isSelected = selectedFilterAccount === org.toLowerCase();
+              return (
+                <button
+                  key={org}
+                  onClick={() => {
+                    setSelectedFilterAccount(isSelected ? 'all' : org.toLowerCase());
+                  }}
+                  title={`Guest Organization: ${org}`}
+                  style={{
+                    padding: '4px 10px 4px 8px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.75rem',
+                    fontWeight: isSelected ? '700' : '600',
+                    backgroundColor: isSelected ? '#10b981' : 'var(--bg-tertiary)',
+                    color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                    border: isSelected ? '1px solid #10b981' : '1px solid var(--border-color)',
+                    boxShadow: isSelected ? '0 2px 8px rgba(16, 185, 129, 0.28)' : 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.18s ease'
+                  }}
+                >
+                  <span style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    backgroundColor: isSelected ? '#ffffff' : '#10b981',
+                    flexShrink: 0
+                  }} />
+                  <span style={{
+                    maxWidth: '120px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {org}
                   </span>
                 </button>
               );
