@@ -175,16 +175,42 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
 
   return rawList.map(gc => {
     let participantName = '';
-    if (gc.chatType === 'group' && gc.topic) {
-      participantName = gc.topic;
+    const cleanUser = cleanEmail.includes('@') ? cleanEmail.split('@')[0] : cleanEmail;
+
+    if (gc.chatType === 'group' && gc.topic && gc.topic.trim()) {
+      participantName = gc.topic.trim();
     } else if (gc.members && gc.members.length > 0) {
-      const others = gc.members.filter(m => (m.email || m.userPrincipalName || '').toLowerCase().trim() !== cleanEmail);
+      const others = gc.members.filter(m => {
+        const mEmail = (m.email || m.userPrincipalName || m.emailAddress?.address || '').toLowerCase().trim();
+        const mName = (m.displayName || m.emailAddress?.name || '').toLowerCase().trim();
+        const isMe = (mEmail && (mEmail === cleanEmail || mEmail.includes(cleanUser))) ||
+                     (mName && (mName === cleanName.toLowerCase() || mName.includes(cleanUser)));
+        return !isMe;
+      });
+
       if (others.length > 0) {
-        participantName = others.map(m => m.displayName || m.email?.split('@')[0]).join(', ');
-      } else {
-        participantName = `${gc.members[0]?.displayName || 'You'} (You)`;
+        participantName = others.map(m =>
+          m.displayName ||
+          m.emailAddress?.name ||
+          m.email ||
+          m.userPrincipalName ||
+          m.emailAddress?.address?.split('@')[0] ||
+          'External User'
+        ).filter(Boolean).join(', ');
+      } else if (gc.members.length === 1) {
+        participantName = `${gc.members[0]?.displayName || cleanName} (You)`;
       }
     }
+
+    // If participant is still not resolved, check lastMessagePreview sender
+    if (!participantName || participantName === 'Direct Message') {
+      const fromName = gc.lastMessagePreview?.from?.user?.displayName;
+      const fromEmail = (gc.lastMessagePreview?.from?.user?.email || gc.lastMessagePreview?.from?.user?.userPrincipalName || '').toLowerCase().trim();
+      if (fromName && fromEmail !== cleanEmail && !fromName.toLowerCase().includes(cleanUser)) {
+        participantName = fromName;
+      }
+    }
+
     if (!participantName) {
       participantName = gc.chatType === 'oneOnOne' ? 'Direct Message' : 'Group Chat';
     }
@@ -208,6 +234,7 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
         if (domain.includes('baywa')) detectedCompany = 'BayWa r.e.';
         else if (domain.includes('schaer') || domain.includes('drschaer')) detectedCompany = 'DR SCHAER AG';
         else if (domain.includes('kerry') || domain.includes('dines')) detectedCompany = 'Kerry Dines Ltd';
+        else if (domain.includes('gmail')) detectedCompany = 'External (Gmail)';
         else {
           const base = domain.split('.')[0];
           if (base.length >= 3) detectedCompany = base.charAt(0).toUpperCase() + base.slice(1);
