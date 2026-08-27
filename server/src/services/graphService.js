@@ -256,12 +256,13 @@ const fetchGraphChatMessages = async (accessToken, chatId) => {
 
 /**
  * Send a chat message — POST /v1.0/chats/{chatId}/messages
- * Supports optional attachments and rich HTML payloads.
+ * Supports rich HTML, inline hostedContents images, and attachments.
  */
-const sendGraphChatMessage = async (accessToken, chatId, content, attachments = []) => {
+const sendGraphChatMessage = async (accessToken, chatId, content, attachments = [], hostedContents = []) => {
+  const cleanChatId = decodeURIComponent(chatId);
   const payload = {
     body: {
-      content: content,
+      content: content || ' ',
       contentType: 'html'
     }
   };
@@ -270,10 +271,32 @@ const sendGraphChatMessage = async (accessToken, chatId, content, attachments = 
     payload.attachments = attachments;
   }
 
-  return await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages`, {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
+  if (Array.isArray(hostedContents) && hostedContents.length > 0) {
+    payload.hostedContents = hostedContents;
+  }
+
+  try {
+    return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    // If hostedContents failed (e.g. tenant restrictions), try fallback without hostedContents
+    if (hostedContents.length > 0) {
+      console.warn('[Graph sendChatMessage hostedContents retry fallback]:', err.message);
+      const fallbackPayload = {
+        body: {
+          content: content || '📷 Photo',
+          contentType: 'html'
+        }
+      };
+      return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages`, {
+        method: 'POST',
+        body: JSON.stringify(fallbackPayload)
+      });
+    }
+    throw err;
+  }
 };
 
 const EMOJI_TO_UNICODE_MAP = {

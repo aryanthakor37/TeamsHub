@@ -529,12 +529,51 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    // Format rich HTML content if images/attachments are present
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
+
     let formattedContent = content ? content.trim() : '';
-    if (image && typeof image === 'string' && image.startsWith('data:image')) {
-      formattedContent += `<div><img src="${image}" alt="Attachment" style="max-width: 480px; max-height: 320px; border-radius: 8px; margin-top: 6px; display: block;" /></div>`;
-    } else if (image && image.dataUrl) {
-      formattedContent += `<div><img src="${image.dataUrl}" alt="${image.name || 'Attachment'}" style="max-width: 480px; max-height: 320px; border-radius: 8px; margin-top: 6px; display: block;" /></div>`;
+    const hostedContents = [];
+    let tempIdCounter = 1;
+
+    // Helper to format images as Microsoft Graph hostedContents
+    const processImageToHosted = (dataUrlStr, fileName = 'Image') => {
+      const match = typeof dataUrlStr === 'string' ? dataUrlStr.match(/^data:([^;]+);base64,(.+)$/) : null;
+      if (match) {
+        const mime = match[1] || 'image/png';
+        const bytes = match[2];
+        const tempId = String(tempIdCounter++);
+        hostedContents.push({
+          '@microsoft.graph.temporaryId': tempId,
+          contentBytes: bytes,
+          contentType: mime
+        });
+        return `<p><img src="../hostedContents/${tempId}/$value" alt="${fileName}" style="max-width: 480px; max-height: 360px; border-radius: 8px;" /></p>`;
+      }
+      return '';
+    };
+
+    if (image) {
+      if (typeof image === 'string' && image.startsWith('data:image')) {
+        const imgTag = processImageToHosted(image, 'Uploaded Photo');
+        if (imgTag) formattedContent += `\n${imgTag}`;
+      } else if (image.dataUrl && image.dataUrl.startsWith('data:image')) {
+        const imgTag = processImageToHosted(image.dataUrl, image.name || 'Uploaded Photo');
+        if (imgTag) formattedContent += `\n${imgTag}`;
+      }
+    }
+
+    if (Array.isArray(attachments)) {
+      attachments.forEach((att) => {
+        if (att.dataUrl && att.dataUrl.startsWith('data:image')) {
+          const imgTag = processImageToHosted(att.dataUrl, att.name || 'Photo');
+          if (imgTag) formattedContent += `\n${imgTag}`;
+        }
+      });
     }
 
     // ── Mock Mode ──
@@ -561,7 +600,17 @@ const sendMessage = async (req, res) => {
     const connectedAccountId = req.body?.connectedAccountId || req.query?.connectedAccountId;
     const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
 
-    if (dbAvailable) {
+    if (!accessToken) {
+      if (connectedAccountId && accountTokensMap[connectedAccountId.toLowerCase()]) {
+        accessToken = accountTokensMap[connectedAccountId.toLowerCase()];
+      } else if (activeEmailHeader && accountTokensMap[activeEmailHeader]) {
+        accessToken = accountTokensMap[activeEmailHeader];
+      } else if (Object.keys(accountTokensMap).length > 0) {
+        accessToken = Object.values(accountTokensMap)[0];
+      }
+    }
+
+    if (dbAvailable && !accessToken) {
       let acc = null;
       if (connectedAccountId && connectedAccountId !== 'all') {
         if (connectedAccountId.includes('@')) {
@@ -594,53 +643,59 @@ const sendMessage = async (req, res) => {
       }
     }
 
-    if (accessToken) {
-      // Look up the microsoftChatId (it could be id or we fetch from DB)
-      let microsoftChatId = id;
-      let targetAccountId = 'default';
-      if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
-        const chat = await Chat.findById(id);
-        if (chat) {
-          microsoftChatId = chat.microsoftChatId;
-          targetAccountId = chat.connectedAccountId;
-        }
-      }
+    const candidateTokens = [];
+    if (accessToken) candidateTokens.push(accessToken);
+    Object.values(accountTokensMap).forEach(t => {
+      if (t && !candidateTokens.includes(t)) candidateTokens.push(t);
+    });
 
-      try {
-        const userProfile = await fetchGraphUserProfile(accessToken);
-        const msEmail = userProfile.mail || userProfile.userPrincipalName || req.user.email || '';
-        const msId = userProfile.id;
-
-        const graphResponse = await sendGraphChatMessage(accessToken, microsoftChatId, formattedContent, attachments);
-        const normalizedMessage = normalizeGraphMessage(graphResponse, id, targetAccountId, msEmail, msId);
-
-        if (attachments && attachments.length > 0 && (!normalizedMessage.attachments || normalizedMessage.attachments.length === 0)) {
-          normalizedMessage.attachments = attachments;
-        }
-
-        // Zero-Storage Mode: Pass-through response directly to browser RAM (NO DB storage)
-        const io = req.app.get('io');
-        if (io && normalizedMessage) {
-          io.to(`chat:${id}`).emit('new_message', normalizedMessage);
-        }
-
-        return res.status(201).json({
-          success: true,
-          source: 'graph',
-          data: normalizedMessage
-        });
-      } catch (graphErr) {
-        return sendGraphError(res, graphErr);
+    let microsoftChatId = decodeURIComponent(id);
+    let targetAccountId = 'default';
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(microsoftChatId)) {
+      const chat = await Chat.findById(microsoftChatId);
+      if (chat) {
+        microsoftChatId = chat.microsoftChatId;
+        targetAccountId = chat.connectedAccountId;
       }
     }
 
-    // In-Memory Pass-Through for local/mock response
+    if (candidateTokens.length > 0 && microsoftChatId.startsWith('19:')) {
+      for (const token of candidateTokens) {
+        try {
+          const userProfile = await fetchGraphUserProfile(token);
+          const msEmail = userProfile.mail || userProfile.userPrincipalName || req.user?.email || '';
+          const msId = userProfile.id;
+
+          const graphResponse = await sendGraphChatMessage(token, microsoftChatId, formattedContent, [], hostedContents);
+          const normalizedMessage = normalizeGraphMessage(graphResponse, id, targetAccountId, msEmail, msId);
+
+          if (attachments && attachments.length > 0 && (!normalizedMessage.attachments || normalizedMessage.attachments.length === 0)) {
+            normalizedMessage.attachments = attachments;
+          }
+
+          const io = req.app.get('io');
+          if (io && normalizedMessage) {
+            io.to(`chat:${id}`).emit('new_message', normalizedMessage);
+          }
+
+          return res.status(201).json({
+            success: true,
+            source: 'graph',
+            data: normalizedMessage
+          });
+        } catch (graphErr) {
+          console.warn('[Graph sendMessage token retry]:', graphErr.message);
+        }
+      }
+    }
+
+    // In-Memory Pass-Through Fallback
     const passThroughMsg = {
       _id: `msg-${Date.now()}`,
       chatId: id,
       microsoftMessageId: `msg-${Date.now()}`,
       senderName: req.user?.name || req.user?.displayName || 'Aryan Kumrecha',
-      senderEmail: req.user?.email || 'aryan@companya.com',
+      senderEmail: req.user?.email || activeEmailHeader || 'aryan@companya.com',
       content: formattedContent || content.trim(),
       contentType: 'html',
       isOutgoing: true,
