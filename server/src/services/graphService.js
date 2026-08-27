@@ -822,18 +822,57 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     }
   });
 
-  // Skip system/event messages with no useful content
-  if (!content.trim() && attachments.length === 0 && graphMessage.messageType !== 'message') {
+  // Extract event / system details if present in meeting chats
+  let eventText = '';
+  if (graphMessage.eventDetail) {
+    const ev = graphMessage.eventDetail;
+    const initiator = ev.initiator?.user?.displayName || 'Organizer';
+    const evType = ev['@odata.type'] || '';
+    if (evType.includes('membersAdded')) {
+      const added = (ev.members || []).map(m => m.displayName).join(', ');
+      eventText = `${initiator} added ${added || 'participants'} to the meeting`;
+    } else if (evType.includes('callStarted')) {
+      eventText = `Meeting started by ${initiator}`;
+    } else if (evType.includes('callEnded')) {
+      eventText = `Meeting ended`;
+    } else if (evType.includes('callRecording')) {
+      eventText = `Meeting recording saved`;
+    } else {
+      eventText = `Meeting update`;
+    }
+  }
+
+  const cleanText = content ? content.replace(/<[^>]*>/g, '').trim() : '';
+
+  // Skip completely empty messages, system placeholders with no text, and no attachments
+  if (!cleanText && attachments.length === 0 && !eventText && !content.includes('<img')) {
     return null;
+  }
+
+  let finalContent = content.trim();
+  if (!cleanText && !content.includes('<img') && eventText) {
+    finalContent = `<div style="font-style: italic; opacity: 0.9; display: inline-flex; align-items: center; gap: 6px;"><span>🗓️</span> <span>${eventText}</span></div>`;
+  }
+
+  let resolvedSenderName = (
+    graphMessage.from?.user?.displayName ||
+    graphMessage.from?.application?.displayName ||
+    graphMessage.from?.guest?.displayName ||
+    (senderEmail ? senderEmail.split('@')[0] : '') ||
+    ''
+  ).trim();
+
+  if (!resolvedSenderName || resolvedSenderName.toLowerCase() === 'unknown') {
+    resolvedSenderName = eventText ? 'Meeting System' : 'Teams User';
   }
 
   return {
     connectedAccountId,
     chatId,
     microsoftMessageId: graphMessage.id,
-    senderName,
+    senderName: resolvedSenderName,
     senderEmail,
-    content: content.trim() || (attachments.length > 0 ? '' : '(System message)'),
+    content: finalContent || '(Message)',
     contentType: graphMessage.body?.contentType === 'html' ? 'html' : 'text',
     isOutgoing,
     attachments,

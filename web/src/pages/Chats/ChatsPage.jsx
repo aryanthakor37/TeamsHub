@@ -345,7 +345,15 @@ export default function ChatsPage({
   };
 
   const safeMessages = useMemo(() => {
-    const sorted = [...rawMessages].filter(Boolean).sort((a, b) => {
+    const valid = [...rawMessages].filter((m) => {
+      if (!m) return false;
+      const clean = (m.content || '').replace(/<[^>]*>/g, '').trim();
+      const hasAttachments = Array.isArray(m.attachments) && m.attachments.length > 0;
+      const hasImage = !!m.image || (m.content && m.content.includes('<img'));
+      return clean.length > 0 || hasAttachments || hasImage;
+    });
+
+    const sorted = valid.sort((a, b) => {
       const tA = new Date(a.createdDateTime || a.timestamp || 0).getTime() || 0;
       const tB = new Date(b.createdDateTime || b.timestamp || 0).getTime() || 0;
       return tA - tB;
