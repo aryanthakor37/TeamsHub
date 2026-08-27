@@ -666,11 +666,28 @@ const setMessageReaction = async (req, res) => {
     const { id, msgId } = req.params;
     const { reactionType = 'like', connectedAccountId } = req.body;
 
-    const validReactions = ['like', 'heart', 'laugh', 'surprised', 'sad', 'applause'];
+    const validReactions = ['like', 'heart', 'laugh', 'surprised', 'sad', 'applause', 'angry'];
     const cleanReaction = validReactions.includes(reactionType.toLowerCase()) ? reactionType.toLowerCase() : 'like';
+
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
 
     let accessToken = req.microsoftAccessToken;
     const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+
+    if (!accessToken) {
+      if (connectedAccountId && accountTokensMap[connectedAccountId.toLowerCase()]) {
+        accessToken = accountTokensMap[connectedAccountId.toLowerCase()];
+      } else if (activeEmailHeader && accountTokensMap[activeEmailHeader]) {
+        accessToken = accountTokensMap[activeEmailHeader];
+      } else if (Object.keys(accountTokensMap).length > 0) {
+        accessToken = Object.values(accountTokensMap)[0];
+      }
+    }
 
     const dbAvailable = Chat.db && Chat.db.readyState === 1;
     if (dbAvailable && !accessToken) {
@@ -685,22 +702,49 @@ const setMessageReaction = async (req, res) => {
       if (!acc && activeEmailHeader) {
         acc = await ConnectedAccount.findOne({ email: activeEmailHeader }).select('+microsoftAccessToken');
       }
+      if (!acc) {
+        acc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).sort({ updatedAt: -1 }).select('+microsoftAccessToken');
+      }
       if (acc?.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
       }
     }
 
-    let microsoftChatId = id;
-    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
-      const chat = await Chat.findById(id);
-      if (chat) microsoftChatId = chat.microsoftChatId;
+    const candidateTokens = [];
+    if (accessToken) candidateTokens.push(accessToken);
+    Object.values(accountTokensMap).forEach(t => {
+      if (t && !candidateTokens.includes(t)) candidateTokens.push(t);
+    });
+
+    let cleanChatId = decodeURIComponent(id);
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(cleanChatId)) {
+      const chat = await Chat.findById(cleanChatId);
+      if (chat && chat.microsoftChatId) cleanChatId = chat.microsoftChatId;
     }
 
-    if (accessToken && !isMockMode()) {
-      try {
-        await setGraphMessageReaction(accessToken, microsoftChatId, msgId, cleanReaction);
-      } catch (err) {
-        console.warn('Graph setReaction warning:', err.message);
+    let realMessageId = decodeURIComponent(msgId);
+    if (realMessageId.startsWith('msg-')) {
+      const sub = realMessageId.replace(/^msg-/, '');
+      if (/^\d+$/.test(sub)) {
+        realMessageId = sub;
+      }
+    }
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(realMessageId)) {
+      const msgDoc = await Message.findById(realMessageId);
+      if (msgDoc && msgDoc.microsoftMessageId) realMessageId = msgDoc.microsoftMessageId;
+    }
+
+    let graphSuccess = false;
+    if (candidateTokens.length > 0 && !isMockMode()) {
+      for (const token of candidateTokens) {
+        try {
+          await setGraphMessageReaction(token, cleanChatId, realMessageId, cleanReaction);
+          graphSuccess = true;
+          console.log(`[Graph setReaction SUCCESS] Chat: ${cleanChatId} Msg: ${realMessageId} Reaction: ${cleanReaction}`);
+          break;
+        } catch (err) {
+          console.warn(`[Graph setReaction error for Chat: ${cleanChatId} Msg: ${realMessageId}]`, err.message);
+        }
       }
     }
 
@@ -709,6 +753,7 @@ const setMessageReaction = async (req, res) => {
       messageId: msgId,
       reactionType: cleanReaction,
       action: 'set',
+      graphSynced: graphSuccess,
       user: {
         displayName: req.user?.displayName || req.user?.name || 'You',
         email: req.user?.email || activeEmailHeader || ''
@@ -739,11 +784,28 @@ const unsetMessageReaction = async (req, res) => {
     const reactionType = req.body?.reactionType || req.query?.reactionType || 'like';
     const connectedAccountId = req.body?.connectedAccountId || req.query?.connectedAccountId;
 
-    const validReactions = ['like', 'heart', 'laugh', 'surprised', 'sad', 'applause'];
+    const validReactions = ['like', 'heart', 'laugh', 'surprised', 'sad', 'applause', 'angry'];
     const cleanReaction = validReactions.includes(reactionType.toLowerCase()) ? reactionType.toLowerCase() : 'like';
+
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
 
     let accessToken = req.microsoftAccessToken;
     const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+
+    if (!accessToken) {
+      if (connectedAccountId && accountTokensMap[connectedAccountId.toLowerCase()]) {
+        accessToken = accountTokensMap[connectedAccountId.toLowerCase()];
+      } else if (activeEmailHeader && accountTokensMap[activeEmailHeader]) {
+        accessToken = accountTokensMap[activeEmailHeader];
+      } else if (Object.keys(accountTokensMap).length > 0) {
+        accessToken = Object.values(accountTokensMap)[0];
+      }
+    }
 
     const dbAvailable = Chat.db && Chat.db.readyState === 1;
     if (dbAvailable && !accessToken) {
@@ -758,22 +820,49 @@ const unsetMessageReaction = async (req, res) => {
       if (!acc && activeEmailHeader) {
         acc = await ConnectedAccount.findOne({ email: activeEmailHeader }).select('+microsoftAccessToken');
       }
+      if (!acc) {
+        acc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).sort({ updatedAt: -1 }).select('+microsoftAccessToken');
+      }
       if (acc?.microsoftAccessToken) {
         accessToken = acc.microsoftAccessToken;
       }
     }
 
-    let microsoftChatId = id;
-    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(id)) {
-      const chat = await Chat.findById(id);
-      if (chat) microsoftChatId = chat.microsoftChatId;
+    const candidateTokens = [];
+    if (accessToken) candidateTokens.push(accessToken);
+    Object.values(accountTokensMap).forEach(t => {
+      if (t && !candidateTokens.includes(t)) candidateTokens.push(t);
+    });
+
+    let cleanChatId = decodeURIComponent(id);
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(cleanChatId)) {
+      const chat = await Chat.findById(cleanChatId);
+      if (chat && chat.microsoftChatId) cleanChatId = chat.microsoftChatId;
     }
 
-    if (accessToken && !isMockMode()) {
-      try {
-        await unsetGraphMessageReaction(accessToken, microsoftChatId, msgId, cleanReaction);
-      } catch (err) {
-        console.warn('Graph unsetReaction warning:', err.message);
+    let realMessageId = decodeURIComponent(msgId);
+    if (realMessageId.startsWith('msg-')) {
+      const sub = realMessageId.replace(/^msg-/, '');
+      if (/^\d+$/.test(sub)) {
+        realMessageId = sub;
+      }
+    }
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(realMessageId)) {
+      const msgDoc = await Message.findById(realMessageId);
+      if (msgDoc && msgDoc.microsoftMessageId) realMessageId = msgDoc.microsoftMessageId;
+    }
+
+    let graphSuccess = false;
+    if (candidateTokens.length > 0 && !isMockMode()) {
+      for (const token of candidateTokens) {
+        try {
+          await unsetGraphMessageReaction(token, cleanChatId, realMessageId, cleanReaction);
+          graphSuccess = true;
+          console.log(`[Graph unsetReaction SUCCESS] Chat: ${cleanChatId} Msg: ${realMessageId} Reaction: ${cleanReaction}`);
+          break;
+        } catch (err) {
+          console.warn(`[Graph unsetReaction error for Chat: ${cleanChatId} Msg: ${realMessageId}]`, err.message);
+        }
       }
     }
 
@@ -782,6 +871,7 @@ const unsetMessageReaction = async (req, res) => {
       messageId: msgId,
       reactionType: cleanReaction,
       action: 'unset',
+      graphSynced: graphSuccess,
       user: {
         displayName: req.user?.displayName || req.user?.name || 'You',
         email: req.user?.email || activeEmailHeader || ''

@@ -1064,7 +1064,7 @@ export default function ChatsPage({
               ) : (
                 safeMessages.map((msg, index) => {
                   const prevMsg = index > 0 ? safeMessages[index - 1] : null;
-                  const msgId = msg._id || msg.id || msg.microsoftMessageId || `msg-${index}`;
+                  const msgId = msg.microsoftMessageId || msg._id || msg.id || `msg-${index}`;
                   
                   // Group reactions by type for clean pill badges
                   const rawReactions = Array.isArray(msg.reactions) ? msg.reactions : [];

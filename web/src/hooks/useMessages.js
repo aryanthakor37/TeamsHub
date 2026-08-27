@@ -131,8 +131,11 @@ export const useMessages = (chatId, accountId) => {
       if (!data || !data.messageId) return;
       setMessages((prev) =>
         prev.map((msg) => {
-          const msgId = msg._id || msg.id || msg.microsoftMessageId;
-          if (msgId !== data.messageId) return msg;
+          const isMatch =
+            (msg.microsoftMessageId && msg.microsoftMessageId === data.messageId) ||
+            (msg._id && msg._id === data.messageId) ||
+            (msg.id && msg.id === data.messageId);
+          if (!isMatch) return msg;
 
           const currentReactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
           if (data.action === 'set') {
@@ -200,8 +203,11 @@ export const useMessages = (chatId, accountId) => {
     // 1. Optimistic local state update
     setMessages((prev) =>
       prev.map((msg) => {
-        const msgId = msg._id || msg.id || msg.microsoftMessageId;
-        if (msgId !== messageId) return msg;
+        const isTarget =
+          (msg.microsoftMessageId && msg.microsoftMessageId === messageId) ||
+          (msg._id && msg._id === messageId) ||
+          (msg.id && msg.id === messageId);
+        if (!isTarget) return msg;
 
         let reactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
         if (action === 'set') {

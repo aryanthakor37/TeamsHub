@@ -77,10 +77,20 @@ const graphRequest = async (accessToken, endpoint, options = {}, maxRetries = 3)
       if (!response.ok) {
         const headersObj = {};
         response.headers.forEach((v, k) => { headersObj[k] = v; });
+        let errorDetails = '';
+        try {
+          errorDetails = await response.text();
+        } catch (e) {}
+        console.warn(`[Graph API Error HTTP ${response.status}] ${endpoint}:`, errorDetails);
         throw classifyGraphError(response.status, headersObj);
       }
 
-      return await response.json();
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return { success: true };
+      }
+
+      const text = await response.text();
+      return text ? JSON.parse(text) : { success: true };
     } catch (error) {
       if (error instanceof GraphApiError) throw error;
       if (attempt === maxRetries - 1) {
@@ -268,24 +278,44 @@ const sendGraphChatMessage = async (accessToken, chatId, content, attachments = 
 
 /**
  * Set a reaction on a message — POST /v1.0/chats/{chatId}/messages/{messageId}/setReaction
- * reactionType: 'like' | 'heart' | 'laugh' | 'surprised' | 'sad' | 'applause'
+ * reactionType: 'like' | 'heart' | 'laugh' | 'surprised' | 'sad' | 'applause' | 'angry'
  */
 const setGraphMessageReaction = async (accessToken, chatId, messageId, reactionType) => {
-  return await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/setReaction`, {
-    method: 'POST',
-    body: JSON.stringify({ reactionType })
-  });
+  const cleanChatId = decodeURIComponent(chatId);
+  const cleanMsgId = decodeURIComponent(messageId);
+  try {
+    return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/setReaction`, {
+      method: 'POST',
+      body: JSON.stringify({ reactionType })
+    });
+  } catch (err) {
+    console.warn('[Graph setReaction v1.0 failed, trying beta]', err.message);
+    return await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/setReaction`, {
+      method: 'POST',
+      body: JSON.stringify({ reactionType })
+    });
+  }
 };
 
 /**
  * Unset a reaction on a message — POST /v1.0/chats/{chatId}/messages/{messageId}/unsetReaction
- * reactionType: 'like' | 'heart' | 'laugh' | 'surprised' | 'sad' | 'applause'
+ * reactionType: 'like' | 'heart' | 'laugh' | 'surprised' | 'sad' | 'applause' | 'angry'
  */
 const unsetGraphMessageReaction = async (accessToken, chatId, messageId, reactionType) => {
-  return await graphRequest(accessToken, `/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/unsetReaction`, {
-    method: 'POST',
-    body: JSON.stringify({ reactionType })
-  });
+  const cleanChatId = decodeURIComponent(chatId);
+  const cleanMsgId = decodeURIComponent(messageId);
+  try {
+    return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/unsetReaction`, {
+      method: 'POST',
+      body: JSON.stringify({ reactionType })
+    });
+  } catch (err) {
+    console.warn('[Graph unsetReaction v1.0 failed, trying beta]', err.message);
+    return await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/unsetReaction`, {
+      method: 'POST',
+      body: JSON.stringify({ reactionType })
+    });
+  }
 };
 
 /**
