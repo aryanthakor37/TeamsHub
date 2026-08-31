@@ -186,10 +186,10 @@ export const useMessages = (chatId, accountId) => {
     socket.on('chat:message:received', handleRealtimeMsg);
     socket.on('reaction:updated', handleRealtimeReaction);
 
-    // Live Background Polling every 2.5 seconds for instant new incoming Teams messages
+    // Live Background Polling every 1.0 second for instant real-time incoming Teams messages
     const interval = setInterval(() => {
       loadMessagesSilently();
-    }, 2500);
+    }, 1000);
 
     return () => {
       socket.off('chat:message:received', handleRealtimeMsg);
