@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Send, ShieldCheck, CheckCircle2, MessageSquare, AlertCircle,
   FileText, Paperclip, Image as ImageIcon, Download, X, ExternalLink,
-  Eye, Smile, LogIn, ArrowLeft, Columns, ChevronDown, Split
+  Eye, Smile, LogIn, ArrowLeft, Columns, ChevronDown, Split, Search
 } from 'lucide-react';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../hooks/useAuth';
@@ -107,10 +107,12 @@ export default function ChatConversationPane({
   onPreviewDoc,
   onBack,
   bumpChatToTop,
-  paneTitle = ''
+  paneTitle = '',
+  paneIndex = 1
 }) {
   const { connectedAccounts } = useAuth();
   const [showSwitchDropdown, setShowSwitchDropdown] = useState(false);
+  const [switchSearchQuery, setSwitchSearchQuery] = useState('');
   const [draftMessage, setDraftMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [showComposerEmojiPicker, setShowComposerEmojiPicker] = useState(false);
@@ -125,6 +127,63 @@ export default function ChatConversationPane({
   const imageInputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesThreadContainerRef = useRef(null);
+  const switchSearchInputRef = useRef(null);
+
+  // Keyboard shortcut listener: Alt+1 and Alt+2 to focus composers
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.altKey && (e.key === '1' || e.key === '2')) {
+        const target = e.key === '1' ? 1 : 2;
+        if (paneIndex === target) {
+          e.preventDefault();
+          chatInputRef.current?.focus();
+        }
+      }
+      if (e.key === 'Escape') {
+        setShowSwitchDropdown(false);
+        setShowComposerEmojiPicker(false);
+        setLightboxImage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [paneIndex]);
+
+  // Focus switch search input when switch dropdown opens
+  useEffect(() => {
+    if (showSwitchDropdown) {
+      setTimeout(() => switchSearchInputRef.current?.focus(), 50);
+    } else {
+      setSwitchSearchQuery('');
+    }
+  }, [showSwitchDropdown]);
+
+  // Group chats by account / company for Switch Dropdown
+  const groupedSwitchChats = useMemo(() => {
+    const q = switchSearchQuery.toLowerCase().trim();
+    const filtered = allChats.filter(c => {
+      if (!q) return true;
+      return (
+        c.participant?.toLowerCase().includes(q) ||
+        c.company?.toLowerCase().includes(q) ||
+        c.accountBadge?.toLowerCase().includes(q) ||
+        c.accountEmail?.toLowerCase().includes(q) ||
+        c.lastMessagePreview?.toLowerCase().includes(q)
+      );
+    });
+
+    const groups = {};
+    filtered.forEach(c => {
+      const rawBadge = (c.accountBadge || c.company || c.accountEmail || 'Other Account').trim();
+      const groupName = rawBadge.includes('@') ? rawBadge.split('@')[0] : rawBadge;
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(c);
+    });
+
+    return groups;
+  }, [allChats, switchSearchQuery]);
 
   const chatId = chat?._id || chat?.microsoftChatId || chat?.id;
   const chatOwner = chat?.accountEmail || chat?.connectedAccountId;
@@ -398,50 +457,173 @@ export default function ChatConversationPane({
               </button>
 
               {showSwitchDropdown && (
-                <div style={{
-                  position: 'absolute',
-                  top: '34px',
-                  right: 0,
-                  width: '220px',
-                  maxHeight: '220px',
-                  overflowY: 'auto',
-                  backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '8px',
-                  boxShadow: 'var(--shadow-lg)',
-                  padding: '6px',
-                  zIndex: 100
-                }}>
-                  {allChats.map((c) => {
-                    const id = c._id || c.microsoftChatId || c.id;
-                    const isSelected = id === chatId;
-                    return (
-                      <div
-                        key={id}
-                        onClick={() => {
-                          setShowSwitchDropdown(false);
-                          if (onSelectChat) onSelectChat(id);
-                        }}
+                <div
+                  className="no-scrollbar"
+                  style={{
+                    position: 'absolute',
+                    top: '36px',
+                    right: 0,
+                    width: '300px',
+                    maxHeight: '360px',
+                    overflowY: 'auto',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    boxShadow: '0 14px 36px -4px rgba(0,0,0,0.25), 0 0 0 1px var(--border-color)',
+                    zIndex: 100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    animation: 'slideUp3D 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                >
+                  {/* Search Header */}
+                  <div style={{
+                    padding: '8px 10px',
+                    borderBottom: '1px solid var(--border-color)',
+                    position: 'sticky',
+                    top: 0,
+                    backgroundColor: 'var(--bg-secondary)',
+                    zIndex: 10
+                  }}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <Search size={13} style={{ position: 'absolute', left: '8px', color: 'var(--text-muted)' }} />
+                      <input
+                        ref={switchSearchInputRef}
+                        type="text"
+                        placeholder="Search conversations..."
+                        value={switchSearchQuery}
+                        onChange={(e) => setSwitchSearchQuery(e.target.value)}
                         style={{
-                          padding: '6px 8px',
+                          width: '100%',
+                          padding: '5px 8px 5px 26px',
                           borderRadius: '6px',
-                          backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
-                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
-                          fontSize: '0.78rem',
-                          fontWeight: isSelected ? '700' : '500',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          overflow: 'hidden'
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-tertiary)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.75rem',
+                          outline: 'none'
                         }}
-                      >
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: getAvatarColor(c.participant), flexShrink: 0 }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{c.participant}</span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{c.company || 'Teams'}</span>
+                      />
+                      {switchSearchQuery && (
+                        <button
+                          onClick={() => setSwitchSearchQuery('')}
+                          style={{ position: 'absolute', right: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Grouped Chats List */}
+                  <div style={{ padding: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {Object.keys(groupedSwitchChats).length === 0 ? (
+                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
+                        No conversations found
                       </div>
-                    );
-                  })}
+                    ) : (
+                      Object.entries(groupedSwitchChats).map(([groupName, groupChats]) => (
+                        <div key={groupName} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          {/* Group Section Header */}
+                          <div style={{
+                            padding: '4px 8px',
+                            fontSize: '0.66rem',
+                            fontWeight: '800',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            color: 'var(--accent-primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            backgroundColor: 'var(--bg-tertiary)',
+                            borderRadius: '4px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
+                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: getAvatarColor(groupName), flexShrink: 0 }} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{groupName}</span>
+                            </div>
+                            <span style={{ opacity: 0.75 }}>{groupChats.length}</span>
+                          </div>
+
+                          {/* Chat Items */}
+                          {groupChats.map((c) => {
+                            const id = c._id || c.microsoftChatId || c.id;
+                            const isSelected = id === chatId;
+                            return (
+                              <div
+                                key={id}
+                                onClick={() => {
+                                  setShowSwitchDropdown(false);
+                                  if (onSelectChat) onSelectChat(id);
+                                }}
+                                style={{
+                                  padding: '6px 8px',
+                                  borderRadius: '6px',
+                                  backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  transition: 'background-color 0.15s ease'
+                                }}
+                              >
+                                <div style={{
+                                  width: '26px',
+                                  height: '26px',
+                                  borderRadius: '50%',
+                                  backgroundColor: getAvatarColor(c.participant),
+                                  color: '#fff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.72rem',
+                                  fontWeight: '700',
+                                  flexShrink: 0
+                                }}>
+                                  {getInitials(c.participant)}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{
+                                      fontSize: '0.78rem',
+                                      fontWeight: isSelected ? '800' : '600',
+                                      color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {c.participant}
+                                    </span>
+                                    {c.unreadCount > 0 && (
+                                      <span style={{
+                                        backgroundColor: '#ef4444',
+                                        color: '#fff',
+                                        fontSize: '0.6rem',
+                                        fontWeight: '800',
+                                        padding: '1px 5px',
+                                        borderRadius: '8px'
+                                      }}>
+                                        {c.unreadCount}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.68rem',
+                                    color: 'var(--text-muted)',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {(c.lastMessagePreview || '').replace(/<[^>]*>/g, '').trim() || 'No preview'}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -807,7 +989,7 @@ export default function ChatConversationPane({
           <input
             ref={chatInputRef}
             type="text"
-            placeholder={`Type a message to ${chat.participant}...`}
+            placeholder={`Type a message to ${chat.participant}... (Alt+${paneIndex})`}
             value={draftMessage}
             onChange={(e) => setDraftMessage(e.target.value)}
             style={{

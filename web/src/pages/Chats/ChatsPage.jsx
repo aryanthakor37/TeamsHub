@@ -247,6 +247,18 @@ export default function ChatsPage({
     }
   };
 
+  // Keyboard shortcut: Alt+S to toggle split view
+  useEffect(() => {
+    const handleGlobalKey = (e) => {
+      if (e.altKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        handleToggleSplit();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => window.removeEventListener('keydown', handleGlobalKey);
+  }, [isSplitActive, splitChatId, chats, selectedChatId]);
+
   return (
     <div style={{ display: 'flex', width: '100%', height: 'calc(100vh - 66px)', overflow: 'hidden', backgroundColor: 'var(--bg-primary)' }}>
       {/* Left Chat List Column */}
@@ -584,6 +596,7 @@ export default function ChatsPage({
               bumpChatToTop={bumpChatToTop}
               onBack={() => setActiveChatId(null)}
               paneTitle="Primary Chat"
+              paneIndex={1}
             />
 
             {/* Secondary Right Conversation Pane (Split View) */}
@@ -599,6 +612,7 @@ export default function ChatsPage({
                 onPreviewDoc={(doc) => setPreviewDocModal(doc)}
                 bumpChatToTop={bumpChatToTop}
                 paneTitle="Split Chat"
+                paneIndex={2}
               />
             )}
           </>
