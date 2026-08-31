@@ -568,6 +568,50 @@ export const unsetMessageReactionOnBackend = async (chatId, messageId, reactionT
 };
 
 /**
+ * Edit a Message on Backend & Microsoft Graph
+ */
+export const editMessageOnBackend = async (chatId, messageId, content, accountId) => {
+  try {
+    const headers = await getAuthHeaders(accountId);
+    const response = await fetch(
+      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}`,
+      {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ content, connectedAccountId: accountId })
+      }
+    );
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.warn('[TeamsHub Chat API] Edit Message Error:', error.message);
+    return { success: false };
+  }
+};
+
+/**
+ * Delete a Message on Backend & Microsoft Graph
+ */
+export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
+  try {
+    const headers = await getAuthHeaders(accountId);
+    const response = await fetch(
+      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}`,
+      {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({ connectedAccountId: accountId })
+      }
+    );
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.warn('[TeamsHub Chat API] Delete Message Error:', error.message);
+    return { success: false };
+  }
+};
+
+/**
  * Mark Chat as Read on Backend
  */
 export const markChatAsReadOnBackend = async (chatId, accountId = null) => {

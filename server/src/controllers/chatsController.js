@@ -9,6 +9,8 @@ const {
   fetchGraphChatsFromAPI,
   fetchGraphChatMessages,
   sendGraphChatMessage,
+  updateGraphChatMessage,
+  deleteGraphChatMessage,
   setGraphMessageReaction,
   unsetGraphMessageReaction,
   getUnicodeReaction,
@@ -988,6 +990,154 @@ const unsetMessageReaction = async (req, res) => {
 };
 
 // ============================================================
+// PATCH /api/chats/:id/messages/:msgId (Edit Message)
+// ============================================================
+const editMessage = async (req, res) => {
+  try {
+    const { id, msgId } = req.params;
+    const { content } = req.body;
+
+    let connectedAccounts = [];
+    if (dbAvailable) {
+      connectedAccounts = await ConnectedAccount.find({
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken');
+    }
+
+    const candidateTokens = [];
+    if (req.headers['x-ms-token']) candidateTokens.push(req.headers['x-ms-token']);
+    connectedAccounts.forEach(acc => {
+      if (acc.microsoftAccessToken && !candidateTokens.includes(acc.microsoftAccessToken)) {
+        candidateTokens.push(acc.microsoftAccessToken);
+      }
+    });
+
+    let cleanChatId = decodeURIComponent(id);
+    let realMessageId = decodeURIComponent(msgId);
+    if (realMessageId.startsWith('msg-')) {
+      const sub = realMessageId.replace(/^msg-/, '');
+      if (/^\d+$/.test(sub)) realMessageId = sub;
+    }
+
+    let graphSuccess = false;
+    if (candidateTokens.length > 0 && !isMockMode()) {
+      for (const token of candidateTokens) {
+        try {
+          await updateGraphChatMessage(token, cleanChatId, realMessageId, content);
+          graphSuccess = true;
+          console.log(`[Graph editMessage SUCCESS] Chat: ${cleanChatId} Msg: ${realMessageId}`);
+          break;
+        } catch (err) {
+          console.warn(`[Graph editMessage error for Chat: ${cleanChatId} Msg: ${realMessageId}]`, err.message);
+        }
+      }
+    }
+
+    if (dbAvailable) {
+      try {
+        await Message.updateOne(
+          { $or: [{ microsoftMessageId: realMessageId }, { _id: realMessageId }] },
+          { $set: { content: content, isEdited: true } }
+        );
+      } catch (dbErr) {}
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`chat:${id}`).emit('chat:message:edited', {
+        chatId: id,
+        messageId: msgId,
+        content
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        chatId: id,
+        messageId: msgId,
+        content,
+        graphSynced: graphSuccess
+      }
+    });
+  } catch (error) {
+    return sendGraphError(res, error);
+  }
+};
+
+// ============================================================
+// DELETE /api/chats/:id/messages/:msgId (Delete Message)
+// ============================================================
+const deleteMessage = async (req, res) => {
+  try {
+    const { id, msgId } = req.params;
+
+    let connectedAccounts = [];
+    if (dbAvailable) {
+      connectedAccounts = await ConnectedAccount.find({
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken');
+    }
+
+    const candidateTokens = [];
+    if (req.headers['x-ms-token']) candidateTokens.push(req.headers['x-ms-token']);
+    connectedAccounts.forEach(acc => {
+      if (acc.microsoftAccessToken && !candidateTokens.includes(acc.microsoftAccessToken)) {
+        candidateTokens.push(acc.microsoftAccessToken);
+      }
+    });
+
+    let cleanChatId = decodeURIComponent(id);
+    let realMessageId = decodeURIComponent(msgId);
+    if (realMessageId.startsWith('msg-')) {
+      const sub = realMessageId.replace(/^msg-/, '');
+      if (/^\d+$/.test(sub)) realMessageId = sub;
+    }
+
+    let graphSuccess = false;
+    if (candidateTokens.length > 0 && !isMockMode()) {
+      for (const token of candidateTokens) {
+        try {
+          await deleteGraphChatMessage(token, cleanChatId, realMessageId);
+          graphSuccess = true;
+          console.log(`[Graph deleteMessage SUCCESS] Chat: ${cleanChatId} Msg: ${realMessageId}`);
+          break;
+        } catch (err) {
+          console.warn(`[Graph deleteMessage error for Chat: ${cleanChatId} Msg: ${realMessageId}]`, err.message);
+        }
+      }
+    }
+
+    if (dbAvailable) {
+      try {
+        await Message.deleteOne({
+          $or: [{ microsoftMessageId: realMessageId }, { _id: realMessageId }]
+        });
+      } catch (dbErr) {}
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`chat:${id}`).emit('chat:message:deleted', {
+        chatId: id,
+        messageId: msgId
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        chatId: id,
+        messageId: msgId,
+        graphSynced: graphSuccess
+      }
+    });
+  } catch (error) {
+    return sendGraphError(res, error);
+  }
+};
+
+// ============================================================
 // GET /api/chats/:id/messages/:msgId/hostedContents/:contentId
 // ============================================================
 
@@ -1228,6 +1378,8 @@ module.exports = {
   getChatById,
   getChatMessages,
   sendMessage,
+  editMessage,
+  deleteMessage,
   setMessageReaction,
   unsetMessageReaction,
   getMessageImage,

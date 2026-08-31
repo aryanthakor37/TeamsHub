@@ -334,6 +334,59 @@ const sendGraphChatMessage = async (accessToken, chatId, content, attachments = 
   }
 };
 
+/**
+ * Update (Edit) a chat message on Microsoft Graph — PATCH /v1.0/chats/{chatId}/messages/{messageId}
+ */
+const updateGraphChatMessage = async (accessToken, chatId, messageId, content) => {
+  const cleanChatId = decodeURIComponent(chatId);
+  const cleanMsgId = decodeURIComponent(messageId);
+  const payload = {
+    body: {
+      content: content || ' ',
+      contentType: 'html'
+    }
+  };
+
+  try {
+    return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    console.warn('[Graph updateMessage v1.0 failed, trying beta]', err.message);
+    return await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+  }
+};
+
+/**
+ * Soft Delete / Delete a chat message on Microsoft Graph
+ */
+const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
+  const cleanChatId = decodeURIComponent(chatId);
+  const cleanMsgId = decodeURIComponent(messageId);
+
+  try {
+    return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
+      method: 'POST'
+    });
+  } catch (err) {
+    console.warn('[Graph softDelete v1.0 failed, trying beta]', err.message);
+    try {
+      return await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
+        method: 'POST'
+      });
+    } catch (err2) {
+      console.warn('[Graph softDelete beta failed, trying direct DELETE]', err2.message);
+      return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}`, {
+        method: 'DELETE'
+      });
+    }
+  }
+};
+
 const EMOJI_TO_UNICODE_MAP = {
   'like': '👍',
   'thumbsup': '👍',
@@ -1960,6 +2013,8 @@ module.exports = {
   fetchGraphChatsFromAPI,
   fetchGraphChatMessages,
   sendGraphChatMessage,
+  updateGraphChatMessage,
+  deleteGraphChatMessage,
   setGraphMessageReaction,
   unsetGraphMessageReaction,
   getUnicodeReaction,

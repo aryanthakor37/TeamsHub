@@ -3,7 +3,9 @@ import {
   fetchMessagesFromBackend,
   sendMessageToBackend,
   setMessageReactionOnBackend,
-  unsetMessageReactionOnBackend
+  unsetMessageReactionOnBackend,
+  editMessageOnBackend,
+  deleteMessageOnBackend
 } from '../services/chatService';
 import { playTeamsNotificationSound } from '../utils/notificationUtils';
 import { joinChatRoom, leaveChatRoom, getSocket, emitChatMessage } from '../services/socketService';
@@ -261,9 +263,9 @@ export const useMessages = (chatId, accountId) => {
     }
   }, [chatId, accountId]);
 
-  // Delete message (optimistic state removal + persistent storage update)
+  // Delete message (optimistic state removal + persistent storage update + Graph API delete)
   const deleteMessage = useCallback(async (messageId) => {
-    if (!messageId) return;
+    if (!messageId || !chatId) return;
     setMessages((prev) => {
       const updated = prev.filter(
         (m) =>
@@ -272,19 +274,23 @@ export const useMessages = (chatId, accountId) => {
           m.id !== messageId &&
           `msg-${m.id}` !== messageId
       );
-      if (chatId) {
-        messageMemoryCache.set(chatId, updated);
-        try {
-          localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(updated.slice(-50)));
-        } catch (e) {}
-      }
+      messageMemoryCache.set(chatId, updated);
+      try {
+        localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(updated.slice(-50)));
+      } catch (e) {}
       return updated;
     });
-  }, [chatId]);
 
-  // Edit message content
+    try {
+      await deleteMessageOnBackend(chatId, messageId, accountId);
+    } catch (err) {
+      console.warn('Failed to delete message on backend:', err.message);
+    }
+  }, [chatId, accountId]);
+
+  // Edit message content (optimistic update + Graph API edit)
   const editMessage = useCallback(async (messageId, newContent) => {
-    if (!messageId || !newContent) return;
+    if (!messageId || !newContent || !chatId) return;
     setMessages((prev) => {
       const updated = prev.map((m) => {
         const isMatch =
@@ -294,15 +300,19 @@ export const useMessages = (chatId, accountId) => {
         if (!isMatch) return m;
         return { ...m, content: newContent, isEdited: true };
       });
-      if (chatId) {
-        messageMemoryCache.set(chatId, updated);
-        try {
-          localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(updated.slice(-50)));
-        } catch (e) {}
-      }
+      messageMemoryCache.set(chatId, updated);
+      try {
+        localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(updated.slice(-50)));
+      } catch (e) {}
       return updated;
     });
-  }, [chatId]);
+
+    try {
+      await editMessageOnBackend(chatId, messageId, newContent, accountId);
+    } catch (err) {
+      console.warn('Failed to edit message on backend:', err.message);
+    }
+  }, [chatId, accountId]);
 
   return {
     messages,
