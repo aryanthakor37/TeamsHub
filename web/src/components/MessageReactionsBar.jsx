@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Smile, MoreHorizontal, MessageSquareQuote, Edit3, Forward,
-  Link, Bookmark, Trash2, Pin, EyeOff, Mail, Languages, ChevronRight
+  Smile, MoreHorizontal, MessageSquareQuote, Edit3,
+  Copy, Trash2, Pin, Languages
 } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 
@@ -31,15 +31,12 @@ export default function MessageReactionsBar({
   activeUserReactions = [],
   isOutgoing = false,
   message = null,
+  isTranslated = false,
   onReply = null,
   onEdit = null,
-  onForward = null,
-  onCopyLink = null,
-  onSaveMessage = null,
+  onCopyText = null,
   onDelete = null,
   onPin = null,
-  onMarkUnread = null,
-  onShareOutlook = null,
   onTranslate = null
 }) {
   const [showFullPicker, setShowFullPicker] = useState(false);
@@ -71,18 +68,18 @@ export default function MessageReactionsBar({
     <div
       style={{
         position: 'absolute',
-        top: '-18px',
-        right: isOutgoing ? '12px' : 'auto',
-        left: isOutgoing ? 'auto' : '12px',
-        backgroundColor: 'var(--bg-secondary)',
+        top: '-20px',
+        right: isOutgoing ? '8px' : 'auto',
+        left: isOutgoing ? 'auto' : '8px',
+        backgroundColor: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
         borderRadius: '24px',
-        padding: '3px 6px',
+        padding: '2px 6px',
         display: 'flex',
         alignItems: 'center',
-        gap: '3px',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.16)',
-        backdropFilter: 'blur(12px)',
+        gap: '2px',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.18)',
+        backdropFilter: 'blur(16px)',
         zIndex: 60,
         userSelect: 'none',
         animation: 'fadeInScale 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -116,7 +113,7 @@ export default function MessageReactionsBar({
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'scale(1.25)';
-              e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'scale(1)';
@@ -177,7 +174,7 @@ export default function MessageReactionsBar({
       </div>
 
       {/* Divider */}
-      <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
+      <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
 
       {/* Teams 3-Dots Action Menu Trigger */}
       <div style={{ position: 'relative' }} ref={menuRef}>
@@ -216,7 +213,7 @@ export default function MessageReactionsBar({
           <MoreHorizontal size={15} />
         </button>
 
-        {/* Authenticated Teams-Style Context Menu Dropdown */}
+        {/* Clean Essential Context Menu (No double reactions) */}
         {showContextMenu && (
           <div
             className="teams-context-menu"
@@ -229,9 +226,9 @@ export default function MessageReactionsBar({
               color: 'var(--text-primary)',
               border: '1px solid var(--border-color)',
               borderRadius: '8px',
-              boxShadow: '0 8px 28px rgba(0, 0, 0, 0.22)',
-              width: '215px',
-              padding: '6px 0',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.22)',
+              width: '185px',
+              padding: '4px 0',
               zIndex: 1000,
               fontSize: '0.82rem',
               display: 'flex',
@@ -239,49 +236,16 @@ export default function MessageReactionsBar({
               animation: 'fadeInScale 0.12s ease-out'
             }}
           >
-            {/* Quick Reactions Header inside context menu */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '4px 12px 8px 12px',
-              borderBottom: '1px solid var(--border-color)',
-              marginBottom: '4px'
-            }}>
-              {TEAMS_REACTIONS.slice(0, 5).map((item) => (
-                <button
-                  key={item.type}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectReaction(item.type, item.emoji);
-                    setShowContextMenu(false);
-                  }}
-                  title={item.name}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '2px 4px',
-                    fontSize: '1.05rem',
-                    cursor: 'pointer',
-                    transition: 'transform 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.3)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-                >
-                  {item.emoji}
-                </button>
-              ))}
-            </div>
-
             {/* Reply with quote */}
-            <button
-              className="teams-menu-item"
-              onClick={(e) => handleAction(onReply, e)}
-            >
-              <MessageSquareQuote size={15} className="menu-icon" />
-              <span className="menu-label">Reply with quote</span>
-            </button>
+            {onReply && (
+              <button
+                className="teams-menu-item"
+                onClick={(e) => handleAction(onReply, e)}
+              >
+                <MessageSquareQuote size={15} className="menu-icon" />
+                <span className="menu-label">Reply with quote</span>
+              </button>
+            )}
 
             {/* Edit (available for outgoing messages) */}
             {isOutgoing && onEdit && (
@@ -295,83 +259,52 @@ export default function MessageReactionsBar({
               </button>
             )}
 
-            {/* Forward */}
-            <button
-              className="teams-menu-item"
-              onClick={(e) => handleAction(onForward, e)}
-            >
-              <Forward size={15} className="menu-icon" />
-              <span className="menu-label">Forward</span>
-              <ChevronRight size={13} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
-            </button>
-
-            {/* Copy link / Copy text */}
-            <button
-              className="teams-menu-item"
-              onClick={(e) => handleAction(onCopyLink, e)}
-            >
-              <Link size={15} className="menu-icon" />
-              <span className="menu-label">Copy link</span>
-            </button>
-
-            {/* Save this message */}
-            <button
-              className="teams-menu-item"
-              onClick={(e) => handleAction(onSaveMessage, e)}
-            >
-              <Bookmark size={15} className="menu-icon" />
-              <span className="menu-label">Save this message</span>
-            </button>
-
-            {/* Delete (if outgoing or allowed) */}
-            {onDelete && (
+            {/* Real Live Translation */}
+            {onTranslate && (
               <button
-                className="teams-menu-item danger"
-                onClick={(e) => handleAction(onDelete, e)}
+                className="teams-menu-item"
+                onClick={(e) => handleAction(onTranslate, e)}
               >
-                <Trash2 size={15} className="menu-icon" />
-                <span className="menu-label">Delete</span>
+                <Languages size={15} className="menu-icon" style={{ color: isTranslated ? 'var(--accent-primary)' : 'inherit' }} />
+                <span className="menu-label">{isTranslated ? 'See original' : 'Translate'}</span>
+              </button>
+            )}
+
+            {/* Copy text */}
+            {onCopyText && (
+              <button
+                className="teams-menu-item"
+                onClick={(e) => handleAction(onCopyText, e)}
+              >
+                <Copy size={15} className="menu-icon" />
+                <span className="menu-label">Copy text</span>
               </button>
             )}
 
             {/* Pin for everyone */}
-            <button
-              className="teams-menu-item"
-              onClick={(e) => handleAction(onPin, e)}
-            >
-              <Pin size={15} className="menu-icon" />
-              <span className="menu-label">Pin for everyone</span>
-            </button>
+            {onPin && (
+              <button
+                className="teams-menu-item"
+                onClick={(e) => handleAction(onPin, e)}
+              >
+                <Pin size={15} className="menu-icon" />
+                <span className="menu-label">Pin</span>
+              </button>
+            )}
 
-            <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
-
-            {/* Mark as unread */}
-            <button
-              className="teams-menu-item"
-              onClick={(e) => handleAction(onMarkUnread, e)}
-            >
-              <EyeOff size={15} className="menu-icon" />
-              <span className="menu-label">Mark as unread</span>
-            </button>
-
-            {/* Share to Outlook */}
-            <button
-              className="teams-menu-item"
-              onClick={(e) => handleAction(onShareOutlook, e)}
-            >
-              <Mail size={15} className="menu-icon" />
-              <span className="menu-label">Share to Outlook</span>
-            </button>
-
-            {/* Translation */}
-            <button
-              className="teams-menu-item"
-              onClick={(e) => handleAction(onTranslate, e)}
-            >
-              <Languages size={15} className="menu-icon" />
-              <span className="menu-label">Translation</span>
-              <ChevronRight size={13} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
-            </button>
+            {/* Delete (if outgoing or allowed) */}
+            {onDelete && (
+              <>
+                <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '3px 0' }} />
+                <button
+                  className="teams-menu-item danger"
+                  onClick={(e) => handleAction(onDelete, e)}
+                >
+                  <Trash2 size={15} className="menu-icon" />
+                  <span className="menu-label">Delete</span>
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

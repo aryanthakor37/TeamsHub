@@ -261,6 +261,59 @@ export const useMessages = (chatId, accountId) => {
     }
   }, [chatId, accountId]);
 
-  return { messages, loading, error, reload: loadMessages, sendMessage, toggleReaction };
+  // Delete message (optimistic state removal + persistent storage update)
+  const deleteMessage = useCallback(async (messageId) => {
+    if (!messageId) return;
+    setMessages((prev) => {
+      const updated = prev.filter(
+        (m) =>
+          m.microsoftMessageId !== messageId &&
+          m._id !== messageId &&
+          m.id !== messageId &&
+          `msg-${m.id}` !== messageId
+      );
+      if (chatId) {
+        messageMemoryCache.set(chatId, updated);
+        try {
+          localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(updated.slice(-50)));
+        } catch (e) {}
+      }
+      return updated;
+    });
+  }, [chatId]);
+
+  // Edit message content
+  const editMessage = useCallback(async (messageId, newContent) => {
+    if (!messageId || !newContent) return;
+    setMessages((prev) => {
+      const updated = prev.map((m) => {
+        const isMatch =
+          m.microsoftMessageId === messageId ||
+          m._id === messageId ||
+          m.id === messageId;
+        if (!isMatch) return m;
+        return { ...m, content: newContent, isEdited: true };
+      });
+      if (chatId) {
+        messageMemoryCache.set(chatId, updated);
+        try {
+          localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(updated.slice(-50)));
+        } catch (e) {}
+      }
+      return updated;
+    });
+  }, [chatId]);
+
+  return {
+    messages,
+    loading,
+    error,
+    reload: loadMessages,
+    sendMessage,
+    toggleReaction,
+    deleteMessage,
+    editMessage
+  };
 };
+
 

@@ -4,7 +4,7 @@ import {
   FileText, Paperclip, Image as ImageIcon, Download, X, ExternalLink,
   Eye, Smile, LogIn, ArrowLeft, Columns, ChevronDown, Split, Search,
   Pin, Bookmark, Check, CornerUpLeft, MessageSquareQuote, Edit3,
-  Forward, Link, Trash2, EyeOff, Mail, Languages, ChevronRight
+  Copy, Trash2, Languages
 } from 'lucide-react';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,6 +12,7 @@ import { getAvatarColor, getInitials } from '../../utils/avatarUtils';
 import { getFileCategoryMeta } from '../../components/DocumentPreviewModal';
 import EmojiPicker from '../../components/EmojiPicker';
 import MessageReactionsBar, { getEmojiForReactionType, TEAMS_REACTIONS } from '../../components/MessageReactionsBar';
+import { translateTeamsMessage } from '../../utils/translationUtils';
 
 // Helper to format date divider headers like Teams
 const formatMessageDate = (dateStr) => {
@@ -136,10 +137,32 @@ export default function ChatConversationPane({
   });
   const [toastNotification, setToastNotification] = useState(null);
   const [activeContextMenu, setActiveContextMenu] = useState(null); // { msg, msgId, x, y, isOutgoing, rawReactions }
+  const [translatedMessages, setTranslatedMessages] = useState({}); // { [msgId]: translatedText }
 
   const showToast = (text) => {
     setToastNotification(text);
     setTimeout(() => setToastNotification(null), 2400);
+  };
+
+  const handleToggleTranslate = async (msg) => {
+    if (!msg) return;
+    const msgId = msg.microsoftMessageId || msg._id || msg.id;
+    if (translatedMessages[msgId]) {
+      setTranslatedMessages((prev) => {
+        const next = { ...prev };
+        delete next[msgId];
+        return next;
+      });
+      return;
+    }
+    showToast('Translating to Gujarati...');
+    const originalText = (msg.content || '').replace(/<[^>]*>/g, '');
+    const translated = await translateTeamsMessage(originalText, 'gu');
+    setTranslatedMessages((prev) => ({
+      ...prev,
+      [msgId]: translated
+    }));
+    showToast('Translated to Gujarati');
   };
 
   const chatInputRef = useRef(null);
@@ -227,7 +250,7 @@ export default function ChatConversationPane({
   const chatId = chat?._id || chat?.microsoftChatId || chat?.id;
   const chatOwner = chat?.accountEmail || chat?.connectedAccountId;
 
-  const { messages, loading: messagesLoading, error: messagesError, sendMessage, toggleReaction } = useMessages(chatId, chatOwner);
+  const { messages, loading: messagesLoading, error: messagesError, sendMessage, toggleReaction, deleteMessage, editMessage } = useMessages(chatId, chatOwner);
   const rawMessages = Array.isArray(messages) ? messages : [];
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
 
@@ -320,7 +343,13 @@ export default function ChatConversationPane({
     }
 
     if (editingMessage) {
+      const editMsgId = editingMessage.microsoftMessageId || editingMessage._id || editingMessage.id;
       setEditingMessage(null);
+      setDraftMessage('');
+      await editMessage(editMsgId, textToSend);
+      showToast('Message updated');
+      chatInputRef.current?.focus();
+      return;
     }
 
     setIsSending(true);
@@ -929,6 +958,7 @@ export default function ChatConversationPane({
                           activeUserReactions={activeUserReactions}
                           onSelectReaction={(reactionType) => toggleReaction(msgId, reactionType, rawReactions)}
                           message={msg}
+                          isTranslated={!!translatedMessages[msgId]}
                           onReply={(m) => {
                             setReplyingToMessage(m);
                             setEditingMessage(null);
@@ -940,29 +970,15 @@ export default function ChatConversationPane({
                             setDraftMessage((m.content || '').replace(/<[^>]*>/g, ''));
                             chatInputRef.current?.focus();
                           }}
-                          onForward={(m) => {
-                            const text = (m.content || '').replace(/<[^>]*>/g, '');
-                            if (navigator.clipboard) navigator.clipboard.writeText(text);
-                            showToast('Message copied to forward');
-                          }}
-                          onCopyLink={(m) => {
-                            const text = (m.content || '').replace(/<[^>]*>/g, '');
+                          onTranslate={() => handleToggleTranslate(msg)}
+                          onCopyText={(m) => {
+                            const text = (translatedMessages[msgId] || m.content || '').replace(/<[^>]*>/g, '');
                             if (navigator.clipboard) navigator.clipboard.writeText(text);
                             showToast('Message copied to clipboard');
                           }}
-                          onSaveMessage={(m) => {
+                          onDelete={async (m) => {
                             const id = m.microsoftMessageId || m._id || m.id || msgId;
-                            setSavedMessageIds((prev) => {
-                              const exists = prev.includes(id);
-                              const next = exists ? prev.filter((x) => x !== id) : [...prev, id];
-                              try {
-                                localStorage.setItem('teamshub_saved_messages', JSON.stringify(next));
-                              } catch {}
-                              showToast(exists ? 'Message removed from saved' : 'Message saved');
-                              return next;
-                            });
-                          }}
-                          onDelete={() => {
+                            await deleteMessage(id);
                             showToast('Message deleted');
                           }}
                           onPin={(m) => {
@@ -974,12 +990,6 @@ export default function ChatConversationPane({
                               return next;
                             });
                           }}
-                          onMarkUnread={() => showToast('Marked as unread')}
-                          onShareOutlook={(m) => {
-                            const text = (m.content || '').replace(/<[^>]*>/g, '');
-                            window.open(`mailto:?subject=Microsoft Teams Message&body=${encodeURIComponent(text)}`);
-                          }}
-                          onTranslate={() => showToast('Translation ready')}
                         />
                       )}
 
@@ -1009,7 +1019,11 @@ export default function ChatConversationPane({
                           border: msg.isOutgoing ? 'none' : '1px solid var(--border-color)'
                         }}
                       >
-                        {msg.contentType === 'html' ? (
+                        {translatedMessages[msgId] ? (
+                          <div style={{ margin: 0, fontWeight: '500' }}>
+                            {translatedMessages[msgId]}
+                          </div>
+                        ) : msg.contentType === 'html' ? (
                           <div
                             className="message-html-content"
                             dangerouslySetInnerHTML={{
@@ -1055,6 +1069,30 @@ export default function ChatConversationPane({
                           </div>
                         )}
                       </div>
+
+                      {/* Translated Indicator */}
+                      {translatedMessages[msgId] && (
+                        <div style={{
+                          fontSize: '0.72rem',
+                          color: 'var(--text-muted)',
+                          marginTop: '3px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          <Languages size={12} color="var(--accent-primary)" />
+                          <span>Translated to Gujarati • </span>
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleTranslate(msg);
+                            }}
+                            style={{ color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', fontWeight: '600' }}
+                          >
+                            See original
+                          </span>
+                        </div>
+                      )}
 
                       {/* Read receipts */}
                       {msg.isOutgoing && (
@@ -1322,16 +1360,16 @@ export default function ChatConversationPane({
           className="teams-context-menu"
           style={{
             position: 'fixed',
-            top: Math.max(10, Math.min(activeContextMenu.y, window.innerHeight - 380)),
-            left: Math.max(10, Math.min(activeContextMenu.x, window.innerWidth - 230)),
+            top: Math.max(10, Math.min(activeContextMenu.y, window.innerHeight - 260)),
+            left: Math.max(10, Math.min(activeContextMenu.x, window.innerWidth - 200)),
             zIndex: 99999,
             backgroundColor: 'var(--bg-card)',
             color: 'var(--text-primary)',
             border: '1px solid var(--border-color)',
             borderRadius: '8px',
             boxShadow: '0 12px 36px rgba(0, 0, 0, 0.28)',
-            width: '215px',
-            padding: '6px 0',
+            width: '185px',
+            padding: '4px 0',
             fontSize: '0.82rem',
             display: 'flex',
             flexDirection: 'column',
@@ -1339,41 +1377,6 @@ export default function ChatConversationPane({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Quick Reactions Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '4px 12px 8px 12px',
-            borderBottom: '1px solid var(--border-color)',
-            marginBottom: '4px'
-          }}>
-            {TEAMS_REACTIONS.slice(0, 5).map((item) => (
-              <button
-                key={item.type}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleReaction(activeContextMenu.msgId, item.type, activeContextMenu.rawReactions);
-                  setActiveContextMenu(null);
-                }}
-                title={item.name}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '2px 4px',
-                  fontSize: '1.05rem',
-                  cursor: 'pointer',
-                  transition: 'transform 0.15s ease'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.3)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-              >
-                {item.emoji}
-              </button>
-            ))}
-          </div>
-
           {/* Reply with quote */}
           <button
             className="teams-menu-item"
@@ -1408,73 +1411,35 @@ export default function ChatConversationPane({
             </button>
           )}
 
-          {/* Forward */}
+          {/* Real Live Translation */}
           <button
             className="teams-menu-item"
             onClick={(e) => {
               e.stopPropagation();
-              const text = (activeContextMenu.msg.content || '').replace(/<[^>]*>/g, '');
-              if (navigator.clipboard) navigator.clipboard.writeText(text);
-              showToast('Message copied to forward');
+              handleToggleTranslate(activeContextMenu.msg);
               setActiveContextMenu(null);
             }}
           >
-            <Forward size={15} className="menu-icon" />
-            <span className="menu-label">Forward</span>
-            <ChevronRight size={13} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
+            <Languages size={15} className="menu-icon" style={{ color: translatedMessages[activeContextMenu.msgId] ? 'var(--accent-primary)' : 'inherit' }} />
+            <span className="menu-label">{translatedMessages[activeContextMenu.msgId] ? 'See original' : 'Translate'}</span>
           </button>
 
-          {/* Copy link / text */}
+          {/* Copy text */}
           <button
             className="teams-menu-item"
             onClick={(e) => {
               e.stopPropagation();
-              const text = (activeContextMenu.msg.content || '').replace(/<[^>]*>/g, '');
+              const text = (translatedMessages[activeContextMenu.msgId] || activeContextMenu.msg.content || '').replace(/<[^>]*>/g, '');
               if (navigator.clipboard) navigator.clipboard.writeText(text);
               showToast('Message copied to clipboard');
               setActiveContextMenu(null);
             }}
           >
-            <Link size={15} className="menu-icon" />
-            <span className="menu-label">Copy link</span>
+            <Copy size={15} className="menu-icon" />
+            <span className="menu-label">Copy text</span>
           </button>
 
-          {/* Save this message */}
-          <button
-            className="teams-menu-item"
-            onClick={(e) => {
-              e.stopPropagation();
-              const id = activeContextMenu.msg.microsoftMessageId || activeContextMenu.msg._id || activeContextMenu.msg.id || activeContextMenu.msgId;
-              setSavedMessageIds((prev) => {
-                const exists = prev.includes(id);
-                const next = exists ? prev.filter((x) => x !== id) : [...prev, id];
-                try {
-                  localStorage.setItem('teamshub_saved_messages', JSON.stringify(next));
-                } catch {}
-                showToast(exists ? 'Message removed from saved' : 'Message saved');
-                return next;
-              });
-              setActiveContextMenu(null);
-            }}
-          >
-            <Bookmark size={15} className="menu-icon" />
-            <span className="menu-label">Save this message</span>
-          </button>
-
-          {/* Delete */}
-          <button
-            className="teams-menu-item danger"
-            onClick={(e) => {
-              e.stopPropagation();
-              showToast('Message deleted');
-              setActiveContextMenu(null);
-            }}
-          >
-            <Trash2 size={15} className="menu-icon" />
-            <span className="menu-label">Delete</span>
-          </button>
-
-          {/* Pin for everyone */}
+          {/* Pin */}
           <button
             className="teams-menu-item"
             onClick={(e) => {
@@ -1490,51 +1455,27 @@ export default function ChatConversationPane({
             }}
           >
             <Pin size={15} className="menu-icon" />
-            <span className="menu-label">Pin for everyone</span>
+            <span className="menu-label">Pin</span>
           </button>
 
-          <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
-
-          {/* Mark as unread */}
-          <button
-            className="teams-menu-item"
-            onClick={(e) => {
-              e.stopPropagation();
-              showToast('Marked as unread');
-              setActiveContextMenu(null);
-            }}
-          >
-            <EyeOff size={15} className="menu-icon" />
-            <span className="menu-label">Mark as unread</span>
-          </button>
-
-          {/* Share to Outlook */}
-          <button
-            className="teams-menu-item"
-            onClick={(e) => {
-              e.stopPropagation();
-              const text = (activeContextMenu.msg.content || '').replace(/<[^>]*>/g, '');
-              window.open(`mailto:?subject=Microsoft Teams Message&body=${encodeURIComponent(text)}`);
-              setActiveContextMenu(null);
-            }}
-          >
-            <Mail size={15} className="menu-icon" />
-            <span className="menu-label">Share to Outlook</span>
-          </button>
-
-          {/* Translation */}
-          <button
-            className="teams-menu-item"
-            onClick={(e) => {
-              e.stopPropagation();
-              showToast('Translation ready');
-              setActiveContextMenu(null);
-            }}
-          >
-            <Languages size={15} className="menu-icon" />
-            <span className="menu-label">Translation</span>
-            <ChevronRight size={13} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
-          </button>
+          {/* Real Delete (if outgoing) */}
+          {activeContextMenu.isOutgoing && (
+            <>
+              <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '3px 0' }} />
+              <button
+                className="teams-menu-item danger"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await deleteMessage(activeContextMenu.msgId);
+                  showToast('Message deleted');
+                  setActiveContextMenu(null);
+                }}
+              >
+                <Trash2 size={15} className="menu-icon" />
+                <span className="menu-label">Delete</span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
