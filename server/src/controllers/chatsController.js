@@ -1210,15 +1210,20 @@ const deleteMessage = async (req, res) => {
     }
 
     let graphSuccess = false;
+    const debugLogs = [];
     if (candidateTokens.length > 0 && !isMockMode()) {
-      for (const token of candidateTokens) {
+      for (let idx = 0; idx < candidateTokens.length; idx++) {
+        const token = candidateTokens[idx];
         try {
-          await deleteGraphChatMessage(token, cleanChatId, realMessageId);
+          const tokenSnippet = token.substring(0, 15) + '...';
+          debugLogs.push({ attempt: idx + 1, tokenSnippet, status: 'started' });
+          await deleteGraphChatMessage(token, cleanChatId, realMessageId, debugLogs);
           graphSuccess = true;
           console.log(`[Graph deleteMessage SUCCESS] Chat: ${cleanChatId} Msg: ${realMessageId}`);
           break;
         } catch (err) {
           console.warn(`[Graph deleteMessage error for Chat: ${cleanChatId} Msg: ${realMessageId}]`, err.message);
+          debugLogs.push({ attempt: idx + 1, status: 'failed', error: err.message, details: err.details });
         }
       }
     }
@@ -1250,7 +1255,8 @@ const deleteMessage = async (req, res) => {
       data: {
         chatId: id,
         messageId: msgId,
-        graphSynced: graphSuccess
+        graphSynced: graphSuccess,
+        debugLogs
       }
     });
   } catch (error) {

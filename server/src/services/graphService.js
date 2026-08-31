@@ -89,7 +89,9 @@ const graphRequest = async (accessToken, endpoint, options = {}, maxRetries = 3)
           errorDetails = await response.text();
         } catch (e) { }
         console.warn(`[Graph API Error HTTP ${response.status}] ${endpoint}:`, errorDetails);
-        throw classifyGraphError(response.status, headersObj);
+        const classified = classifyGraphError(response.status, headersObj);
+        classified.details = errorDetails;
+        throw classified;
       }
 
       if (response.status === 204 || response.headers.get('content-length') === '0') {
@@ -375,9 +377,13 @@ const updateGraphChatMessage = async (accessToken, chatId, messageId, content) =
 /**
  * Soft Delete / Delete a chat message on Microsoft Graph
  */
-const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
+const deleteGraphChatMessage = async (accessToken, chatId, messageId, debugLogs = []) => {
   const cleanChatId = decodeURIComponent(chatId);
   const cleanMsgId = decodeURIComponent(messageId);
+
+  const logStep = (step, success, details = '') => {
+    debugLogs.push({ step, success, details });
+  };
 
   // 1. Try v1.0 softDelete (Delegated Chat.ReadWrite action - NO body)
   try {
@@ -385,9 +391,11 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
       method: 'POST'
     });
     console.log('[Graph softDelete v1.0 success]');
+    logStep('softDelete_v1.0', true, 'Success');
     return res;
   } catch (err) {
     console.warn('[Graph softDelete v1.0 failed]:', err.message);
+    logStep('softDelete_v1.0', false, err.details || err.message);
   }
 
   // 2. Try users/me softDelete
@@ -396,9 +404,11 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
       method: 'POST'
     });
     console.log('[Graph users/me softDelete success]');
+    logStep('users_me_softDelete', true, 'Success');
     return res;
   } catch (err) {
     console.warn('[Graph users/me softDelete failed]:', err.message);
+    logStep('users_me_softDelete', false, err.details || err.message);
   }
 
   // 3. Try beta softDelete
@@ -408,10 +418,14 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
     });
     if (res) {
       console.log('[Graph softDelete beta success]');
+      logStep('softDelete_beta', true, 'Success');
       return res;
+    } else {
+      logStep('softDelete_beta', false, 'Empty or null response');
     }
   } catch (err2) {
     console.warn('[Graph softDelete beta failed]:', err2.message);
+    logStep('softDelete_beta', false, err2.details || err2.message);
   }
 
   // 4. Try direct DELETE
@@ -420,14 +434,24 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
       method: 'DELETE'
     });
     console.log('[Graph direct DELETE success]');
+    logStep('direct_DELETE', true, 'Success');
     return res;
   } catch (err3) {
     console.warn('[Graph direct DELETE failed]:', err3.message);
+    logStep('direct_DELETE', false, err3.details || err3.message);
   }
 
   // 5. Guaranteed Delegated Update: Overwrite message content on Graph API to deleted notice
   console.log('[Graph delete fallback to message clear update]');
-  return await updateGraphChatMessage(accessToken, cleanChatId, cleanMsgId, '<p><em>This message was deleted.</em></p>');
+  try {
+    const res = await updateGraphChatMessage(accessToken, cleanChatId, cleanMsgId, '<p><em>This message was deleted.</em></p>');
+    logStep('PATCH_fallback', true, 'Success');
+    return res;
+  } catch (errFallback) {
+    console.warn('[Graph delete fallback PATCH failed]:', errFallback.message);
+    logStep('PATCH_fallback', false, errFallback.details || errFallback.message);
+    throw errFallback;
+  }
 };
 
 const EMOJI_TO_UNICODE_MAP = {
