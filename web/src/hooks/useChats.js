@@ -110,9 +110,18 @@ export const useChats = () => {
   const prevChatTimestamps = useRef(new Map());
   const isInitialLoad = useRef(true);
 
-  // Request browser notification permission once on hook mount
+  // Request browser notification permission once and seed initial timestamps from cache
   useEffect(() => {
     requestNotificationPermission();
+    const cached = getStoredLocalChats();
+    if (cached && cached.length > 0) {
+      cached.forEach(c => {
+        const key = getChatUniqueKey(c);
+        const ts = new Date(c.lastMessageTimestamp || 0).getTime();
+        if (key && ts) prevChatTimestamps.current.set(key, ts);
+      });
+      isInitialLoad.current = false;
+    }
   }, []);
 
   // Synchronize read chats and clear state on logout
@@ -259,11 +268,11 @@ export const useChats = () => {
       setChats(sorted);
       saveStoredLocalChats(sorted);
 
-      // Record initial timestamps
-      rawItems.forEach(c => {
-        const id = c._id || c.id || c.microsoftChatId;
+      // Record initial timestamps using composite key
+      withRead.forEach(c => {
+        const key = getChatUniqueKey(c);
         const ts = new Date(c.lastMessageTimestamp || 0).getTime();
-        prevChatTimestamps.current.set(id, ts);
+        if (key && ts) prevChatTimestamps.current.set(key, ts);
       });
       isInitialLoad.current = false;
     } catch (err) {
@@ -276,7 +285,9 @@ export const useChats = () => {
   const loadChatsSilently = useCallback(async () => {
     try {
       const data = await fetchChatsFromBackend('all');
-      const rawItems = data.items || [];
+      const rawItems = Array.isArray(data)
+        ? data
+        : (data?.items || data?.chats || data?.value || []);
       const existingCached = getStoredLocalChats();
       const mergedList = mergeMultiAccountChats(rawItems, existingCached);
 
@@ -289,14 +300,14 @@ export const useChats = () => {
 
       if (!isInitialLoad.current && prevChatTimestamps.current.size > 0) {
         for (const chat of withRead) {
-          const id = chat._id || chat.id || chat.microsoftChatId;
+          const key = getChatUniqueKey(chat);
           const currentTs = new Date(chat.lastMessageTimestamp || 0).getTime();
-          const prevTs = prevChatTimestamps.current.get(id) || 0;
+          const prevTs = prevChatTimestamps.current.get(key) || 0;
 
           const isOutgoing = !!(chat.isLastMessageOutgoing || chat.isOutgoing);
           const isSelf = !!(chat.isSelfChat || chat.participant?.includes('(You)'));
           const isActiveChat = typeof window !== 'undefined' && window.__teamshub_active_chat_id &&
-            (window.__teamshub_active_chat_id === id || window.__teamshub_active_chat_id === chat.microsoftChatId || window.__teamshub_active_chat_id === chat.id);
+            (window.__teamshub_active_chat_id === chat._id || window.__teamshub_active_chat_id === chat.microsoftChatId || window.__teamshub_active_chat_id === chat.id);
 
           // ONLY trigger notification if it is an INCOMING message from the other person
           if (currentTs > prevTs && prevTs > 0 && !isOutgoing && !isSelf && !isActiveChat) {
@@ -307,11 +318,11 @@ export const useChats = () => {
         }
       }
 
-      // Update timestamps map
-      rawItems.forEach(c => {
-        const id = c._id || c.id || c.microsoftChatId;
+      // Update timestamps map using composite unique key
+      withRead.forEach(c => {
+        const key = getChatUniqueKey(c);
         const ts = new Date(c.lastMessageTimestamp || 0).getTime();
-        prevChatTimestamps.current.set(id, ts);
+        if (key && ts) prevChatTimestamps.current.set(key, ts);
       });
 
       // Play Teams chime & show notification if a new incoming message arrived from the other person
