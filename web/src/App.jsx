@@ -16,6 +16,7 @@ import { useChats } from './hooks/useChats';
 import { getAvatarColor, getInitials } from './utils/avatarUtils';
 import { getSocket } from './services/socketService';
 import { MessageSquare, X, ExternalLink } from 'lucide-react';
+import FloatingChatWidget from './components/FloatingChatWidget';
 
 function MainLayout() {
   const [activeTab, setActiveTab] = useState(() => {
@@ -264,6 +265,9 @@ function MainLayout() {
           </button>
         </div>
       )}
+
+      {/* Global Floating Quick-Reply Chat Head Widget */}
+      <FloatingChatWidget onOpenFullChat={(chatId) => setActiveTab('chats')} />
 
       {/* Microsoft Integration Dialog & Login Trigger */}
       <MicrosoftModal
