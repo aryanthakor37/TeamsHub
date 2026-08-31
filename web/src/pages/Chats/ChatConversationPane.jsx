@@ -262,9 +262,20 @@ export default function ChatConversationPane({
   };
 
   const safeMessages = useMemo(() => {
+    const delIds = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('teamshub_deleted_ids') || '[]');
+      } catch {
+        return [];
+      }
+    })();
+
     const valid = [...rawMessages].filter((m) => {
-      if (!m) return false;
+      if (!m || m.isDeleted || m.deletedDateTime) return false;
+      const mId = String(m.microsoftMessageId || m._id || m.id || '').replace(/^msg-/, '').trim();
+      if (delIds.some(d => String(d).replace(/^msg-/, '').trim() === mId)) return false;
       const clean = (m.content || '').replace(/<[^>]*>/g, '').trim();
+      if (clean === 'This message was deleted.' || clean === 'This message has been deleted') return false;
       const hasAttachments = Array.isArray(m.attachments) && m.attachments.length > 0;
       const hasImage = !!m.image || (m.content && m.content.includes('<img'));
       return clean.length > 0 || hasAttachments || hasImage;

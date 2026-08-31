@@ -12,6 +12,21 @@ import { joinChatRoom, leaveChatRoom, getSocket, emitChatMessage } from '../serv
 
 const messageMemoryCache = new Map();
 
+const isSameMessageId = (a, b) => {
+  if (!a || !b) return false;
+  const strA = String(a).replace(/^msg-/, '').trim();
+  const strB = String(b).replace(/^msg-/, '').trim();
+  return strA === strB || String(a).trim() === String(b).trim();
+};
+
+const getDeletedIds = () => {
+  try {
+    return JSON.parse(localStorage.getItem('teamshub_deleted_ids') || '[]');
+  } catch {
+    return [];
+  }
+};
+
 export const useMessages = (chatId, accountId) => {
   const activeChatIdRef = useRef(chatId);
   useEffect(() => {
@@ -82,8 +97,16 @@ export const useMessages = (chatId, accountId) => {
       // Guard against race conditions when user switched chats quickly
       if (activeChatIdRef.current !== chatId) return;
 
-      const items = data?.items || data?.messages || (Array.isArray(data) ? data : []);
-      if (items.length > 0) {
+      const rawItems = data?.items || data?.messages || (Array.isArray(data) ? data : []);
+      const delIds = getDeletedIds();
+      const items = rawItems.filter(m => {
+        if (!m || m.isDeleted || m.deletedDateTime) return false;
+        const clean = (m.content || '').replace(/<[^>]*>/g, '').trim();
+        if (clean === 'This message was deleted.' || clean === 'This message has been deleted') return false;
+        return !delIds.some(d => isSameMessageId(d, m.microsoftMessageId || m._id || m.id));
+      });
+
+      if (items.length > 0 || rawItems.length > 0) {
         setMessages(items);
         messageMemoryCache.set(chatId, items);
         try {
@@ -109,8 +132,14 @@ export const useMessages = (chatId, accountId) => {
       const data = await fetchMessagesFromBackend(chatId, accountId);
       if (activeChatIdRef.current !== chatId) return;
 
-      const newItems = data?.items || data?.messages || (Array.isArray(data) ? data : []);
-      if (newItems.length === 0) return;
+      const rawItems = data?.items || data?.messages || (Array.isArray(data) ? data : []);
+      const delIds = getDeletedIds();
+      const newItems = rawItems.filter(m => {
+        if (!m || m.isDeleted || m.deletedDateTime) return false;
+        const clean = (m.content || '').replace(/<[^>]*>/g, '').trim();
+        if (clean === 'This message was deleted.' || clean === 'This message has been deleted') return false;
+        return !delIds.some(d => isSameMessageId(d, m.microsoftMessageId || m._id || m.id));
+      });
 
       setMessages((prev) => {
         if (activeChatIdRef.current !== chatId) return prev;
@@ -302,13 +331,23 @@ export const useMessages = (chatId, accountId) => {
   // Delete message (optimistic state removal + persistent storage update + Graph API delete)
   const deleteMessage = useCallback(async (messageId) => {
     if (!messageId || !chatId) return;
+
+    // Add to blacklist
+    try {
+      const stored = getDeletedIds();
+      const cleanId = String(messageId).replace(/^msg-/, '').trim();
+      if (!stored.includes(cleanId)) {
+        stored.push(cleanId);
+        localStorage.setItem('teamshub_deleted_ids', JSON.stringify(stored.slice(-200)));
+      }
+    } catch (e) {}
+
     setMessages((prev) => {
       const updated = prev.filter(
         (m) =>
-          m.microsoftMessageId !== messageId &&
-          m._id !== messageId &&
-          m.id !== messageId &&
-          `msg-${m.id}` !== messageId
+          !isSameMessageId(m.microsoftMessageId, messageId) &&
+          !isSameMessageId(m._id, messageId) &&
+          !isSameMessageId(m.id, messageId)
       );
       messageMemoryCache.set(chatId, updated);
       try {
