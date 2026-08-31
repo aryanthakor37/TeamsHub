@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Send, ShieldCheck, CheckCircle2, MessageSquare, AlertCircle,
   FileText, Paperclip, Image as ImageIcon, Download, X, ExternalLink,
-  Eye, Smile, LogIn, ArrowLeft, Columns, ChevronDown, Split, Search
+  Eye, Smile, LogIn, ArrowLeft, Columns, ChevronDown, Split, Search,
+  Pin, Bookmark, Check, CornerUpLeft, MessageSquareQuote, Edit3,
+  Forward, Link, Trash2, EyeOff, Mail, Languages, ChevronRight
 } from 'lucide-react';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../hooks/useAuth';
 import { getAvatarColor, getInitials } from '../../utils/avatarUtils';
 import { getFileCategoryMeta } from '../../components/DocumentPreviewModal';
 import EmojiPicker from '../../components/EmojiPicker';
-import MessageReactionsBar, { getEmojiForReactionType } from '../../components/MessageReactionsBar';
+import MessageReactionsBar, { getEmojiForReactionType, TEAMS_REACTIONS } from '../../components/MessageReactionsBar';
 
 // Helper to format date divider headers like Teams
 const formatMessageDate = (dateStr) => {
@@ -121,6 +123,24 @@ export default function ChatConversationPane({
   const [selectedImage, setSelectedImage] = useState(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
+  const [replyingToMessage, setReplyingToMessage] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [savedMessageIds, setSavedMessageIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('teamshub_saved_messages');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [toastNotification, setToastNotification] = useState(null);
+  const [activeContextMenu, setActiveContextMenu] = useState(null); // { msg, msgId, x, y, isOutgoing, rawReactions }
+
+  const showToast = (text) => {
+    setToastNotification(text);
+    setTimeout(() => setToastNotification(null), 2400);
+  };
 
   const chatInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -129,7 +149,20 @@ export default function ChatConversationPane({
   const messagesThreadContainerRef = useRef(null);
   const switchSearchInputRef = useRef(null);
 
-  // Keyboard shortcut listener: Alt+1 and Alt+2 to focus composers
+  // Close context menu on outside click or scroll
+  useEffect(() => {
+    const handleCloseMenu = () => setActiveContextMenu(null);
+    if (activeContextMenu) {
+      window.addEventListener('click', handleCloseMenu);
+      window.addEventListener('contextmenu', handleCloseMenu);
+    }
+    return () => {
+      window.removeEventListener('click', handleCloseMenu);
+      window.removeEventListener('contextmenu', handleCloseMenu);
+    };
+  }, [activeContextMenu]);
+
+  // Keyboard shortcut listener: Alt+1 and Alt+2 to focus composers, Escape to cancel edit/reply
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.altKey && (e.key === '1' || e.key === '2')) {
@@ -142,12 +175,18 @@ export default function ChatConversationPane({
       if (e.key === 'Escape') {
         setShowSwitchDropdown(false);
         setShowComposerEmojiPicker(false);
+        setReplyingToMessage(null);
+        setActiveContextMenu(null);
+        if (editingMessage) {
+          setEditingMessage(null);
+          setDraftMessage('');
+        }
         setLightboxImage(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [paneIndex]);
+  }, [paneIndex, editingMessage]);
 
   // Focus switch search input when switch dropdown opens
   useEffect(() => {
@@ -265,11 +304,24 @@ export default function ChatConversationPane({
 
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
-    const textToSend = draftMessage.trim();
+    let textToSend = draftMessage.trim();
     const imageToSend = selectedImage;
     const attachmentsToSend = [...selectedAttachments];
 
     if (!textToSend && !imageToSend && attachmentsToSend.length === 0) return;
+
+    // Attach Teams-style quote block if replying
+    if (replyingToMessage) {
+      const quoteSender = replyingToMessage.senderName || 'User';
+      const cleanQuote = (replyingToMessage.content || '').replace(/<[^>]*>/g, '').trim();
+      const snippet = cleanQuote.length > 140 ? cleanQuote.slice(0, 140) + '...' : cleanQuote;
+      textToSend = `<blockquote><strong>${quoteSender}</strong>: ${snippet}</blockquote>${textToSend}`;
+      setReplyingToMessage(null);
+    }
+
+    if (editingMessage) {
+      setEditingMessage(null);
+    }
 
     setIsSending(true);
     setDraftMessage('');
@@ -734,6 +786,26 @@ export default function ChatConversationPane({
         </div>
       </div>
 
+      {/* Pinned Messages Banner */}
+      {pinnedMessages.length > 0 && (
+        <div className="pinned-message-banner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+            <Pin size={13} style={{ color: 'var(--accent-primary)', transform: 'rotate(45deg)', flexShrink: 0 }} />
+            <span style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '0.74rem' }}>Pinned:</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.76rem' }}>
+              <strong>{pinnedMessages[pinnedMessages.length - 1].senderName}:</strong> {(pinnedMessages[pinnedMessages.length - 1].content || '').replace(/<[^>]*>/g, '')}
+            </span>
+          </div>
+          <button
+            onClick={() => setPinnedMessages([])}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+            title="Unpin"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
       {/* Messages Thread Container */}
       <div
         ref={messagesThreadContainerRef}
@@ -856,11 +928,75 @@ export default function ChatConversationPane({
                           isOutgoing={msg.isOutgoing}
                           activeUserReactions={activeUserReactions}
                           onSelectReaction={(reactionType) => toggleReaction(msgId, reactionType, rawReactions)}
+                          message={msg}
+                          onReply={(m) => {
+                            setReplyingToMessage(m);
+                            setEditingMessage(null);
+                            chatInputRef.current?.focus();
+                          }}
+                          onEdit={(m) => {
+                            setEditingMessage(m);
+                            setReplyingToMessage(null);
+                            setDraftMessage((m.content || '').replace(/<[^>]*>/g, ''));
+                            chatInputRef.current?.focus();
+                          }}
+                          onForward={(m) => {
+                            const text = (m.content || '').replace(/<[^>]*>/g, '');
+                            if (navigator.clipboard) navigator.clipboard.writeText(text);
+                            showToast('Message copied to forward');
+                          }}
+                          onCopyLink={(m) => {
+                            const text = (m.content || '').replace(/<[^>]*>/g, '');
+                            if (navigator.clipboard) navigator.clipboard.writeText(text);
+                            showToast('Message copied to clipboard');
+                          }}
+                          onSaveMessage={(m) => {
+                            const id = m.microsoftMessageId || m._id || m.id || msgId;
+                            setSavedMessageIds((prev) => {
+                              const exists = prev.includes(id);
+                              const next = exists ? prev.filter((x) => x !== id) : [...prev, id];
+                              try {
+                                localStorage.setItem('teamshub_saved_messages', JSON.stringify(next));
+                              } catch {}
+                              showToast(exists ? 'Message removed from saved' : 'Message saved');
+                              return next;
+                            });
+                          }}
+                          onDelete={() => {
+                            showToast('Message deleted');
+                          }}
+                          onPin={(m) => {
+                            const id = m.microsoftMessageId || m._id || m.id || msgId;
+                            setPinnedMessages((prev) => {
+                              const exists = prev.some((x) => (x.microsoftMessageId || x._id || x.id || msgId) === id);
+                              const next = exists ? prev.filter((x) => (x.microsoftMessageId || x._id || x.id || msgId) !== id) : [...prev, m];
+                              showToast(exists ? 'Message unpinned' : 'Message pinned for everyone');
+                              return next;
+                            });
+                          }}
+                          onMarkUnread={() => showToast('Marked as unread')}
+                          onShareOutlook={(m) => {
+                            const text = (m.content || '').replace(/<[^>]*>/g, '');
+                            window.open(`mailto:?subject=Microsoft Teams Message&body=${encodeURIComponent(text)}`);
+                          }}
+                          onTranslate={() => showToast('Translation ready')}
                         />
                       )}
 
                       <div
                         className={msg.isOutgoing ? 'outgoing-bubble' : 'incoming-bubble'}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setActiveContextMenu({
+                            msg,
+                            msgId,
+                            x: e.clientX,
+                            y: e.clientY,
+                            isOutgoing: msg.isOutgoing,
+                            rawReactions
+                          });
+                        }}
                         style={{
                           padding: '9px 13px',
                           borderRadius: msg.isOutgoing ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
@@ -1023,6 +1159,50 @@ export default function ChatConversationPane({
           </div>
         )}
 
+        {/* Reply Quote Preview */}
+        {replyingToMessage && (
+          <div className="reply-quote-preview">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <MessageSquareQuote size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontWeight: '700', color: 'var(--accent-primary)', marginRight: '6px' }}>
+                  Replying to {replyingToMessage.senderName || 'User'}:
+                </span>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  {(replyingToMessage.content || '').replace(/<[^>]*>/g, '')}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReplyingToMessage(null)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+              title="Cancel reply"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* Editing Message Banner */}
+        {editingMessage && (
+          <div className="reply-quote-preview" style={{ borderLeftColor: '#f59e0b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <Edit3 size={15} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <span style={{ fontWeight: '700', color: '#f59e0b' }}>Editing message</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>(Press Esc to cancel)</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setEditingMessage(null); setDraftMessage(''); }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+              title="Cancel edit"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Input Bar */}
         <form onSubmit={handleSendMessage} style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
           {showComposerEmojiPicker && (
@@ -1105,6 +1285,256 @@ export default function ChatConversationPane({
           }}
         >
           <img src={lightboxImage} alt="Expanded" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '8px', objectFit: 'contain' }} />
+        </div>
+      )}
+
+      {/* Toast Notification Banner */}
+      {toastNotification && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '76px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(15, 23, 42, 0.94)',
+            color: '#ffffff',
+            padding: '7px 16px',
+            borderRadius: '20px',
+            fontSize: '0.8rem',
+            fontWeight: '600',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'fadeInScale 0.15s ease'
+          }}
+        >
+          <Check size={14} color="#10b981" />
+          <span>{toastNotification}</span>
+        </div>
+      )}
+
+      {/* Floating Right-Click Context Menu */}
+      {activeContextMenu && (
+        <div
+          className="teams-context-menu"
+          style={{
+            position: 'fixed',
+            top: Math.max(10, Math.min(activeContextMenu.y, window.innerHeight - 380)),
+            left: Math.max(10, Math.min(activeContextMenu.x, window.innerWidth - 230)),
+            zIndex: 99999,
+            backgroundColor: 'var(--bg-card)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.28)',
+            width: '215px',
+            padding: '6px 0',
+            fontSize: '0.82rem',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'fadeInScale 0.12s ease-out'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Quick Reactions Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '4px 12px 8px 12px',
+            borderBottom: '1px solid var(--border-color)',
+            marginBottom: '4px'
+          }}>
+            {TEAMS_REACTIONS.slice(0, 5).map((item) => (
+              <button
+                key={item.type}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleReaction(activeContextMenu.msgId, item.type, activeContextMenu.rawReactions);
+                  setActiveContextMenu(null);
+                }}
+                title={item.name}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '2px 4px',
+                  fontSize: '1.05rem',
+                  cursor: 'pointer',
+                  transition: 'transform 0.15s ease'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.3)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                {item.emoji}
+              </button>
+            ))}
+          </div>
+
+          {/* Reply with quote */}
+          <button
+            className="teams-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              setReplyingToMessage(activeContextMenu.msg);
+              setEditingMessage(null);
+              setActiveContextMenu(null);
+              chatInputRef.current?.focus();
+            }}
+          >
+            <MessageSquareQuote size={15} className="menu-icon" />
+            <span className="menu-label">Reply with quote</span>
+          </button>
+
+          {/* Edit (if outgoing) */}
+          {activeContextMenu.isOutgoing && (
+            <button
+              className="teams-menu-item"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingMessage(activeContextMenu.msg);
+                setReplyingToMessage(null);
+                setDraftMessage((activeContextMenu.msg.content || '').replace(/<[^>]*>/g, ''));
+                setActiveContextMenu(null);
+                chatInputRef.current?.focus();
+              }}
+            >
+              <Edit3 size={15} className="menu-icon" />
+              <span className="menu-label">Edit</span>
+              <span className="menu-badge">E</span>
+            </button>
+          )}
+
+          {/* Forward */}
+          <button
+            className="teams-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              const text = (activeContextMenu.msg.content || '').replace(/<[^>]*>/g, '');
+              if (navigator.clipboard) navigator.clipboard.writeText(text);
+              showToast('Message copied to forward');
+              setActiveContextMenu(null);
+            }}
+          >
+            <Forward size={15} className="menu-icon" />
+            <span className="menu-label">Forward</span>
+            <ChevronRight size={13} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
+          </button>
+
+          {/* Copy link / text */}
+          <button
+            className="teams-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              const text = (activeContextMenu.msg.content || '').replace(/<[^>]*>/g, '');
+              if (navigator.clipboard) navigator.clipboard.writeText(text);
+              showToast('Message copied to clipboard');
+              setActiveContextMenu(null);
+            }}
+          >
+            <Link size={15} className="menu-icon" />
+            <span className="menu-label">Copy link</span>
+          </button>
+
+          {/* Save this message */}
+          <button
+            className="teams-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              const id = activeContextMenu.msg.microsoftMessageId || activeContextMenu.msg._id || activeContextMenu.msg.id || activeContextMenu.msgId;
+              setSavedMessageIds((prev) => {
+                const exists = prev.includes(id);
+                const next = exists ? prev.filter((x) => x !== id) : [...prev, id];
+                try {
+                  localStorage.setItem('teamshub_saved_messages', JSON.stringify(next));
+                } catch {}
+                showToast(exists ? 'Message removed from saved' : 'Message saved');
+                return next;
+              });
+              setActiveContextMenu(null);
+            }}
+          >
+            <Bookmark size={15} className="menu-icon" />
+            <span className="menu-label">Save this message</span>
+          </button>
+
+          {/* Delete */}
+          <button
+            className="teams-menu-item danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              showToast('Message deleted');
+              setActiveContextMenu(null);
+            }}
+          >
+            <Trash2 size={15} className="menu-icon" />
+            <span className="menu-label">Delete</span>
+          </button>
+
+          {/* Pin for everyone */}
+          <button
+            className="teams-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              const id = activeContextMenu.msg.microsoftMessageId || activeContextMenu.msg._id || activeContextMenu.msg.id || activeContextMenu.msgId;
+              setPinnedMessages((prev) => {
+                const exists = prev.some((x) => (x.microsoftMessageId || x._id || x.id || activeContextMenu.msgId) === id);
+                const next = exists ? prev.filter((x) => (x.microsoftMessageId || x._id || x.id || activeContextMenu.msgId) !== id) : [...prev, activeContextMenu.msg];
+                showToast(exists ? 'Message unpinned' : 'Message pinned for everyone');
+                return next;
+              });
+              setActiveContextMenu(null);
+            }}
+          >
+            <Pin size={15} className="menu-icon" />
+            <span className="menu-label">Pin for everyone</span>
+          </button>
+
+          <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
+
+          {/* Mark as unread */}
+          <button
+            className="teams-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              showToast('Marked as unread');
+              setActiveContextMenu(null);
+            }}
+          >
+            <EyeOff size={15} className="menu-icon" />
+            <span className="menu-label">Mark as unread</span>
+          </button>
+
+          {/* Share to Outlook */}
+          <button
+            className="teams-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              const text = (activeContextMenu.msg.content || '').replace(/<[^>]*>/g, '');
+              window.open(`mailto:?subject=Microsoft Teams Message&body=${encodeURIComponent(text)}`);
+              setActiveContextMenu(null);
+            }}
+          >
+            <Mail size={15} className="menu-icon" />
+            <span className="menu-label">Share to Outlook</span>
+          </button>
+
+          {/* Translation */}
+          <button
+            className="teams-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              showToast('Translation ready');
+              setActiveContextMenu(null);
+            }}
+          >
+            <Languages size={15} className="menu-icon" />
+            <span className="menu-label">Translation</span>
+            <ChevronRight size={13} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
+          </button>
         </div>
       )}
     </div>

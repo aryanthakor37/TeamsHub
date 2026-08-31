@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  MessageSquare, 
-  Folder, 
-  Users, 
-  Clock, 
-  ArrowUpRight, 
-  FileText, 
-  ImageIcon, 
-  Video, 
-  FileSpreadsheet, 
-  Archive, 
+import {
+  MessageSquare,
+  Folder,
+  Users,
+  Clock,
+  ArrowUpRight,
+  FileText,
+  ImageIcon,
+  Video,
+  FileSpreadsheet,
+  Archive,
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
@@ -44,7 +44,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
   const [loadingFiles, setLoadingFiles] = useState(() => getStoredCachedFiles().length === 0);
   const connectedCount = connectedAccounts ? connectedAccounts.length : 0;
   const activeAccName = activeAccount ? (activeAccount.displayName || activeAccount.email) : 'No Active Account';
-  
+
   useEffect(() => {
     let active = true;
     if (connectedAccounts && connectedAccounts.length > 0) {
@@ -57,9 +57,9 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           setRecentFiles(sorted);
           try {
             localStorage.setItem('teamshub_cached_files', JSON.stringify(sorted));
-          } catch (e) {}
+          } catch (e) { }
         }
-      }).catch(() => {}).finally(() => {
+      }).catch(() => { }).finally(() => {
         if (active) setLoadingFiles(false);
       });
     } else {
@@ -86,7 +86,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
       const aEmail = (a.email || '').toLowerCase().trim();
       const aUser = aEmail.split('@')[0];
       return (aName && (badge.includes(aName) || aName.includes(badge))) ||
-             (aUser && (badge.includes(aUser) || aUser.includes(badge)));
+        (aUser && (badge.includes(aUser) || aUser.includes(badge)));
     });
     if (foundByBadge && foundByBadge.email) return foundByBadge.email.toLowerCase().trim();
 
@@ -146,7 +146,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
 
   const realUnreadCount = visibleChats ? visibleChats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0) : 0;
   const isConnected = connectedCount > 0;
-  
+
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
       {/* Header Banner */}
@@ -312,7 +312,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                   }}>
                     {getInitials(chat.participant)}
                   </div>
-                  
+
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
                       <span style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>{chat.participant}</span>
@@ -395,12 +395,12 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ 
-                        fontWeight: '700', 
-                        fontSize: '0.9rem', 
-                        color: 'var(--text-primary)', 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis', 
+                      <div style={{
+                        fontWeight: '700',
+                        fontSize: '0.9rem',
+                        color: 'var(--text-primary)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
                         marginBottom: '2px'
                       }} title={file.name}>
