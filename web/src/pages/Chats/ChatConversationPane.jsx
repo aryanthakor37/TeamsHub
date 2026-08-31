@@ -430,47 +430,59 @@ export default function ChatConversationPane({
 
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{
-              fontWeight: '800',
-              fontSize: '0.95rem',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              minWidth: 0
             }}>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{chat.participant}</span>
-              
-              {/* Split Mode Pane Tag */}
-              {isSplit && (
-                <span style={{
-                  padding: '2px 7px',
-                  borderRadius: '6px',
-                  background: paneTheme.headerBadgeBg,
-                  color: paneTheme.headerBadgeText,
-                  fontSize: '0.64rem',
-                  fontWeight: '800',
-                  letterSpacing: '0.02em',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-                  flexShrink: 0
-                }}>
-                  {paneTheme.pillText}
-                </span>
-              )}
-
+              <span style={{ fontWeight: '800', fontSize: '0.94rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                {chat.participant}
+              </span>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                 backgroundColor: 'rgba(16, 185, 129, 0.14)', color: '#10b981',
                 padding: '1px 6px', borderRadius: '10px', fontSize: '0.62rem', fontWeight: '800',
                 flexShrink: 0
               }}>
-                <div style={{ width: '5px', height: '5px', backgroundColor: '#10b981', borderRadius: '50%' }} />
+                <div style={{ width: '4px', height: '4px', backgroundColor: '#10b981', borderRadius: '50%' }} />
                 LIVE
               </div>
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              <strong style={{ color: paneTheme.accentColor, fontWeight: '700' }}>{chat.company || chat.accountBadge || 'Teams'}</strong>
-              {chat.accountEmail ? ` • ${chat.accountEmail}` : ''}
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.72rem',
+              color: 'var(--text-muted)',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              marginTop: '1px'
+            }}>
+              {/* Split Mode Pane Tag */}
+              {isSplit && (
+                <span style={{
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  background: paneTheme.headerBadgeBg,
+                  color: paneTheme.headerBadgeText,
+                  fontSize: '0.62rem',
+                  fontWeight: '800',
+                  letterSpacing: '0.02em',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                  flexShrink: 0
+                }}>
+                  {paneTheme.pillText}
+                </span>
+              )}
+              <strong style={{ color: paneTheme.accentColor, fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {chat.company || chat.accountBadge || 'Teams'}
+              </strong>
+              {chat.accountEmail && (
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', opacity: 0.85 }}>
+                  • {chat.accountEmail}
+                </span>
+              )}
             </div>
           </div>
         </div>
