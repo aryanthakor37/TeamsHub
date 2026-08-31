@@ -155,7 +155,7 @@ export default function ChatsPage({
     return Array.from(orgs);
   }, [chats, uniqueConnectedAccounts, isAccountConnected]);
 
-  const filteredChats = chats.filter((chat) => {
+  const filteredChats = !isAccountConnected ? [] : chats.filter((chat) => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q || (
       chat.participant?.toLowerCase().includes(q) ||
@@ -414,7 +414,27 @@ export default function ChatsPage({
 
         {/* Chat List Items */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-          {chatsLoading && chats.length === 0 ? (
+          {!isAccountConnected ? (
+            <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
+                <LogIn size={22} color="var(--accent-primary)" />
+              </div>
+              <div style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
+                No Account Connected
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
+                Connect a Microsoft Teams account to sync and view conversations.
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => onOpenMicrosoftModal && onOpenMicrosoftModal()}
+                style={{ fontSize: '0.8rem', padding: '8px 16px', margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <LogIn size={14} />
+                <span>Connect Account</span>
+              </button>
+            </div>
+          ) : chatsLoading && chats.length === 0 ? (
             <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '32px', fontSize: '0.84rem' }}>
               Loading conversations...
             </div>
@@ -584,13 +604,27 @@ export default function ChatsPage({
           </>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <MessageSquare size={48} style={{ marginBottom: '12px', opacity: 0.4 }} />
-            <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
-              Select a conversation to start chatting
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px auto' }}>
+              <LogIn size={26} color="var(--accent-primary)" />
             </div>
-            <div style={{ fontSize: '0.85rem' }}>
-              All your Microsoft Teams chats from all accounts & guest organizations are synced in real-time.
+            <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
+              {!isAccountConnected ? 'No Microsoft Account Connected' : 'Select a conversation to start chatting'}
             </div>
+            <div style={{ fontSize: '0.85rem', maxWidth: '420px', lineHeight: '1.5', marginBottom: !isAccountConnected ? '18px' : '0' }}>
+              {!isAccountConnected
+                ? 'Sign in with your work or personal Microsoft account to access all chats and messages in one unified workspace.'
+                : 'All your Microsoft Teams chats from all accounts & guest organizations are synced in real-time.'}
+            </div>
+            {!isAccountConnected && (
+              <button
+                className="btn btn-primary"
+                onClick={() => onOpenMicrosoftModal && onOpenMicrosoftModal()}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem' }}
+              >
+                <LogIn size={16} />
+                <span>Connect Microsoft Account</span>
+              </button>
+            )}
           </div>
         )}
       </div>

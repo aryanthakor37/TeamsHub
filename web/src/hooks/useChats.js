@@ -27,13 +27,24 @@ const saveStoredReadChat = (chatId) => {
   } catch (e) {}
 };
 
-const isLegacyOrFakeChat = (c) => {
-  if (!c) return true;
-  return false;
+const hasConnectedAccounts = () => {
+  try {
+    const rawAccs = localStorage.getItem('teamshub_connected_accounts');
+    const accs = rawAccs ? JSON.parse(rawAccs) : [];
+    if (Array.isArray(accs) && accs.length > 0) return true;
+
+    const activeEmail = localStorage.getItem('teamshub_active_email');
+    if (activeEmail && activeEmail.trim()) return true;
+
+    return false;
+  } catch (e) {
+    return false;
+  }
 };
 
 const getStoredLocalChats = () => {
   try {
+    if (!hasConnectedAccounts()) return [];
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
@@ -45,6 +56,10 @@ const getStoredLocalChats = () => {
 
 const saveStoredLocalChats = (items) => {
   try {
+    if (!hasConnectedAccounts()) {
+      localStorage.removeItem('teamshub_cached_chats');
+      return;
+    }
     const filtered = (items || []).filter((c) => !isLegacyOrFakeChat(c));
     localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
   } catch (e) {}
@@ -218,15 +233,10 @@ export const useChats = () => {
   };
 
   const loadChats = useCallback(async (isUserRefresh = false) => {
-    let activeAccounts = [];
-    try {
-      activeAccounts = msalInstance.getAllAccounts() || [];
-    } catch (e) {}
-    const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
-
-    if (activeAccounts.length === 0 && !activeEmail) {
+    if (!hasConnectedAccounts()) {
       setChats([]);
       setLoading(false);
+      localStorage.removeItem('teamshub_cached_chats');
       return;
     }
 

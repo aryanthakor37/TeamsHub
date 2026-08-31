@@ -80,9 +80,20 @@ const getChats = async (req, res) => {
     const limitNum = parseInt(limit, 10);
     let clientUserEmail = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
     const userEmailsHeader = req.headers['x-user-emails'];
-    const activeEmailsList = userEmailsHeader
-      ? userEmailsHeader.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-      : (clientUserEmail ? [clientUserEmail] : []);
+    // If client has no connected accounts or tokens in session, return empty list
+    if (activeEmailsList.length === 0 && !req.microsoftAccessToken && Object.keys(accountTokensMap).length === 0) {
+      return res.status(200).json({
+        success: true,
+        source: 'empty',
+        data: {
+          items: [],
+          page: pageNum,
+          limit: limitNum,
+          total: 0,
+          hasMore: false
+        }
+      });
+    }
 
     // ── Mock Mode ──
     if (isMockMode()) {
