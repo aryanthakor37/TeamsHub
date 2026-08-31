@@ -1,0 +1,43 @@
+{
+  "name": "teamshub-desktop",
+  "version": "1.0.0",
+  "description": "TeamsHub Enterprise Multi-Tenant Workspace for Windows",
+  "main": "main.js",
+  "author": "TeamsHub Team",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build:win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.teamshub.desktop",
+    "productName": "TeamsHub",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "TeamsHub"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "assets/**/*",
+      "dist/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}

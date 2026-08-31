@@ -1,0 +1,11 @@
+{
+  "name": "teamshub-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "desktop": "cd desktop && npm start",
+    "desktop:build": "npm --prefix web run build && powershell -Command \"Copy-Item -Recurse -Force web/dist desktop/dist\" && npm --prefix desktop run build:win",
+    "web:build": "npm --prefix web run build",
+    "server:start": "npm --prefix server run start"
+  }
+}
