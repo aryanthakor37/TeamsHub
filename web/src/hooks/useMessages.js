@@ -114,8 +114,8 @@ export const useMessages = (chatId, accountId) => {
 
       setMessages((prev) => {
         if (activeChatIdRef.current !== chatId) return prev;
-        const prevSig = prev.map(m => `${m.microsoftMessageId || m._id || m.id}_${(m.reactions || []).length}`).join('|');
-        const newSig = newItems.map(m => `${m.microsoftMessageId || m._id || m.id}_${(m.reactions || []).length}`).join('|');
+        const prevSig = prev.map(m => `${m.microsoftMessageId || m._id || m.id}_${(m.reactions || []).length}_${m.content || ''}`).join('|');
+        const newSig = newItems.map(m => `${m.microsoftMessageId || m._id || m.id}_${(m.reactions || []).length}_${m.content || ''}`).join('|');
 
         if (prevSig !== newSig) {
           const prevLast = prev.length > 0 ? prev[prev.length - 1] : null;
@@ -126,6 +126,10 @@ export const useMessages = (chatId, accountId) => {
           if (newLast && !newLast.isOutgoing && prevId !== newId) {
             playTeamsNotificationSound();
           }
+          messageMemoryCache.set(chatId, newItems);
+          try {
+            localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(newItems.slice(-50)));
+          } catch (e) {}
           return newItems;
         }
         return prev;
@@ -185,8 +189,38 @@ export const useMessages = (chatId, accountId) => {
       );
     };
 
+    // Real-time Message Edit listener
+    const handleRealtimeEdit = (data) => {
+      if (!data || !data.messageId) return;
+      setMessages((prev) =>
+        prev.map((msg) => {
+          const isMatch =
+            (msg.microsoftMessageId && msg.microsoftMessageId === data.messageId) ||
+            (msg._id && msg._id === data.messageId) ||
+            (msg.id && msg.id === data.messageId);
+          if (!isMatch) return msg;
+          return { ...msg, content: data.content, isEdited: true };
+        })
+      );
+    };
+
+    // Real-time Message Delete listener
+    const handleRealtimeDelete = (data) => {
+      if (!data || !data.messageId) return;
+      setMessages((prev) =>
+        prev.filter(
+          (m) =>
+            m.microsoftMessageId !== data.messageId &&
+            m._id !== data.messageId &&
+            m.id !== data.messageId
+        )
+      );
+    };
+
     socket.on('chat:message:received', handleRealtimeMsg);
     socket.on('reaction:updated', handleRealtimeReaction);
+    socket.on('chat:message:edited', handleRealtimeEdit);
+    socket.on('chat:message:deleted', handleRealtimeDelete);
 
     // Live Background Polling every 1.0 second for instant real-time incoming Teams messages
     const interval = setInterval(() => {
@@ -196,6 +230,8 @@ export const useMessages = (chatId, accountId) => {
     return () => {
       socket.off('chat:message:received', handleRealtimeMsg);
       socket.off('reaction:updated', handleRealtimeReaction);
+      socket.off('chat:message:edited', handleRealtimeEdit);
+      socket.off('chat:message:deleted', handleRealtimeDelete);
       leaveChatRoom(chatId);
       clearInterval(interval);
     };
