@@ -48,19 +48,26 @@ const classifyGraphError = (httpStatus, headers = {}) => {
 /**
  * Generic Graph API request with exponential backoff for 429s
  */
+/**
+ * Generic Graph API request with exponential backoff for 429s
+ */
 const graphRequest = async (accessToken, endpoint, options = {}, maxRetries = 3) => {
   let attempt = 0;
   let delay = 500;
+
+  const reqHeaders = {
+    Authorization: `Bearer ${accessToken}`,
+    ...(options.headers || {})
+  };
+  if (options.body && !reqHeaders['Content-Type']) {
+    reqHeaders['Content-Type'] = 'application/json';
+  }
 
   while (attempt < maxRetries) {
     try {
       const response = await fetch(`${GRAPH_API_BASE}${endpoint}`, {
         method: options.method || 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          ...(options.headers || {})
-        },
+        headers: reqHeaders,
         body: options.body
       });
 
@@ -108,16 +115,20 @@ const graphRequest = async (accessToken, endpoint, options = {}, maxRetries = 3)
  */
 const graphRequestBeta = async (accessToken, endpoint, options = {}) => {
   try {
+    const reqHeaders = {
+      Authorization: `Bearer ${accessToken}`,
+      ...(options.headers || {})
+    };
+    if (options.body && !reqHeaders['Content-Type']) {
+      reqHeaders['Content-Type'] = 'application/json';
+    }
     const response = await fetch(`${GRAPH_API_BETA_BASE}${endpoint}`, {
       method: options.method || 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      },
+      headers: reqHeaders,
       body: options.body
     });
     if (!response.ok) return null;
+    if (response.status === 204 || response.headers.get('content-length') === '0') return { success: true };
     return await response.json();
   } catch (e) {
     return null;
@@ -368,11 +379,10 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
   const cleanChatId = decodeURIComponent(chatId);
   const cleanMsgId = decodeURIComponent(messageId);
 
-  // 1. Try v1.0 softDelete
+  // 1. Try v1.0 softDelete (Delegated Chat.ReadWrite action - NO body)
   try {
     const res = await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
-      method: 'POST',
-      body: JSON.stringify({})
+      method: 'POST'
     });
     console.log('[Graph softDelete v1.0 success]');
     return res;
@@ -380,19 +390,31 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
     console.warn('[Graph softDelete v1.0 failed]:', err.message);
   }
 
-  // 2. Try beta softDelete
+  // 2. Try users/me softDelete
+  try {
+    const res = await graphRequest(accessToken, `/users/me/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
+      method: 'POST'
+    });
+    console.log('[Graph users/me softDelete success]');
+    return res;
+  } catch (err) {
+    console.warn('[Graph users/me softDelete failed]:', err.message);
+  }
+
+  // 3. Try beta softDelete
   try {
     const res = await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
-      method: 'POST',
-      body: JSON.stringify({})
+      method: 'POST'
     });
-    console.log('[Graph softDelete beta success]');
-    return res;
+    if (res) {
+      console.log('[Graph softDelete beta success]');
+      return res;
+    }
   } catch (err2) {
     console.warn('[Graph softDelete beta failed]:', err2.message);
   }
 
-  // 3. Try direct DELETE
+  // 4. Try direct DELETE
   try {
     const res = await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}`, {
       method: 'DELETE'
@@ -403,7 +425,7 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
     console.warn('[Graph direct DELETE failed]:', err3.message);
   }
 
-  // 4. Guaranteed Delegated Update: Overwrite message content on Graph API to deleted notice
+  // 5. Guaranteed Delegated Update: Overwrite message content on Graph API to deleted notice
   console.log('[Graph delete fallback to message clear update]');
   return await updateGraphChatMessage(accessToken, cleanChatId, cleanMsgId, '<p><em>This message was deleted.</em></p>');
 };
