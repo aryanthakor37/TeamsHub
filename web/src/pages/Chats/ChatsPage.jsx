@@ -246,21 +246,6 @@ export default function ChatsPage({
     return () => window.removeEventListener('teamshub:open-chat', handleOpenChatEvent);
   }, [chats]);
 
-  // Synchronize active chat ID globally to suppress self-notifications on active view & auto-mark read
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.__teamshub_active_chat_id = selectedChatId;
-    }
-    if (selectedChatId) {
-      markChatAsRead(selectedChatId, activeChat?.connectedAccountId);
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.__teamshub_active_chat_id = null;
-      }
-    };
-  }, [selectedChatId, activeChat?.connectedAccountId, markChatAsRead]);
-
   const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
 
   const getChatOwnerEmail = (c) => {
@@ -371,6 +356,22 @@ export default function ChatsPage({
     ? (filteredChats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) ||
        chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)))
     : null;
+
+  // Synchronize active chat ID globally to suppress self-notifications on active view & auto-mark read
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__teamshub_active_chat_id = selectedChatId;
+    }
+    if (selectedChatId) {
+      markChatAsRead(selectedChatId, activeChat?.connectedAccountId);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.__teamshub_active_chat_id = null;
+      }
+    };
+  }, [selectedChatId, activeChat?.connectedAccountId, markChatAsRead]);
+
   const chatOwner = activeChat?.accountEmail || activeChat?.connectedAccountId;
   const { messages, loading: messagesLoading, error: messagesError, sendMessage, toggleReaction } = useMessages(selectedChatId, chatOwner);
   const rawMessages = Array.isArray(messages) ? messages : [];
