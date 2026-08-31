@@ -27,12 +27,33 @@ export const AuthContext = createContext({
   disconnectAccount: async () => { }
 });
 
-export const MicrosoftAuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [connectedAccounts, setConnectedAccounts] = useState([]);
+const getStoredAccounts = () => {
+  try {
+    const raw = localStorage.getItem('teamshub_connected_accounts');
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+};
 
-  const [activeAccount, setActiveAccountState] = useState(null);
-  const [defaultAccountId, setDefaultAccountIdState] = useState(null);
+export const MicrosoftAuthProvider = ({ children }) => {
+  const initialStored = getStoredAccounts();
+  const initialActiveEmail = localStorage.getItem('teamshub_active_email');
+  const initialMatchedActive = initialStored.find(a => a.email?.toLowerCase() === initialActiveEmail?.toLowerCase()) || initialStored[0] || null;
+
+  const [user, setUser] = useState(() => {
+    if (!initialMatchedActive) return null;
+    return {
+      name: initialMatchedActive.displayName || initialMatchedActive.email?.split('@')[0],
+      email: initialMatchedActive.email,
+      avatar: initialMatchedActive.avatar || ''
+    };
+  });
+  const [connectedAccounts, setConnectedAccounts] = useState(() => initialStored);
+
+  const [activeAccount, setActiveAccountState] = useState(() => initialMatchedActive);
+  const [defaultAccountId, setDefaultAccountIdState] = useState(() => initialMatchedActive?._id || initialMatchedActive?.accountId || null);
   const [authState, setAuthState] = useState('AUTHENTICATED');
   const [authError, setAuthError] = useState(null);
 
@@ -49,6 +70,7 @@ export const MicrosoftAuthProvider = ({ children }) => {
         setActiveAccountState(null);
         setDefaultAccountIdState(null);
         setUser(null);
+        localStorage.removeItem('teamshub_connected_accounts');
         localStorage.removeItem('teamshub_active_email');
         localStorage.removeItem('teamshub_cached_chats');
         setAuthState('AUTHENTICATED');
@@ -63,6 +85,10 @@ export const MicrosoftAuthProvider = ({ children }) => {
       }
 
       setConnectedAccounts(currentSessionAccounts);
+      try {
+        localStorage.setItem('teamshub_connected_accounts', JSON.stringify(currentSessionAccounts));
+      } catch (e) {}
+
       const activeEmail = localStorage.getItem('teamshub_active_email');
       const matchedActive = currentSessionAccounts.find(a => a.email?.toLowerCase() === activeEmail?.toLowerCase());
       const chosenActive = matchedActive || currentSessionAccounts[0];

@@ -80,8 +80,20 @@ const getChats = async (req, res) => {
     const limitNum = parseInt(limit, 10);
     let clientUserEmail = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
     const userEmailsHeader = req.headers['x-user-emails'];
+    const activeEmailsList = userEmailsHeader
+      ? userEmailsHeader.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+      : (clientUserEmail ? [clientUserEmail] : []);
+
+    const headerToken = req.microsoftAccessToken;
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
+
     // If client has no connected accounts or tokens in session, return empty list
-    if (activeEmailsList.length === 0 && !req.microsoftAccessToken && Object.keys(accountTokensMap).length === 0) {
+    if (activeEmailsList.length === 0 && !headerToken && Object.keys(accountTokensMap).length === 0) {
       return res.status(200).json({
         success: true,
         source: 'empty',
@@ -114,14 +126,6 @@ const getChats = async (req, res) => {
     // ── Real Mode: Find Tokens & Fetch Live Graph Chats across ALL connected accounts ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     let targetAccounts = [];
-    const headerToken = req.microsoftAccessToken;
-
-    let accountTokensMap = {};
-    if (req.headers['x-account-tokens']) {
-      try {
-        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
-      } catch (e) {}
-    }
 
     // 1. If caller sent a direct Bearer headerToken, ALWAYS include it as primary target account
     if (headerToken) {
