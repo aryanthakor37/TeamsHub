@@ -56,27 +56,50 @@ export default function WelcomePage({ onOpenMicrosoftModal, onGoToDashboard }) {
         </p>
 
         {/* CTA Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <button
             className="btn btn-primary"
             onClick={onOpenMicrosoftModal}
-            style={{ padding: '14px 28px', fontSize: '1rem' }}
+            style={{ padding: '13px 26px', fontSize: '0.98rem' }}
           >
             <span>Connect Microsoft Account</span>
             <ArrowRight size={18} />
           </button>
 
+          <a
+            href="https://github.com/aryanthakor37/TeamsHub/releases/latest"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{
+              padding: '13px 24px',
+              fontSize: '0.98rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              textDecoration: 'none',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              borderColor: 'var(--accent-primary)',
+              color: 'var(--text-primary)'
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.401H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+            </svg>
+            <span>Download for Windows (.exe)</span>
+          </a>
+
           <button
             className="btn btn-secondary"
             onClick={onGoToDashboard}
-            style={{ padding: '14px 28px', fontSize: '1rem' }}
+            style={{ padding: '13px 22px', fontSize: '0.98rem' }}
           >
             Explore Demo Workspace
           </button>
         </div>
 
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '16px' }}>
-          * Microsoft account connection will be enabled in Phase 2.
+          * Multi-tenant guest workspaces available with native Windows Desktop companion.
         </p>
 
         {/* Feature Cards Grid */}

@@ -54,3 +54,8 @@ app/build/
 
 # Antigravity artifacts
 .gemini/
+
+# Desktop electron build outputs
+desktop/release/
+desktop/dist/
+*.exe
