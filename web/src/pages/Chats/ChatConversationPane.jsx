@@ -847,17 +847,20 @@ export default function ChatConversationPane({
                         />
                       )}
 
-                      <div style={{
-                        padding: '9px 13px',
-                        borderRadius: msg.isOutgoing ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                        background: msg.isOutgoing ? paneTheme.bubbleBg : 'var(--bg-secondary)',
-                        color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)',
-                        fontSize: '0.84rem',
-                        lineHeight: '1.45',
-                        wordBreak: 'break-word',
-                        boxShadow: msg.isOutgoing ? paneTheme.bubbleShadow : '0 1px 3px rgba(0,0,0,0.05)',
-                        border: msg.isOutgoing ? 'none' : '1px solid var(--border-color)'
-                      }}>
+                      <div
+                        className={msg.isOutgoing ? 'outgoing-bubble' : 'incoming-bubble'}
+                        style={{
+                          padding: '9px 13px',
+                          borderRadius: msg.isOutgoing ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                          background: msg.isOutgoing ? paneTheme.bubbleBg : 'var(--bg-secondary)',
+                          color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)',
+                          fontSize: '0.84rem',
+                          lineHeight: '1.45',
+                          wordBreak: 'break-word',
+                          boxShadow: msg.isOutgoing ? paneTheme.bubbleShadow : '0 1px 3px rgba(0,0,0,0.05)',
+                          border: msg.isOutgoing ? 'none' : '1px solid var(--border-color)'
+                        }}
+                      >
                         {msg.contentType === 'html' ? (
                           <div
                             className="message-html-content"

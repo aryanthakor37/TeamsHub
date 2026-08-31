@@ -527,6 +527,29 @@ button:focus, button:focus-visible, button:active {
   font-weight: 500;
 }
 
+.outgoing-bubble,
+.outgoing-bubble .message-html-content,
+.outgoing-bubble .message-html-content *,
+.outgoing-bubble .message-html-content p,
+.outgoing-bubble .message-html-content span,
+.outgoing-bubble .message-html-content div {
+  color: #ffffff !important;
+}
+
+.outgoing-bubble .message-html-content a {
+  color: #ffffff !important;
+  text-decoration: underline !important;
+  font-weight: 700 !important;
+  word-break: break-all;
+}
+
+.incoming-bubble .message-html-content a {
+  color: var(--accent-primary) !important;
+  text-decoration: underline !important;
+  font-weight: 600;
+  word-break: break-all;
+}
+
 .message-html-content blockquote {
   margin: 8px 0 12px 0;
   padding: 10px 16px;
@@ -540,11 +563,6 @@ button:focus, button:focus-visible, button:active {
 [data-theme='dark'] .message-html-content blockquote {
   background: rgba(98, 100, 167, 0.22);
   border-left-color: #818cf8;
-}
-
-.teams-msg-outgoing .message-html-content a {
-  color: var(--accent-primary);
-  font-weight: 600;
 }
 
 /* ==========================================================================
