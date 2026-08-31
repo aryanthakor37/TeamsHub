@@ -233,13 +233,13 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
       if (externalMember) {
         const mEmail = (externalMember.email || externalMember.userPrincipalName || externalMember.emailAddress?.address || '').toLowerCase().trim();
         const domain = mEmail.split('@')[1] || '';
-        if (domain.includes('baywa')) detectedCompany = 'BayWa r.e.';
-        else if (domain.includes('schaer') || domain.includes('drschaer')) detectedCompany = 'DR SCHAER AG';
-        else if (domain.includes('kerry') || domain.includes('dines')) detectedCompany = 'Kerry Dines Ltd';
-        else if (domain.includes('gmail')) detectedCompany = 'External (Gmail)';
-        else {
+        if (domain.includes('gmail') || domain.includes('outlook') || domain.includes('hotmail')) {
+          detectedCompany = 'External';
+        } else {
           const base = domain.split('.')[0];
-          if (base.length >= 3) detectedCompany = base.charAt(0).toUpperCase() + base.slice(1);
+          if (base.length >= 2) {
+            detectedCompany = base.charAt(0).toUpperCase() + base.slice(1);
+          }
         }
       }
     }
