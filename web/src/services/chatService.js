@@ -595,14 +595,24 @@ export const editMessageOnBackend = async (chatId, messageId, content, accountId
 export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
   try {
     const headers = await getAuthHeaders(accountId);
-    const response = await fetch(
-      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}`,
+    let response = await fetch(
+      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/delete?connectedAccountId=${encodeURIComponent(accountId || '')}`,
       {
-        method: 'DELETE',
+        method: 'POST',
         headers,
         body: JSON.stringify({ connectedAccountId: accountId })
       }
     );
+    if (!response.ok) {
+      response = await fetch(
+        `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}?connectedAccountId=${encodeURIComponent(accountId || '')}`,
+        {
+          method: 'DELETE',
+          headers,
+          body: JSON.stringify({ connectedAccountId: accountId })
+        }
+      );
+    }
     const result = await response.json();
     return result;
   } catch (error) {

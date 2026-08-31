@@ -1128,7 +1128,7 @@ const editMessage = async (req, res) => {
 const deleteMessage = async (req, res) => {
   try {
     const { id, msgId } = req.params;
-    const { connectedAccountId } = req.body || {};
+    const connectedAccountId = req.body?.connectedAccountId || req.query?.connectedAccountId || req.query?.email || req.headers['x-user-email'];
     const dbAvailable = Chat.db && Chat.db.readyState === 1;
 
     let accountTokensMap = {};
