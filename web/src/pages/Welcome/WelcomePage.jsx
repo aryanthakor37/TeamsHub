@@ -67,7 +67,7 @@ export default function WelcomePage({ onOpenMicrosoftModal, onGoToDashboard }) {
           </button>
 
           <a
-            href="https://github.com/aryanthakor37/TeamsHub/releases/latest"
+            href="https://github.com/aryanthakor37/TeamsHub/releases/download/v1.0.0-stable-checkpoint/TeamsHub.exe"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
