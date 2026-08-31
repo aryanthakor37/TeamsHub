@@ -15,9 +15,9 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
   const { chats, unreadCount, markChatAsRead } = useChats('all');
 
   const unreadChats = (connectedAccounts && connectedAccounts.length > 0 && chats)
-    ? chats.filter(c => (c.unreadCount || 0) > 0)
+    ? chats.filter(c => (c.unreadCount || 0) > 0 && !c.isLastMessageOutgoing && !c.isOutgoing && !c.isSelfChat)
     : [];
-  const unreadTotal = (connectedAccounts && connectedAccounts.length > 0) ? (unreadCount || unreadChats.length) : 0;
+  const unreadTotal = (connectedAccounts && connectedAccounts.length > 0) ? unreadChats.length : 0;
 
   useEffect(() => {
     let isMounted = true;

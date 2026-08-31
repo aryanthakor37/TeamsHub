@@ -246,17 +246,20 @@ export default function ChatsPage({
     return () => window.removeEventListener('teamshub:open-chat', handleOpenChatEvent);
   }, [chats]);
 
-  // Synchronize active chat ID globally to suppress self-notifications on active view
+  // Synchronize active chat ID globally to suppress self-notifications on active view & auto-mark read
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.__teamshub_active_chat_id = activeChatId;
+      window.__teamshub_active_chat_id = selectedChatId;
+    }
+    if (selectedChatId) {
+      markChatAsRead(selectedChatId, activeChat?.connectedAccountId);
     }
     return () => {
       if (typeof window !== 'undefined') {
         window.__teamshub_active_chat_id = null;
       }
     };
-  }, [activeChatId]);
+  }, [selectedChatId, activeChat?.connectedAccountId, markChatAsRead]);
 
   const isAccountConnected = connectedAccounts && connectedAccounts.length > 0;
 

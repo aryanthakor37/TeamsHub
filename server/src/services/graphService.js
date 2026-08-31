@@ -669,13 +669,28 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
   const lastMsgFromId = (graphChat.lastMessagePreview?.from?.user?.id || '').toLowerCase().trim();
   const lastMsgFromEmail = (graphChat.lastMessagePreview?.from?.user?.email || graphChat.lastMessagePreview?.from?.user?.userPrincipalName || '').toLowerCase().trim();
   const lastMsgFromName = (graphChat.lastMessagePreview?.from?.user?.displayName || '').toLowerCase().trim();
-  const isFromMe = !!(
-    (currentUserId && lastMsgFromId && currentUserId.toLowerCase() === lastMsgFromId) ||
-    (currentEmail && lastMsgFromEmail && currentEmail === lastMsgFromEmail) ||
-    (currentDisplayName && lastMsgFromName && (currentDisplayName === lastMsgFromName || lastMsgFromName.includes(currentDisplayName)))
-  );
 
-  if (!isFromMe && graphChat.viewpoint && graphChat.viewpoint.lastMessageReadDateTime) {
+  // In a 1-on-1 direct message chat, if lastMsgFromName is NOT the other participant, it was sent by the logged-in user!
+  const isOneOnOneOther = graphChat.chatType === 'oneOnOne' && participantName && lastMsgFromName &&
+    (participantName.toLowerCase().trim() === lastMsgFromName || lastMsgFromName.includes(participantName.toLowerCase().trim()) || participantName.toLowerCase().trim().includes(lastMsgFromName));
+  
+  let isFromMe = false;
+  if (graphChat.chatType === 'oneOnOne' && lastMsgFromName && participantName && !isSelfChat) {
+    if (!isOneOnOneOther) {
+      isFromMe = true;
+    }
+  }
+
+  if (!isFromMe) {
+    isFromMe = !!(
+      (currentUserId && lastMsgFromId && currentUserId.toLowerCase() === lastMsgFromId) ||
+      (currentEmail && lastMsgFromEmail && (currentEmail === lastMsgFromEmail || currentEmail.startsWith(lastMsgFromEmail) || lastMsgFromEmail.startsWith(currentEmail))) ||
+      (currentDisplayName && lastMsgFromName && (currentDisplayName === lastMsgFromName || lastMsgFromName.includes(currentDisplayName) || currentDisplayName.includes(lastMsgFromName))) ||
+      (currentEmail && lastMsgFromEmail && currentEmail.split('@')[0] === lastMsgFromEmail.split('@')[0])
+    );
+  }
+
+  if (!isFromMe && !isSelfChat && graphChat.viewpoint && graphChat.viewpoint.lastMessageReadDateTime) {
     const lastRead = new Date(graphChat.viewpoint.lastMessageReadDateTime).getTime();
     const msgTime = new Date(lastMessageTimestamp).getTime();
     // Only mark unread if the actual message is strictly after the user's last read timestamp
@@ -714,11 +729,14 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     chatType: graphChat.chatType || 'oneOnOne',
     isSelfChat,
     isLastMessageOutgoing: isFromMe,
+    isOutgoing: isFromMe,
+    lastMessageSender: graphChat.lastMessagePreview?.from?.user?.displayName || '',
+    lastMessageSenderEmail: lastMsgFromEmail,
     lastMessagePreview: graphChat.lastMessagePreview?.body?.content
       ? cleanPreviewHtml(graphChat.lastMessagePreview.body.content).substring(0, 120)
       : '',
     lastMessageTimestamp,
-    unreadCount: isFromMe ? 0 : unreadCount,
+    unreadCount: (isFromMe || isSelfChat) ? 0 : unreadCount,
     onlineStatus: 'online'
   };
 };

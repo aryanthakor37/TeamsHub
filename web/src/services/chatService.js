@@ -242,6 +242,28 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
       }
     }
 
+    const lastMsgFromUser = gc.lastMessagePreview?.from?.user;
+    const lastMsgFromName = (lastMsgFromUser?.displayName || '').trim();
+    const lastMsgFromEmail = (lastMsgFromUser?.email || lastMsgFromUser?.userPrincipalName || '').toLowerCase().trim();
+
+    const isOneOnOneOther = gc.chatType === 'oneOnOne' && participantName && lastMsgFromName &&
+      (participantName.toLowerCase().trim() === lastMsgFromName.toLowerCase().trim() || lastMsgFromName.toLowerCase().includes(participantName.toLowerCase().trim()) || participantName.toLowerCase().trim().includes(lastMsgFromName.toLowerCase().trim()));
+
+    let isLastMessageOutgoing = false;
+    if (gc.chatType === 'oneOnOne' && lastMsgFromName && participantName && !isSelfChat) {
+      if (!isOneOnOneOther) {
+        isLastMessageOutgoing = true;
+      }
+    }
+
+    if (!isLastMessageOutgoing) {
+      isLastMessageOutgoing = !!(
+        (cleanEmail && lastMsgFromEmail && (cleanEmail === lastMsgFromEmail || cleanEmail.startsWith(lastMsgFromEmail) || lastMsgFromEmail.startsWith(cleanEmail))) ||
+        (cleanUser && lastMsgFromEmail && lastMsgFromEmail.includes(cleanUser)) ||
+        (cleanName && lastMsgFromName && (cleanName.toLowerCase() === lastMsgFromName.toLowerCase() || lastMsgFromName.toLowerCase().includes(cleanName.toLowerCase()) || cleanName.toLowerCase().includes(lastMsgFromName.toLowerCase())))
+      );
+    }
+
     const lastMsgContent = gc.lastMessagePreview?.body?.content
       ? gc.lastMessagePreview.body.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
       : '';
@@ -252,13 +274,18 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
       connectedAccountId: cleanEmail,
       accountEmail: cleanEmail,
       participant: participantName,
+      lastMessageSender: lastMsgFromName,
+      lastMessageSenderEmail: lastMsgFromEmail,
       role: gc.chatType === 'oneOnOne' ? 'Direct Message' : 'Group Chat',
       company: detectedCompany,
       accountBadge: detectedCompany,
       chatType: gc.chatType || 'oneOnOne',
+      isSelfChat: !!isSelfChat,
+      isLastMessageOutgoing,
+      isOutgoing: isLastMessageOutgoing,
       lastMessagePreview: lastMsgContent,
       lastMessageTimestamp: gc.lastMessagePreview?.createdDateTime || gc.lastUpdatedDateTime || new Date().toISOString(),
-      unreadCount: 0,
+      unreadCount: (isLastMessageOutgoing || isSelfChat) ? 0 : (gc.viewpoint?.lastMessageReadDateTime ? (new Date(gc.lastMessagePreview?.createdDateTime || 0).getTime() > new Date(gc.viewpoint.lastMessageReadDateTime).getTime() + 1000 ? 1 : 0) : 0),
       onlineStatus: 'online'
     };
   });

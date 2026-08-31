@@ -164,18 +164,56 @@ export const useChats = () => {
 
   const applyReadStatus = (items) => {
     const readMap = getStoredReadChats();
+    const activeChatId = typeof window !== 'undefined' ? window.__teamshub_active_chat_id : null;
+
+    let connectedEmails = [];
+    let connectedNames = [];
+    try {
+      const stored = localStorage.getItem('teamshub_connected_accounts');
+      if (stored) {
+        const accs = JSON.parse(stored);
+        connectedEmails = accs.map(a => (a.email || a.username || '').toLowerCase().trim()).filter(Boolean);
+        connectedNames = accs.map(a => (a.displayName || a.name || '').toLowerCase().trim().replace(/[`'"]/g, '')).filter(Boolean);
+      }
+    } catch (e) {}
+
+    const activeUserEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+    if (activeUserEmail && !connectedEmails.includes(activeUserEmail)) connectedEmails.push(activeUserEmail);
+
     return items.map((chat) => {
       const id = chat._id || chat.id || chat.microsoftChatId;
+      
+      // Determine if the last message in this chat was sent by ANY connected account / current user (outgoing)
+      const senderName = (chat.lastMessageSender || '').toLowerCase().trim().replace(/[`'"]/g, '');
+      const senderEmail = (chat.lastMessageSenderEmail || '').toLowerCase().trim();
+      const isFromConnectedUser = (
+        (senderEmail && connectedEmails.some(e => e === senderEmail || e.startsWith(senderEmail) || senderEmail.startsWith(e))) ||
+        (senderName && connectedNames.some(n => n === senderName || (n.length >= 3 && senderName.includes(n)) || (senderName.length >= 3 && n.includes(senderName)))) ||
+        (senderEmail && connectedEmails.some(e => {
+          const u = e.split('@')[0];
+          return u && senderEmail.includes(u);
+        }))
+      );
+
+      const isOutgoing = !!(chat.isLastMessageOutgoing || chat.isOutgoing || isFromConnectedUser);
+      const isSelf = !!(chat.isSelfChat || chat.participant?.includes('(You)'));
+      const isActive = activeChatId && (activeChatId === id || activeChatId === chat.microsoftChatId || activeChatId === chat.id);
+
+      // NEVER mark unread if the last message was sent by the user / outgoing / self-chat / currently open active chat!
+      if (isOutgoing || isSelf || isActive) {
+        return { ...chat, isLastMessageOutgoing: isOutgoing, unreadCount: 0 };
+      }
+
       const markedReadTime = readMap[id];
       if (markedReadTime) {
         const msgTime = new Date(chat.lastMessageTimestamp || 0).getTime();
-        // If a new message arrived AFTER the user marked it read, it is UNREAD!
+        // If a new INCOMING message arrived strictly after the user marked it read:
         if (msgTime > (markedReadTime + 1000)) {
-          return { ...chat, unreadCount: 1 };
+          return { ...chat, isLastMessageOutgoing: false, unreadCount: 1 };
         }
-        return { ...chat, unreadCount: 0 };
+        return { ...chat, isLastMessageOutgoing: false, unreadCount: 0 };
       }
-      return chat;
+      return { ...chat, isLastMessageOutgoing: false, unreadCount: chat.unreadCount || 0 };
     });
   };
 
