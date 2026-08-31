@@ -135,16 +135,40 @@ export default function ChatsPage({
     return Array.from(map.values());
   }, [connectedAccounts]);
 
-  // Extract unique guest organizations
+  // Extract unique true guest organizations (exclude connected accounts' names & emails)
   const guestOrganizations = useMemo(() => {
+    if (!isAccountConnected || uniqueConnectedAccounts.length === 0) return [];
     const orgs = new Set();
-    chats.forEach(c => {
-      if (c.company && c.company !== 'Teams' && c.company !== 'Microsoft Teams' && !c.company.includes('@')) {
-        orgs.add(c.company);
+    const connectedEmails = uniqueConnectedAccounts.map(a => (a.email || a.username || '').toLowerCase().trim());
+    const connectedUsers = connectedEmails.map(e => e.split('@')[0]);
+    const connectedNames = uniqueConnectedAccounts.map(a => (a.displayName || a.name || '').toLowerCase().trim().replace(/[`'"]/g, ''));
+    const homeDomains = uniqueConnectedAccounts.map(a => (a.email || '').split('@')[1]?.toLowerCase()).filter(Boolean);
+
+    (chats || []).forEach(c => {
+      const comp = (c.company || '').trim();
+      const compLower = comp.toLowerCase().replace(/[`'"]/g, '');
+      const isOwnerIdentity =
+        connectedEmails.includes(compLower) ||
+        connectedUsers.includes(compLower) ||
+        connectedNames.includes(compLower) ||
+        connectedUsers.some(u => u && (compLower === u || compLower.includes(u) || u.includes(compLower))) ||
+        connectedNames.some(n => n && (compLower === n || compLower.includes(n) || n.includes(compLower)));
+
+      if (
+        comp &&
+        !isOwnerIdentity &&
+        !compLower.includes('teams') &&
+        !compLower.includes('microsoft') &&
+        !compLower.includes('direct message') &&
+        !compLower.includes('estatic') &&
+        !compLower.includes('@') &&
+        !homeDomains.some(d => d && compLower.includes(d.split('.')[0]))
+      ) {
+        orgs.add(comp);
       }
     });
     return Array.from(orgs);
-  }, [chats]);
+  }, [chats, uniqueConnectedAccounts, isAccountConnected]);
 
   // Enhanced Filter Logic
   const filteredChats = chats.filter((chat) => {
