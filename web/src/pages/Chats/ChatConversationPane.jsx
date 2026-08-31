@@ -600,7 +600,7 @@ export default function ChatConversationPane({
                                 key={id}
                                 onClick={() => {
                                   setShowSwitchDropdown(false);
-                                  if (onSelectChat) onSelectChat(id);
+                                  if (onSelectChat) onSelectChat(id, c);
                                 }}
                                 style={{
                                   padding: '6px 8px',

@@ -33,13 +33,22 @@ export default function ChatsPage({
   initialKeyword
 }) {
   const { connectedAccounts } = useAuth();
-  const [selectedFilterAccount, setSelectedFilterAccount] = useState('all');
   const { chats, loading: chatsLoading, refreshing, refresh, bumpChatToTop, markChatAsRead } = useChats();
   const [activeChatId, setActiveChatId] = useState(initialChatId || null);
+  const [activeChatKey, setActiveChatKey] = useState(null);
   const [splitChatId, setSplitChatId] = useState(null);
+  const [splitChatKey, setSplitChatKey] = useState(null);
   const [isSplitActive, setIsSplitActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [previewDocModal, setPreviewDocModal] = useState(null);
+
+  // Helper for 100% unique identification across multiple accounts
+  const getChatUniqueKey = (c) => {
+    if (!c) return '';
+    const id = c._id || c.microsoftChatId || c.id || '';
+    const owner = (c.accountEmail || c.accountBadge || c.company || c.connectedAccountId || 'acc').toLowerCase().trim();
+    return `${owner}___${id}`;
+  };
 
   // Track applied initial navigation key
   const appliedInitialChatRef = useRef(null);
@@ -61,6 +70,7 @@ export default function ChatsPage({
         if (found) {
           const targetId = found._id || found.microsoftChatId || found.id;
           setActiveChatId(targetId);
+          setActiveChatKey(getChatUniqueKey(found));
           appliedInitialChatRef.current = key;
         } else if (initialChatId && chats.length > 0) {
           setActiveChatId(initialChatId);
@@ -189,28 +199,38 @@ export default function ChatsPage({
     return false;
   });
 
-  // Set active chat: prioritize explicitly selected chat in full chats list, fallback to filteredChats[0] or chats[0]
-  const isSelectedChatInAll = chats.some(c => (c._id === activeChatId || c.microsoftChatId === activeChatId || c.id === activeChatId));
-  const selectedChatId = isAccountConnected 
-    ? (isSelectedChatInAll ? activeChatId : (filteredChats.length > 0 ? (filteredChats[0]._id || filteredChats[0].microsoftChatId || filteredChats[0].id) : (chats.length > 0 ? (chats[0]._id || chats[0].microsoftChatId || chats[0].id) : null)))
-    : null;
+  // Set active chat: prioritize explicitly selected chat by unique key / ID, fallback to first chat
+  const activeChat = useMemo(() => {
+    if (!isAccountConnected || !chats || chats.length === 0) return null;
+    if (activeChatKey) {
+      const match = chats.find(c => getChatUniqueKey(c) === activeChatKey);
+      if (match) return match;
+    }
+    if (activeChatId) {
+      const match = chats.find(c => (c._id === activeChatId || c.microsoftChatId === activeChatId || c.id === activeChatId));
+      if (match) return match;
+    }
+    return filteredChats.length > 0 ? filteredChats[0] : chats[0];
+  }, [isAccountConnected, chats, activeChatKey, activeChatId, filteredChats]);
 
-  const activeChat = isAccountConnected 
-    ? (chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) ||
-       filteredChats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)))
-    : null;
+  const selectedChatId = activeChat ? (activeChat._id || activeChat.microsoftChatId || activeChat.id) : null;
 
   // Resolve split second chat
   const splitChat = useMemo(() => {
     if (!isSplitActive || !chats || chats.length === 0) return null;
+    if (splitChatKey) {
+      const match = chats.find(c => getChatUniqueKey(c) === splitChatKey);
+      if (match) return match;
+    }
     if (splitChatId) {
       const found = chats.find(c => c._id === splitChatId || c.microsoftChatId === splitChatId || c.id === splitChatId);
       if (found) return found;
     }
     // Default to another conversation (different from activeChat)
-    const other = chats.find(c => (c._id || c.microsoftChatId || c.id) !== selectedChatId);
+    const activeKey = activeChat ? getChatUniqueKey(activeChat) : '';
+    const other = chats.find(c => getChatUniqueKey(c) !== activeKey);
     return other || chats[0];
-  }, [isSplitActive, splitChatId, chats, selectedChatId]);
+  }, [isSplitActive, splitChatKey, splitChatId, chats, activeChat]);
 
   // Synchronize active chat ID globally to suppress self-notifications on active view & auto-mark read
   useEffect(() => {
@@ -459,13 +479,17 @@ export default function ChatsPage({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {filteredChats.map((c) => {
                 const chatId = c._id || c.microsoftChatId || c.id;
-                const isSelected = selectedChatId === chatId || (isSplitActive && splitChatId === chatId);
+                const uniqueKey = getChatUniqueKey(c);
+                const isPrimarySelected = activeChat && getChatUniqueKey(activeChat) === uniqueKey;
+                const isSplitSelected = isSplitActive && splitChat && getChatUniqueKey(splitChat) === uniqueKey;
+                const isSelected = isPrimarySelected;
 
                 return (
                   <div
-                    key={`${c.accountEmail || 'acc'}_${chatId}`}
+                    key={uniqueKey}
                     onClick={() => {
                       setActiveChatId(chatId);
+                      setActiveChatKey(uniqueKey);
                       markChatAsRead(chatId, c.connectedAccountId);
                     }}
                     className={isSelected ? 'chat-item-3d active' : 'chat-item-3d'}
@@ -475,8 +499,8 @@ export default function ChatsPage({
                       gap: '10px',
                       padding: '9px 10px',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
-                      borderLeft: isSelected ? '3.5px solid var(--accent-primary)' : '3.5px solid transparent',
+                      backgroundColor: isSelected ? 'var(--accent-light)' : (isSplitSelected ? 'rgba(2, 132, 199, 0.08)' : 'transparent'),
+                      borderLeft: isSelected ? '3.5px solid var(--accent-primary)' : (isSplitSelected ? '3.5px solid #0284c7' : '3.5px solid transparent'),
                       cursor: 'pointer',
                       position: 'relative'
                     }}
@@ -588,7 +612,10 @@ export default function ChatsPage({
             <ChatConversationPane
               chat={activeChat}
               allChats={chats}
-              onSelectChat={(id) => setActiveChatId(id)}
+              onSelectChat={(id, chatObj) => {
+                setActiveChatId(id);
+                if (chatObj) setActiveChatKey(getChatUniqueKey(chatObj));
+              }}
               isSplit={isSplitActive}
               onToggleSplit={handleToggleSplit}
               onOpenMicrosoftModal={onOpenMicrosoftModal}
@@ -604,7 +631,10 @@ export default function ChatsPage({
               <ChatConversationPane
                 chat={splitChat}
                 allChats={chats}
-                onSelectChat={(id) => setSplitChatId(id)}
+                onSelectChat={(id, chatObj) => {
+                  setSplitChatId(id);
+                  if (chatObj) setSplitChatKey(getChatUniqueKey(chatObj));
+                }}
                 isSplit={true}
                 isSplitSecondPane={true}
                 onCloseSplit={() => setIsSplitActive(false)}
