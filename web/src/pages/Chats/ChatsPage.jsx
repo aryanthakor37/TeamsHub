@@ -189,15 +189,15 @@ export default function ChatsPage({
     return false;
   });
 
-  // Set active chat instantaneously based on current filtered view
-  const isSelectedChatInFiltered = filteredChats.some(c => (c._id === activeChatId || c.microsoftChatId === activeChatId || c.id === activeChatId));
+  // Set active chat: prioritize explicitly selected chat in full chats list, fallback to filteredChats[0] or chats[0]
+  const isSelectedChatInAll = chats.some(c => (c._id === activeChatId || c.microsoftChatId === activeChatId || c.id === activeChatId));
   const selectedChatId = isAccountConnected 
-    ? (isSelectedChatInFiltered ? activeChatId : (filteredChats.length > 0 ? (filteredChats[0]._id || filteredChats[0].microsoftChatId || filteredChats[0].id) : null))
+    ? (isSelectedChatInAll ? activeChatId : (filteredChats.length > 0 ? (filteredChats[0]._id || filteredChats[0].microsoftChatId || filteredChats[0].id) : (chats.length > 0 ? (chats[0]._id || chats[0].microsoftChatId || chats[0].id) : null)))
     : null;
 
   const activeChat = isAccountConnected 
-    ? (filteredChats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) ||
-       chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)))
+    ? (chats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)) ||
+       filteredChats.find((c) => (c._id === selectedChatId || c.microsoftChatId === selectedChatId || c.id === selectedChatId)))
     : null;
 
   // Resolve split second chat
