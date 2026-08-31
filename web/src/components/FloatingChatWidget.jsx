@@ -16,24 +16,37 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'notifications'
   const [activeMiniChatId, setActiveMiniChatId] = useState(null);
+  const [activeMiniChatKey, setActiveMiniChatKey] = useState(null);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [draftMessage, setDraftMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [hasNewPulse, setHasNewPulse] = useState(false);
 
+  // Helper for 100% unique identification across multiple accounts
+  const getChatUniqueKey = (c) => {
+    if (!c) return '';
+    const id = c._id || c.microsoftChatId || c.id || '';
+    const owner = (c.accountEmail || c.accountBadge || c.company || c.connectedAccountId || 'acc').toLowerCase().trim();
+    return `${owner}___${id}`;
+  };
+
   // Default to first chat if none selected
   useEffect(() => {
     if (!activeMiniChatId && chats && chats.length > 0) {
       setActiveMiniChatId(chats[0]._id || chats[0].microsoftChatId || chats[0].id);
+      setActiveMiniChatKey(getChatUniqueKey(chats[0]));
     }
   }, [chats, activeMiniChatId]);
 
   // Listen for global open mini chat trigger
   useEffect(() => {
     const handleOpenMini = (e) => {
-      const { chatId, tab } = e.detail || {};
+      const { chatId, tab, chat } = e.detail || {};
       if (chatId) {
         setActiveMiniChatId(chatId);
+      }
+      if (chat) {
+        setActiveMiniChatKey(getChatUniqueKey(chat));
       }
       if (tab) {
         setActiveTab(tab);
@@ -48,6 +61,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
       if (chat && !isOpen) {
         const id = chat._id || chat.id || chat.microsoftChatId;
         setActiveMiniChatId(id);
+        setActiveMiniChatKey(getChatUniqueKey(chat));
         setHasNewPulse(true);
       }
     };
@@ -62,8 +76,16 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
 
   const activeChat = useMemo(() => {
     if (!chats || chats.length === 0) return null;
-    return chats.find(c => (c._id === activeMiniChatId || c.microsoftChatId === activeMiniChatId || c.id === activeMiniChatId)) || chats[0];
-  }, [chats, activeMiniChatId]);
+    if (activeMiniChatKey) {
+      const match = chats.find(c => getChatUniqueKey(c) === activeMiniChatKey);
+      if (match) return match;
+    }
+    if (activeMiniChatId) {
+      const match = chats.find(c => (c._id === activeMiniChatId || c.microsoftChatId === activeMiniChatId || c.id === activeMiniChatId));
+      if (match) return match;
+    }
+    return chats[0];
+  }, [chats, activeMiniChatKey, activeMiniChatId]);
 
   const chatOwner = activeChat?.accountEmail || activeChat?.connectedAccountId;
   const targetChatId = activeChat?._id || activeChat?.microsoftChatId || activeChat?.id;
@@ -307,6 +329,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                         onClick={() => {
                           markChatAsRead(chatId, chat.connectedAccountId);
                           setActiveMiniChatId(chatId);
+                          setActiveMiniChatKey(getChatUniqueKey(chat));
                           setActiveTab('chat');
                         }}
                         style={{
@@ -421,20 +444,22 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
               {/* Quick Chat Switcher Dropdown */}
               {showAccountMenu && (
                 <div style={{
-                  maxHeight: '180px',
+                  maxHeight: '220px',
                   overflowY: 'auto',
                   backgroundColor: 'var(--bg-secondary)',
                   borderBottom: '1px solid var(--border-color)',
                   padding: '6px'
                 }}>
-                  {chats.slice(0, 8).map((c) => {
+                  {chats.slice(0, 20).map((c) => {
                     const cId = c._id || c.microsoftChatId || c.id;
-                    const isSelected = cId === targetChatId;
+                    const uniqueKey = getChatUniqueKey(c);
+                    const isSelected = activeChat && getChatUniqueKey(activeChat) === uniqueKey;
                     return (
                       <div
-                        key={cId}
+                        key={uniqueKey}
                         onClick={() => {
                           setActiveMiniChatId(cId);
+                          setActiveMiniChatKey(uniqueKey);
                           setShowAccountMenu(false);
                           markChatAsRead(cId, c.connectedAccountId);
                         }}
@@ -445,6 +470,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                           padding: '6px 8px',
                           borderRadius: '6px',
                           backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
+                          borderLeft: isSelected ? '3px solid var(--accent-primary)' : '3px solid transparent',
                           cursor: 'pointer',
                           fontSize: '0.8rem',
                           fontWeight: isSelected ? '700' : '500',
@@ -469,7 +495,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                           {c.participant}
                         </div>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                          {c.company || 'Teams'}
+                          {c.company || c.accountBadge || 'Teams'}
                         </span>
                       </div>
                     );
