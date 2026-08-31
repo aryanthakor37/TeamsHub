@@ -995,28 +995,85 @@ const unsetMessageReaction = async (req, res) => {
 const editMessage = async (req, res) => {
   try {
     const { id, msgId } = req.params;
-    const { content } = req.body;
+    const { content, connectedAccountId } = req.body || {};
+    const dbAvailable = Chat.db && Chat.db.readyState === 1;
 
-    let connectedAccounts = [];
-    if (dbAvailable) {
-      connectedAccounts = await ConnectedAccount.find({
-        microsoftAccessToken: { $exists: true, $ne: '' }
-      }).select('+microsoftAccessToken');
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
+
+    let accessToken = req.microsoftAccessToken;
+    const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+
+    if (!accessToken) {
+      if (connectedAccountId && accountTokensMap[connectedAccountId.toLowerCase()]) {
+        accessToken = accountTokensMap[connectedAccountId.toLowerCase()];
+      } else if (activeEmailHeader && accountTokensMap[activeEmailHeader]) {
+        accessToken = accountTokensMap[activeEmailHeader];
+      } else if (Object.keys(accountTokensMap).length > 0) {
+        accessToken = Object.values(accountTokensMap)[0];
+      }
+    }
+
+    if (dbAvailable && !accessToken) {
+      let acc = null;
+      if (connectedAccountId && connectedAccountId !== 'all') {
+        if (connectedAccountId.includes('@')) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() }).select('+microsoftAccessToken');
+        } else if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken');
+        }
+      }
+      if (!acc && activeEmailHeader) {
+        acc = await ConnectedAccount.findOne({ email: activeEmailHeader }).select('+microsoftAccessToken');
+      }
+      if (!acc) {
+        acc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).sort({ updatedAt: -1 }).select('+microsoftAccessToken');
+      }
+      if (acc?.microsoftAccessToken) {
+        accessToken = acc.microsoftAccessToken;
+      }
     }
 
     const candidateTokens = [];
-    if (req.headers['x-ms-token']) candidateTokens.push(req.headers['x-ms-token']);
-    connectedAccounts.forEach(acc => {
-      if (acc.microsoftAccessToken && !candidateTokens.includes(acc.microsoftAccessToken)) {
-        candidateTokens.push(acc.microsoftAccessToken);
-      }
+    if (accessToken) candidateTokens.push(accessToken);
+    if (req.headers['x-ms-token'] && !candidateTokens.includes(req.headers['x-ms-token'])) candidateTokens.push(req.headers['x-ms-token']);
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      const b = req.headers.authorization.split(' ')[1];
+      if (b && !candidateTokens.includes(b)) candidateTokens.push(b);
+    }
+    Object.values(accountTokensMap).forEach(t => {
+      if (t && !candidateTokens.includes(t)) candidateTokens.push(t);
     });
 
+    if (dbAvailable) {
+      const accounts = await ConnectedAccount.find({
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken');
+      accounts.forEach(acc => {
+        if (acc.microsoftAccessToken && !candidateTokens.includes(acc.microsoftAccessToken)) {
+          candidateTokens.push(acc.microsoftAccessToken);
+        }
+      });
+    }
+
     let cleanChatId = decodeURIComponent(id);
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(cleanChatId)) {
+      const chat = await Chat.findById(cleanChatId);
+      if (chat && chat.microsoftChatId) cleanChatId = chat.microsoftChatId;
+    }
+
     let realMessageId = decodeURIComponent(msgId);
     if (realMessageId.startsWith('msg-')) {
       const sub = realMessageId.replace(/^msg-/, '');
       if (/^\d+$/.test(sub)) realMessageId = sub;
+    }
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(realMessageId)) {
+      const msgDoc = await Message.findById(realMessageId);
+      if (msgDoc && msgDoc.microsoftMessageId) realMessageId = msgDoc.microsoftMessageId;
     }
 
     let graphSuccess = false;
@@ -1071,27 +1128,85 @@ const editMessage = async (req, res) => {
 const deleteMessage = async (req, res) => {
   try {
     const { id, msgId } = req.params;
+    const { connectedAccountId } = req.body || {};
+    const dbAvailable = Chat.db && Chat.db.readyState === 1;
 
-    let connectedAccounts = [];
-    if (dbAvailable) {
-      connectedAccounts = await ConnectedAccount.find({
-        microsoftAccessToken: { $exists: true, $ne: '' }
-      }).select('+microsoftAccessToken');
+    let accountTokensMap = {};
+    if (req.headers['x-account-tokens']) {
+      try {
+        accountTokensMap = JSON.parse(req.headers['x-account-tokens']);
+      } catch (e) {}
+    }
+
+    let accessToken = req.microsoftAccessToken;
+    const activeEmailHeader = (req.headers['x-user-email'] || req.user?.email || '').toLowerCase().trim();
+
+    if (!accessToken) {
+      if (connectedAccountId && accountTokensMap[connectedAccountId.toLowerCase()]) {
+        accessToken = accountTokensMap[connectedAccountId.toLowerCase()];
+      } else if (activeEmailHeader && accountTokensMap[activeEmailHeader]) {
+        accessToken = accountTokensMap[activeEmailHeader];
+      } else if (Object.keys(accountTokensMap).length > 0) {
+        accessToken = Object.values(accountTokensMap)[0];
+      }
+    }
+
+    if (dbAvailable && !accessToken) {
+      let acc = null;
+      if (connectedAccountId && connectedAccountId !== 'all') {
+        if (connectedAccountId.includes('@')) {
+          acc = await ConnectedAccount.findOne({ email: connectedAccountId.toLowerCase() }).select('+microsoftAccessToken');
+        } else if (mongoose.Types.ObjectId.isValid(connectedAccountId)) {
+          acc = await ConnectedAccount.findById(connectedAccountId).select('+microsoftAccessToken');
+        }
+      }
+      if (!acc && activeEmailHeader) {
+        acc = await ConnectedAccount.findOne({ email: activeEmailHeader }).select('+microsoftAccessToken');
+      }
+      if (!acc) {
+        acc = await ConnectedAccount.findOne({ microsoftAccessToken: { $exists: true, $ne: '' } }).sort({ updatedAt: -1 }).select('+microsoftAccessToken');
+      }
+      if (acc?.microsoftAccessToken) {
+        accessToken = acc.microsoftAccessToken;
+      }
     }
 
     const candidateTokens = [];
-    if (req.headers['x-ms-token']) candidateTokens.push(req.headers['x-ms-token']);
-    connectedAccounts.forEach(acc => {
-      if (acc.microsoftAccessToken && !candidateTokens.includes(acc.microsoftAccessToken)) {
-        candidateTokens.push(acc.microsoftAccessToken);
-      }
+    if (accessToken) candidateTokens.push(accessToken);
+    if (req.headers['x-ms-token'] && !candidateTokens.includes(req.headers['x-ms-token'])) candidateTokens.push(req.headers['x-ms-token']);
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      const b = req.headers.authorization.split(' ')[1];
+      if (b && !candidateTokens.includes(b)) candidateTokens.push(b);
+    }
+    Object.values(accountTokensMap).forEach(t => {
+      if (t && !candidateTokens.includes(t)) candidateTokens.push(t);
     });
 
+    if (dbAvailable) {
+      const accounts = await ConnectedAccount.find({
+        microsoftAccessToken: { $exists: true, $ne: '' }
+      }).select('+microsoftAccessToken');
+      accounts.forEach(acc => {
+        if (acc.microsoftAccessToken && !candidateTokens.includes(acc.microsoftAccessToken)) {
+          candidateTokens.push(acc.microsoftAccessToken);
+        }
+      });
+    }
+
     let cleanChatId = decodeURIComponent(id);
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(cleanChatId)) {
+      const chat = await Chat.findById(cleanChatId);
+      if (chat && chat.microsoftChatId) cleanChatId = chat.microsoftChatId;
+    }
+
     let realMessageId = decodeURIComponent(msgId);
     if (realMessageId.startsWith('msg-')) {
       const sub = realMessageId.replace(/^msg-/, '');
       if (/^\d+$/.test(sub)) realMessageId = sub;
+    }
+    if (dbAvailable && /^[0-9a-fA-F]{24}$/.test(realMessageId)) {
+      const msgDoc = await Message.findById(realMessageId);
+      if (msgDoc && msgDoc.microsoftMessageId) realMessageId = msgDoc.microsoftMessageId;
     }
 
     let graphSuccess = false;
