@@ -177,6 +177,7 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
     let participantName = '';
     const cleanUser = cleanEmail.includes('@') ? cleanEmail.split('@')[0] : cleanEmail;
 
+    let isSelfChat = false;
     if (gc.chatType === 'group' && gc.topic && gc.topic.trim()) {
       participantName = gc.topic.trim();
     } else if (gc.members && gc.members.length > 0) {
@@ -197,7 +198,8 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
           m.emailAddress?.address?.split('@')[0] ||
           'External User'
         ).filter(Boolean).join(', ');
-      } else if (gc.members.length === 1) {
+      } else {
+        isSelfChat = true;
         participantName = `${gc.members[0]?.displayName || cleanName} (You)`;
       }
     }
