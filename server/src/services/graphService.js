@@ -823,6 +823,12 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     return null;
   }
 
+  const rawContent = graphMessage.body?.content || '';
+  const cleanBody = rawContent.replace(/<[^>]*>/g, '').trim();
+  if (cleanBody === 'This message was deleted.' || cleanBody === 'This message has been deleted') {
+    return null;
+  }
+
   const senderEmail = (graphMessage.from?.user?.email || graphMessage.from?.user?.userPrincipalName || '').toLowerCase().trim();
   const senderName = (graphMessage.from?.user?.displayName || senderEmail || 'Unknown').trim();
   const senderId = graphMessage.from?.user?.id || '';
