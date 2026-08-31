@@ -326,6 +326,33 @@ export default function ChatConversationPane({
     e.target.value = '';
   };
 
+  const isPane2 = paneIndex === 2;
+  const paneTheme = isPane2 ? {
+    accentColor: '#0284c7', // Ocean Cyan / Sky
+    accentHover: '#0369a1',
+    accentLight: 'rgba(2, 132, 199, 0.12)',
+    bubbleBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+    bubbleShadow: '0 3px 10px rgba(2, 132, 199, 0.35)',
+    headerBadgeBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+    headerBadgeText: '#ffffff',
+    pillText: '2️⃣ PANE 2 • DUAL',
+    glowBorder: '1px solid rgba(6, 182, 212, 0.3)',
+    headerBgTint: 'rgba(2, 132, 199, 0.04)',
+    sendBtnBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)'
+  } : {
+    accentColor: '#4f46e5', // Indigo / Purple
+    accentHover: '#4338ca',
+    accentLight: 'rgba(79, 70, 229, 0.12)',
+    bubbleBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+    bubbleShadow: '0 3px 10px rgba(79, 70, 229, 0.32)',
+    headerBadgeBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+    headerBadgeText: '#ffffff',
+    pillText: '1️⃣ PANE 1 • PRIMARY',
+    glowBorder: '1px solid rgba(99, 102, 241, 0.3)',
+    headerBgTint: 'rgba(79, 70, 229, 0.04)',
+    sendBtnBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
+  };
+
   if (!chat) {
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
@@ -341,12 +368,12 @@ export default function ChatConversationPane({
       display: 'flex',
       flexDirection: 'column',
       backgroundColor: 'var(--bg-primary)',
-      borderRight: isSplit && !isSplitSecondPane ? '1px solid var(--border-color)' : 'none',
+      borderRight: isSplit && !isSplitSecondPane ? '2px solid var(--border-color)' : 'none',
       minWidth: 0,
       height: '100%',
       position: 'relative'
     }}>
-      {/* Pane Header */}
+      {/* Pane Header with Distinct Account Tint */}
       <div style={{
         height: '64px',
         padding: '0 18px',
@@ -361,7 +388,7 @@ export default function ChatConversationPane({
         zIndex: 5,
         gap: '10px'
       }}>
-        {/* Left: Participant Info */}
+        {/* Left: Participant Info + Pane Badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
           {onBack && (
             <button
@@ -413,17 +440,36 @@ export default function ChatConversationPane({
               textOverflow: 'ellipsis'
             }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{chat.participant}</span>
+              
+              {/* Split Mode Pane Tag */}
+              {isSplit && (
+                <span style={{
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  background: paneTheme.headerBadgeBg,
+                  color: paneTheme.headerBadgeText,
+                  fontSize: '0.64rem',
+                  fontWeight: '800',
+                  letterSpacing: '0.02em',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                  flexShrink: 0
+                }}>
+                  {paneTheme.pillText}
+                </span>
+              )}
+
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                 backgroundColor: 'rgba(16, 185, 129, 0.14)', color: '#10b981',
-                padding: '1px 6px', borderRadius: '10px', fontSize: '0.62rem', fontWeight: '800'
+                padding: '1px 6px', borderRadius: '10px', fontSize: '0.62rem', fontWeight: '800',
+                flexShrink: 0
               }}>
                 <div style={{ width: '5px', height: '5px', backgroundColor: '#10b981', borderRadius: '50%' }} />
                 LIVE
               </div>
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              <strong style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>{chat.company || chat.accountBadge || 'Teams'}</strong>
+              <strong style={{ color: paneTheme.accentColor, fontWeight: '700' }}>{chat.company || chat.accountBadge || 'Teams'}</strong>
               {chat.accountEmail ? ` • ${chat.accountEmail}` : ''}
             </div>
           </div>
@@ -804,12 +850,12 @@ export default function ChatConversationPane({
                       <div style={{
                         padding: '9px 13px',
                         borderRadius: msg.isOutgoing ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                        backgroundColor: msg.isOutgoing ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                        background: msg.isOutgoing ? paneTheme.bubbleBg : 'var(--bg-secondary)',
                         color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)',
                         fontSize: '0.84rem',
                         lineHeight: '1.45',
                         wordBreak: 'break-word',
-                        boxShadow: msg.isOutgoing ? '0 2px 6px rgba(79, 70, 229, 0.25)' : '0 1px 3px rgba(0,0,0,0.05)',
+                        boxShadow: msg.isOutgoing ? paneTheme.bubbleShadow : '0 1px 3px rgba(0,0,0,0.05)',
                         border: msg.isOutgoing ? 'none' : '1px solid var(--border-color)'
                       }}>
                         {msg.contentType === 'html' ? (
@@ -1012,14 +1058,15 @@ export default function ChatConversationPane({
               height: '36px',
               borderRadius: '50%',
               border: 'none',
-              backgroundColor: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? 'var(--accent-primary)' : 'var(--border-color)',
+              background: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? paneTheme.sendBtnBg : 'var(--border-color)',
               color: '#ffffff',
               cursor: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? 'pointer' : 'default',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'all 0.2s',
-              flexShrink: 0
+              flexShrink: 0,
+              boxShadow: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? paneTheme.bubbleShadow : 'none'
             }}
           >
             <Send size={15} />
