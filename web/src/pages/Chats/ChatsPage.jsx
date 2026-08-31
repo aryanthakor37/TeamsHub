@@ -33,6 +33,7 @@ export default function ChatsPage({
   initialKeyword
 }) {
   const { connectedAccounts } = useAuth();
+  const [selectedFilterAccount, setSelectedFilterAccount] = useState('all');
   const { chats, loading: chatsLoading, refreshing, refresh, bumpChatToTop, markChatAsRead } = useChats();
   const [activeChatId, setActiveChatId] = useState(initialChatId || null);
   const [activeChatKey, setActiveChatKey] = useState(null);
