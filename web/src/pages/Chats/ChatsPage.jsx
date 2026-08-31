@@ -295,15 +295,20 @@ export default function ChatsPage({
           </button>
         </div>
 
-        {/* Filter Account & Organizations Pills */}
-        <div style={{
-          padding: '10px 14px',
-          borderBottom: '1px solid var(--border-color)',
-          display: 'flex',
-          gap: '6px',
-          overflowX: 'auto',
-          backgroundColor: 'var(--bg-tertiary)'
-        }}>
+        {/* Filter Account & Organizations Pills (Hidden scrollbar) */}
+        <div
+          className="no-scrollbar"
+          style={{
+            padding: '10px 14px',
+            borderBottom: '1px solid var(--border-color)',
+            display: 'flex',
+            gap: '6px',
+            overflowX: 'auto',
+            backgroundColor: 'var(--bg-tertiary)',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
           <button
             onClick={() => setSelectedFilterAccount('all')}
             style={{
