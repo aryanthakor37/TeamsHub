@@ -50,23 +50,14 @@ function createWindow() {
     }
   });
 
-  // Load local built static React web bundle with live web fallback
-  const localDistPath = path.join(__dirname, 'dist', 'index.html');
-  const webDistPath = path.join(__dirname, '..', 'web', 'dist', 'index.html');
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.removeMenu();
 
-  if (fs.existsSync(localDistPath)) {
-    mainWindow.loadFile(localDistPath);
-  } else if (fs.existsSync(webDistPath)) {
-    mainWindow.loadFile(webDistPath);
-  } else {
-    mainWindow.loadURL('https://teamshub-1.onrender.com');
-  }
+  // Load production application with full Microsoft OAuth redirect support
+  mainWindow.loadURL('https://teamshub-1.onrender.com');
 
   // Handle external link clicks
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://teams.microsoft.com') || url.startsWith('https://login.microsoftonline.com')) {
-      return { action: 'allow' };
-    }
     return { action: 'allow' };
   });
 
