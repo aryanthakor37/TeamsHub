@@ -295,40 +295,40 @@ export default function ChatsPage({
           </button>
         </div>
 
-        {/* Filter Account & Organizations Pills (Hidden scrollbar) */}
+        {/* Filter Account & Organizations Pills (Flex Wrap to next line) */}
         <div
-          className="no-scrollbar"
           style={{
             padding: '10px 14px',
             borderBottom: '1px solid var(--border-color)',
             display: 'flex',
+            flexWrap: 'wrap',
             gap: '6px',
-            overflowX: 'auto',
-            backgroundColor: 'var(--bg-tertiary)',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
+            backgroundColor: 'var(--bg-tertiary)'
           }}
         >
           <button
             onClick={() => setSelectedFilterAccount('all')}
             style={{
-              padding: '4px 10px',
+              padding: '5px 12px',
               borderRadius: 'var(--radius-full)',
-              fontSize: '0.72rem',
+              fontSize: '0.74rem',
               fontWeight: '700',
               border: selectedFilterAccount === 'all' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
               backgroundColor: selectedFilterAccount === 'all' ? 'var(--accent-primary)' : 'var(--bg-secondary)',
               color: selectedFilterAccount === 'all' ? '#ffffff' : 'var(--text-secondary)',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '5px',
+              boxShadow: 'var(--shadow-sm)'
             }}
           >
-            <Sparkles size={11} />
+            <Sparkles size={12} />
             <span>All Accounts</span>
-            <span style={{ opacity: 0.8, fontSize: '0.65rem' }}>{chats.length}</span>
+            <span style={{ opacity: 0.85, fontSize: '0.68rem', backgroundColor: selectedFilterAccount === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: '10px' }}>
+              {chats.length}
+            </span>
           </button>
 
           {uniqueConnectedAccounts.map((acc) => {
@@ -340,22 +340,50 @@ export default function ChatsPage({
                 key={email}
                 onClick={() => setSelectedFilterAccount(email)}
                 style={{
-                  padding: '4px 10px',
+                  padding: '5px 12px',
                   borderRadius: 'var(--radius-full)',
-                  fontSize: '0.72rem',
+                  fontSize: '0.74rem',
                   fontWeight: '700',
                   border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
                   backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                   color: isSelected ? '#ffffff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '5px',
+                  boxShadow: 'var(--shadow-sm)'
                 }}
               >
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: getAvatarColor(displayName) }} />
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: getAvatarColor(displayName) }} />
                 <span>{displayName}</span>
+              </button>
+            );
+          })}
+
+          {guestOrganizations.map((org) => {
+            const isSelected = selectedFilterAccount === org.toLowerCase();
+            return (
+              <button
+                key={org}
+                onClick={() => setSelectedFilterAccount(org.toLowerCase())}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.74rem',
+                  fontWeight: '700',
+                  border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                  backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <span>{org}</span>
               </button>
             );
           })}
