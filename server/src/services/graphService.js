@@ -370,31 +370,42 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
 
   // 1. Try v1.0 softDelete
   try {
-    return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
+    const res = await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
       method: 'POST',
       body: JSON.stringify({})
     });
+    console.log('[Graph softDelete v1.0 success]');
+    return res;
   } catch (err) {
-    console.warn('[Graph softDelete v1.0 failed, trying beta]', err.message);
-    // 2. Try beta softDelete
-    try {
-      return await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
-        method: 'POST',
-        body: JSON.stringify({})
-      });
-    } catch (err2) {
-      console.warn('[Graph softDelete beta failed, trying direct DELETE]', err2.message);
-      // 3. Try direct DELETE
-      try {
-        return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}`, {
-          method: 'DELETE'
-        });
-      } catch (err3) {
-        console.warn('[Graph DELETE failed, trying fallback to clear text]', err3.message);
-        return await updateGraphChatMessage(accessToken, cleanChatId, cleanMsgId, '<p><em>This message was deleted.</em></p>');
-      }
-    }
+    console.warn('[Graph softDelete v1.0 failed]:', err.message);
   }
+
+  // 2. Try beta softDelete
+  try {
+    const res = await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    console.log('[Graph softDelete beta success]');
+    return res;
+  } catch (err2) {
+    console.warn('[Graph softDelete beta failed]:', err2.message);
+  }
+
+  // 3. Try direct DELETE
+  try {
+    const res = await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}`, {
+      method: 'DELETE'
+    });
+    console.log('[Graph direct DELETE success]');
+    return res;
+  } catch (err3) {
+    console.warn('[Graph direct DELETE failed]:', err3.message);
+  }
+
+  // 4. Guaranteed Delegated Update: Overwrite message content on Graph API to deleted notice
+  console.log('[Graph delete fallback to message clear update]');
+  return await updateGraphChatMessage(accessToken, cleanChatId, cleanMsgId, '<p><em>This message was deleted.</em></p>');
 };
 
 const EMOJI_TO_UNICODE_MAP = {

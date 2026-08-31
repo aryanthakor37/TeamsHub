@@ -329,12 +329,29 @@ export default function ChatConversationPane({
     });
   }, [rawMessages, chat, connectedAccounts]);
 
-  // Auto scroll to bottom
+  const isAtBottomRef = useRef(true);
+  const prevChatIdRef = useRef(chatId);
+
+  const handleScroll = (e) => {
+    const el = e.currentTarget;
+    if (el) {
+      isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    }
+  };
+
+  // Auto scroll to bottom only when user is already at bottom or switches chat
   useEffect(() => {
-    if (messagesThreadContainerRef.current) {
+    if (!messagesThreadContainerRef.current) return;
+    const isChatChanged = prevChatIdRef.current !== chatId;
+    prevChatIdRef.current = chatId;
+
+    if (isChatChanged) {
+      isAtBottomRef.current = true;
+      messagesThreadContainerRef.current.scrollTop = messagesThreadContainerRef.current.scrollHeight;
+    } else if (isAtBottomRef.current) {
       messagesThreadContainerRef.current.scrollTop = messagesThreadContainerRef.current.scrollHeight;
     }
-  }, [safeMessages]);
+  }, [safeMessages, chatId]);
 
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
@@ -850,6 +867,7 @@ export default function ChatConversationPane({
       <div
         ref={messagesThreadContainerRef}
         key={chatId}
+        onScroll={handleScroll}
         style={{
           flex: 1,
           overflowY: 'auto',
