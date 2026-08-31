@@ -1235,7 +1235,13 @@ const deleteMessage = async (req, res) => {
     if (io) {
       io.to(`chat:${id}`).emit('chat:message:deleted', {
         chatId: id,
-        messageId: msgId
+        messageId: msgId,
+        realMessageId
+      });
+      io.emit('chat:message:deleted', {
+        chatId: id,
+        messageId: msgId,
+        realMessageId
       });
     }
 

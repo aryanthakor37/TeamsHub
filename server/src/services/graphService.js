@@ -368,21 +368,31 @@ const deleteGraphChatMessage = async (accessToken, chatId, messageId) => {
   const cleanChatId = decodeURIComponent(chatId);
   const cleanMsgId = decodeURIComponent(messageId);
 
+  // 1. Try v1.0 softDelete
   try {
     return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify({})
     });
   } catch (err) {
     console.warn('[Graph softDelete v1.0 failed, trying beta]', err.message);
+    // 2. Try beta softDelete
     try {
       return await graphRequestBeta(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`, {
-        method: 'POST'
+        method: 'POST',
+        body: JSON.stringify({})
       });
     } catch (err2) {
       console.warn('[Graph softDelete beta failed, trying direct DELETE]', err2.message);
-      return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}`, {
-        method: 'DELETE'
-      });
+      // 3. Try direct DELETE
+      try {
+        return await graphRequest(accessToken, `/chats/${encodeURIComponent(cleanChatId)}/messages/${encodeURIComponent(cleanMsgId)}`, {
+          method: 'DELETE'
+        });
+      } catch (err3) {
+        console.warn('[Graph DELETE failed, trying fallback to clear text]', err3.message);
+        return await updateGraphChatMessage(accessToken, cleanChatId, cleanMsgId, '<p><em>This message was deleted.</em></p>');
+      }
     }
   }
 };
@@ -798,6 +808,10 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
  * Normalize Graph message response into TeamsHub Message schema
  */
 const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEmail, currentDisplayName = '') => {
+  if (graphMessage.deletedDateTime) {
+    return null;
+  }
+
   const senderEmail = (graphMessage.from?.user?.email || graphMessage.from?.user?.userPrincipalName || '').toLowerCase().trim();
   const senderName = (graphMessage.from?.user?.displayName || senderEmail || 'Unknown').trim();
   const senderId = graphMessage.from?.user?.id || '';
