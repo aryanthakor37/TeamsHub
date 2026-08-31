@@ -48,7 +48,7 @@ const getStoredLocalChats = () => {
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((c) => !isLegacyOrFakeChat(c));
+    return parsed;
   } catch (e) {
     return [];
   }
@@ -60,7 +60,7 @@ const saveStoredLocalChats = (items) => {
       localStorage.removeItem('teamshub_cached_chats');
       return;
     }
-    const filtered = (items || []).filter((c) => !isLegacyOrFakeChat(c));
+    const filtered = (items || []).filter(Boolean);
     localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
   } catch (e) {}
 };
@@ -148,6 +148,7 @@ export const useChats = () => {
         const cleanEmail = email.toLowerCase().trim();
         setChats((prev) => {
           const filtered = prev.filter((c) => {
+            const owner = (c.accountEmail || c.connectedAccountId || c.company || '').toLowerCase().trim();
             const userClean = cleanEmail.split('@')[0];
             if (owner === cleanEmail || owner.includes(cleanEmail) || (userClean && owner.includes(userClean))) return false;
             return true;

@@ -618,98 +618,130 @@ export default function ChatsPage({
                     className={isSelected ? 'chat-item-3d active' : 'chat-item-3d'}
                     style={{
                       display: 'flex',
-                      flexDirection: 'column',
-                      gap: '4px',
-                      padding: '10px 12px',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '9px 10px',
                       borderRadius: 'var(--radius-md)',
                       backgroundColor: isSelected ? 'var(--accent-light)' : (isSplitSelected ? 'rgba(2, 132, 199, 0.08)' : 'transparent'),
-                      borderLeft: isSelected ? '3px solid var(--accent-primary)' : (isSplitSelected ? '3px solid #0284c7' : '3px solid transparent'),
-                      cursor: 'pointer'
+                      borderLeft: isSelected ? '3.5px solid var(--accent-primary)' : (isSplitSelected ? '3.5px solid #0284c7' : '3.5px solid transparent'),
+                      cursor: 'pointer',
+                      position: 'relative'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {c.participant}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          {c.lastMessageTimestamp ? new Date(c.lastMessageTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <p style={{
-                        margin: 0,
-                        fontSize: '0.76rem',
-                        color: c.unreadCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)',
-                        fontWeight: c.unreadCount > 0 ? '700' : '400',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        flex: 1
-                      }}>
-                        {formatChatPreview(c.lastMessagePreview) || 'No messages yet'}
-                      </p>
-                      {c.unreadCount > 0 && (
-                        <span style={{
-                          backgroundColor: '#ef4444',
-                          color: '#ffffff',
-                          borderRadius: '10px',
-                          padding: '1px 6px',
-                          fontSize: '0.65rem',
-                          fontWeight: '800',
-                          marginLeft: '6px',
-                          flexShrink: 0
-                        }}>
-                          {c.unreadCount}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
-                      <span style={{
-                        fontSize: '0.66rem',
-                        color: 'var(--accent-primary)',
+                    {/* Avatar with Live Indicator */}
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <div className="avatar-3d" style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        backgroundColor: getAvatarColor(c.participant),
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         fontWeight: '700',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
+                        fontSize: '0.88rem'
                       }}>
-                        {c.company || c.accountBadge || 'Teams'}
-                      </span>
+                        {getInitials(c.participant)}
+                      </div>
+                      <div className="live-pulse-dot" style={{
+                        position: 'absolute',
+                        bottom: '0px',
+                        right: '0px',
+                        width: '10px',
+                        height: '10px',
+                        backgroundColor: '#10b981',
+                        border: '2px solid var(--bg-secondary)',
+                        borderRadius: '50%'
+                      }} />
+                    </div>
 
-                      {/* Hover Quick Split Button */}
-                      <div
-                        className="chat-hover-actions"
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() => handleOpenInSplit(chatId, c)}
-                          className="tab-pill-3d"
-                          title="Open in Dual Split View"
-                          style={{
-                            padding: '2px 7px',
-                            borderRadius: '4px',
+                    {/* Chat Text Details */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                        <span style={{ fontWeight: isSelected ? '700' : '600', fontSize: '0.85rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.participant}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            {c.lastMessageTimestamp ? new Date(c.lastMessageTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <p style={{
+                          margin: 0,
+                          fontSize: '0.76rem',
+                          color: c.unreadCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)',
+                          fontWeight: c.unreadCount > 0 ? '700' : '400',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          flex: 1
+                        }}>
+                          {formatChatPreview(c.lastMessagePreview) || 'No messages yet'}
+                        </p>
+                        {c.unreadCount > 0 && (
+                          <span style={{
+                            backgroundColor: '#ef4444',
+                            color: '#ffffff',
+                            borderRadius: '10px',
+                            padding: '1px 6px',
                             fontSize: '0.65rem',
-                            fontWeight: '700',
-                            border: '1px solid var(--border-color)',
-                            backgroundColor: 'var(--bg-tertiary)',
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
+                            fontWeight: '800',
+                            marginLeft: '6px',
+                            flexShrink: 0
+                          }}>
+                            {c.unreadCount}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                        <span style={{
+                          fontSize: '0.66rem',
+                          color: 'var(--accent-primary)',
+                          fontWeight: '700',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {c.company || c.accountBadge || 'Teams'}
+                        </span>
+
+                        {/* Hover Quick Split Button */}
+                        <div
+                          className="chat-hover-actions"
+                          style={{
+                            display: 'flex',
                             alignItems: 'center',
-                            gap: '3px'
+                            gap: '4px'
                           }}
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <Split size={10} />
-                          <span>Split</span>
-                        </button>
+                          <button
+                            onClick={() => handleOpenInSplit(chatId, c)}
+                            className="tab-pill-3d"
+                            title="Open in Dual Split View"
+                            style={{
+                              padding: '2px 7px',
+                              borderRadius: '4px',
+                              fontSize: '0.65rem',
+                              fontWeight: '700',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-tertiary)',
+                              color: 'var(--text-primary)',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                          >
+                            <Split size={10} />
+                            <span>Split</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
