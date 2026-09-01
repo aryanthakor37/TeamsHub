@@ -12,28 +12,33 @@ export const getActiveMsalAccounts = async () => {
       disconnectedList = JSON.parse(localStorage.getItem('teamshub_disconnected_emails') || '[]');
     } catch (e) { }
 
-    const list = [];
-    for (const acc of accounts) {
+    const validAccounts = accounts.filter(acc => {
       const email = (acc.username || '').toLowerCase().trim();
-      if (!email || disconnectedList.includes(email)) continue; // Never restore disconnected accounts on refresh!
+      return email && !disconnectedList.includes(email);
+    });
 
-      const token = await acquireGraphToken(acc.homeAccountId || acc.username);
-      const actualTenantId = acc.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
+    const list = await Promise.all(
+      validAccounts.map(async (acc) => {
+        const email = (acc.username || '').toLowerCase().trim();
+        const token = await acquireGraphToken(acc.homeAccountId || acc.username).catch(() => null);
+        const actualTenantId = acc.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
 
-      list.push({
-        _id: acc.homeAccountId || acc.localAccountId,
-        accountId: acc.homeAccountId || acc.localAccountId,
-        displayName: acc.name || (email ? email.split('@')[0] : 'Microsoft User'),
-        email: acc.username,
-        tenantId: actualTenantId,
-        accountType: 'Microsoft Work / Personal Account',
-        status: 'connected',
-        isDefault: activeAcc ? (acc.username === activeAcc.username) : true,
-        accessToken: token || localStorage.getItem(`teamshub_token_${email}`) || localStorage.getItem('teamshub_last_access_token') || '',
-        badgeClass: 'badge-company-a',
-        lastAuthenticatedAt: new Date().toISOString()
-      });
-    }
+        return {
+          _id: acc.homeAccountId || acc.localAccountId,
+          accountId: acc.homeAccountId || acc.localAccountId,
+          displayName: acc.name || (email ? email.split('@')[0] : 'Microsoft User'),
+          email: acc.username,
+          tenantId: actualTenantId,
+          accountType: 'Microsoft Work / Personal Account',
+          status: 'connected',
+          isDefault: activeAcc ? (acc.username === activeAcc.username) : true,
+          accessToken: token || localStorage.getItem(`teamshub_token_${email}`) || localStorage.getItem('teamshub_last_access_token') || '',
+          badgeClass: 'badge-company-a',
+          lastAuthenticatedAt: new Date().toISOString()
+        };
+      })
+    );
+
     return list;
   } catch (e) {
     return [];

@@ -77,12 +77,13 @@ export const MicrosoftAuthProvider = ({ children }) => {
         return;
       }
 
-      // Sync only the active MSAL accounts in this browser to backend DB and load them
-      const currentSessionAccounts = [];
-      for (const msalAcc of msalAccs) {
-        const synced = await syncAccountToBackend(msalAcc).catch(() => null);
-        currentSessionAccounts.push(synced?.data || msalAcc);
-      }
+      // Sync only the active MSAL accounts in this browser to backend DB in parallel (lightning fast)
+      const currentSessionAccounts = await Promise.all(
+        msalAccs.map(async (msalAcc) => {
+          const synced = await syncAccountToBackend(msalAcc).catch(() => null);
+          return synced?.data || msalAcc;
+        })
+      );
 
       setConnectedAccounts(currentSessionAccounts);
       try {

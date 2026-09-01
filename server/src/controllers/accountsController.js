@@ -182,23 +182,17 @@ const connectMicrosoftAccount = async (req, res) => {
       global.liveInMemoryAccounts = new Map();
     }
 
-    // Verify the access token by calling Graph /me
+    // Fast-path resolution: Avoid slow Graph /me network call if email/name are already provided
     let graphProfile = null;
-    if (accessToken) {
+    let resolvedEmail = (cleanEmail || req.user?.email || '').toLowerCase().trim();
+    if (!resolvedEmail && accessToken) {
       try {
         graphProfile = await fetchGraphUserProfile(accessToken);
+        resolvedEmail = (graphProfile?.mail || graphProfile?.userPrincipalName || '').toLowerCase().trim();
       } catch (graphErr) {
-        // Token verification fallback (demo/expired token proceeding with payload)
+        // Token verification fallback
       }
     }
-
-    const resolvedEmail = (
-      graphProfile?.mail ||
-      graphProfile?.userPrincipalName ||
-      cleanEmail ||
-      req.user?.email ||
-      ''
-    ).toLowerCase().trim();
 
     if (!resolvedEmail) {
       return res.status(400).json({
