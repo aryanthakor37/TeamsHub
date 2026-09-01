@@ -88,7 +88,7 @@ export default function MicrosoftModal({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Advanced Tenant Option (Expandable) */}
+        {/* Advanced Tenant / Guest Organization Option */}
         <div style={{ marginBottom: '16px' }}>
           <button
             type="button"
@@ -98,27 +98,27 @@ export default function MicrosoftModal({ isOpen, onClose }) {
               border: 'none',
               cursor: 'pointer',
               color: 'var(--accent-primary)',
-              fontSize: '0.78rem',
+              fontSize: '0.8rem',
               fontWeight: '700',
               padding: 0,
               display: 'flex',
               alignItems: 'center',
-              gap: '5px'
+              gap: '6px'
             }}
           >
-            <Globe size={13} />
-            <span>{showAdvanced ? 'Hide Client Tenant Domain' : 'Connect specific Client Tenant / Domain (Optional)'}</span>
-            {showAdvanced ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            <Globe size={14} />
+            <span>{showAdvanced ? 'Hide Guest Tenant / Client Organization' : '🏢 Connect Client Guest Organization (e.g. DR SCHAER AG)'}</span>
+            {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
 
           {showAdvanced && (
-            <div style={{ marginTop: '10px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                Client Domain or Tenant ID
+            <div style={{ marginTop: '12px', padding: '12px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                Client Domain, Organization Name or Tenant ID
               </label>
               <input
                 type="text"
-                placeholder="e.g. clientdomain.com or tenant-id"
+                placeholder="e.g. DR SCHAER AG, drschaer.com, or Tenant ID"
                 value={guestTenantDomain}
                 onChange={(e) => setGuestTenantDomain(e.target.value)}
                 style={{
@@ -126,11 +126,33 @@ export default function MicrosoftModal({ isOpen, onClose }) {
                   padding: '8px 10px',
                   borderRadius: '6px',
                   border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-secondary)',
+                  backgroundColor: 'var(--bg-primary)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.84rem'
+                  fontSize: '0.84rem',
+                  marginBottom: '8px'
                 }}
               />
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Quick Presets:</span>
+                {['DR SCHAER AG', 'BayWa r.e.', 'Client Workspace'].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setGuestTenantDomain(preset)}
+                    style={{
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: guestTenantDomain === preset ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                      color: guestTenantDomain === preset ? '#ffffff' : 'var(--text-secondary)',
+                      borderRadius: '4px',
+                      padding: '2px 8px',
+                      fontSize: '0.72rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

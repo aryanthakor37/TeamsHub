@@ -207,16 +207,23 @@ const connectMicrosoftAccount = async (req, res) => {
       });
     }
 
+    const resolvedCompany = req.body?.company || (accountType && accountType.includes('Guest') ? accountType : '') || 'ESTATIC INFOTECH';
+    const isGuest = accountType && (accountType.includes('Guest') || resolvedCompany.includes('Guest') || resolvedCompany !== 'ESTATIC INFOTECH');
+    const uniqueSuffix = isGuest ? `_${resolvedCompany.toLowerCase().replace(/[^a-z0-9]/g, '_')}` : '';
+    const uniqueKey = `${resolvedEmail}${uniqueSuffix}`;
+    const accountUniqueId = `acc-${uniqueKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
     const accountData = {
-      _id: `acc-${resolvedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      _id: accountUniqueId,
       userId: req.user?._id || 'user-default',
       provider: 'microsoft',
-      accountId: graphProfile?.id || accountId || `ms-oid-${Date.now()}`,
+      accountId: accountId || graphProfile?.id || `ms-oid-${Date.now()}`,
       microsoftUserId: graphProfile?.id || accountId || '',
-      displayName: graphProfile?.displayName || displayName || resolvedEmail.split('@')[0] || 'User',
+      displayName: displayName || graphProfile?.displayName || resolvedEmail.split('@')[0] || 'User',
       email: resolvedEmail,
+      company: resolvedCompany,
       tenantId: tenantId || 'common',
-      accountType: accountType || 'Microsoft Account',
+      accountType: accountType || (isGuest ? `Guest Organization (${resolvedCompany})` : 'Microsoft Account'),
       status: 'connected',
       isDefault: false,
       scopes: scopes || ['User.Read', 'Chat.Read'],
@@ -224,41 +231,11 @@ const connectMicrosoftAccount = async (req, res) => {
       lastAuthenticatedAt: new Date()
     };
 
+    global.liveInMemoryAccounts.set(accountUniqueId, accountData);
     global.liveInMemoryAccounts.set(resolvedEmail, accountData);
+    global.liveInMemoryAccounts.set(uniqueKey, accountData);
 
-    // Auto-discover Guest Tenant Organizations (e.g. BayWa r.e., DR SCHAER AG, Kerry Dines Ltd)
     let discoveredGuests = [];
-    if (accessToken) {
-      try {
-        const guestTenants = await fetchGraphUserTenants(accessToken, resolvedEmail);
-        const emailDomain = resolvedEmail.includes('@') ? resolvedEmail.split('@')[1] : 'tenant.org';
-        for (const guest of guestTenants) {
-          if (!guest || !guest.displayName) continue;
-          const cleanGuestName = (guest.displayName || 'Guest').toLowerCase().replace(/[^a-z0-9]/g, '');
-          const guestEmail = `${cleanGuestName}@guest.${emailDomain}`;
-          const guestAccData = {
-            _id: `acc-guest-${cleanGuestName}`,
-            userId: req.user?._id || 'user-default',
-            provider: 'microsoft',
-            accountId: guest.id || `guest-${Date.now()}`,
-            microsoftUserId: accountData.microsoftUserId,
-            displayName: guest.displayName,
-            email: guestEmail,
-            parentAccountEmail: resolvedEmail,
-            tenantId: guest.id || 'guest-tenant',
-            accountType: 'Guest Tenant Workspace',
-            status: 'connected',
-            isDefault: false,
-            microsoftAccessToken: accessToken,
-            lastAuthenticatedAt: new Date()
-          };
-          global.liveInMemoryAccounts.set(guestEmail, guestAccData);
-          discoveredGuests.push(guestAccData);
-        }
-      } catch (tErr) {
-        console.warn('[AccountsController] Guest discovery warning:', tErr.message);
-      }
-    }
 
     // ── Real Database Mode (if MongoDB connected) ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;

@@ -71,11 +71,22 @@ export const initializeMsal = async () => {
       localStorage.removeItem('teamshub_pending_guest_tenant');
 
       const actualTenantId = pendingTenant || account.tenantId || '41f9d7c7-4e78-4c29-b30d-423f638ea43e';
+      const cleanEmail = (account.username || '').toLowerCase().trim();
+      const uniqueSuffix = pendingOrg ? `_${pendingOrg.toLowerCase().replace(/[^a-z0-9]/g, '_')}` : '';
+      const uniqueAccountId = `acc-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}${uniqueSuffix}`;
+
+      if (response.accessToken) {
+        localStorage.setItem(`teamshub_token_${uniqueAccountId}`, response.accessToken);
+        localStorage.setItem(`teamshub_token_${cleanEmail}${uniqueSuffix}`, response.accessToken);
+        localStorage.setItem(`teamshub_token_${cleanEmail}`, response.accessToken);
+        localStorage.setItem('teamshub_last_access_token', response.accessToken);
+      }
 
       const accountPayload = {
-        accountId: account.homeAccountId || account.localAccountId,
-        displayName: pendingOrg ? `${account.name || account.username.split('@')[0]} (${pendingOrg})` : (account.name || account.username.split('@')[0]),
-        email: account.username,
+        _id: uniqueAccountId,
+        accountId: uniqueAccountId,
+        displayName: pendingOrg ? `${account.name || cleanEmail.split('@')[0]} (${pendingOrg})` : (account.name || cleanEmail.split('@')[0]),
+        email: cleanEmail,
         tenantId: actualTenantId,
         company: pendingOrg || 'ESTATIC INFOTECH',
         accountType: pendingOrg ? `Guest Organization (${pendingOrg})` : 'Microsoft Work Account',
