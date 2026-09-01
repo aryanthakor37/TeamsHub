@@ -107,18 +107,18 @@ export default function MicrosoftModal({ isOpen, onClose }) {
             }}
           >
             <Globe size={14} />
-            <span>{showAdvanced ? 'Hide Guest Tenant / Client Organization' : '🏢 Connect Client Guest Organization (e.g. DR SCHAER AG)'}</span>
+            <span>{showAdvanced ? 'Hide Guest Organization / Tenant' : 'Connect Client Guest Organization / Tenant (Optional)'}</span>
             {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
 
           {showAdvanced && (
             <div style={{ marginTop: '12px', padding: '12px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                Client Domain, Organization Name or Tenant ID
+                Client Organization Name, Domain, or Tenant ID
               </label>
               <input
                 type="text"
-                placeholder="e.g. DR SCHAER AG, drschaer.com, or Tenant ID"
+                placeholder="Enter client company name, domain, or tenant ID"
                 value={guestTenantDomain}
                 onChange={(e) => setGuestTenantDomain(e.target.value)}
                 style={{
@@ -128,31 +128,9 @@ export default function MicrosoftModal({ isOpen, onClose }) {
                   border: '1px solid var(--border-color)',
                   backgroundColor: 'var(--bg-primary)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.84rem',
-                  marginBottom: '8px'
+                  fontSize: '0.84rem'
                 }}
               />
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Quick Presets:</span>
-                {['DR SCHAER AG', 'BayWa r.e.', 'Client Workspace'].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setGuestTenantDomain(preset)}
-                    style={{
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: guestTenantDomain === preset ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                      color: guestTenantDomain === preset ? '#ffffff' : 'var(--text-secondary)',
-                      borderRadius: '4px',
-                      padding: '2px 8px',
-                      fontSize: '0.72rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
         </div>
