@@ -991,26 +991,44 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
       return; // Do NOT render quote as a file attachment!
     }
 
+    let thumbUrl = att.thumbnailUrl;
     if (att.content) {
       try {
         const parsed = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
-        if (parsed.downloadUrl && !contentUrl) contentUrl = parsed.downloadUrl;
-        if (parsed.webUrl && !contentUrl) contentUrl = parsed.webUrl;
-        if (parsed.fileType && contentType === 'application/octet-stream') contentType = parsed.fileType;
-        if (parsed.fileName && (!name || name === 'Unknown File')) name = parsed.fileName;
+        if (parsed.downloadUrl) contentUrl = parsed.downloadUrl;
+        else if (parsed.webUrl && !contentUrl) contentUrl = parsed.webUrl;
+        
+        if (parsed.thumbnailUrl) thumbUrl = parsed.thumbnailUrl;
+        else if (parsed.previewUrl) thumbUrl = parsed.previewUrl;
+
+        if (parsed.fileType) contentType = parsed.fileType;
+        else if (parsed.contentType) contentType = parsed.contentType;
+        else if (parsed.itemType === 'image') contentType = 'image/png';
+
+        if (parsed.fileName && (!name || name === 'Unknown File' || name === 'Attachment')) name = parsed.fileName;
+        else if (parsed.name && (!name || name === 'Unknown File' || name === 'Attachment')) name = parsed.name;
       } catch (e) {
         // Not JSON
       }
     }
 
-    // Only include if it has a real file name or real content URL
-    if ((name && name !== 'Attachment' && name !== 'Unknown File') || (contentUrl && contentUrl !== '#')) {
+    // Detect image content from URL or filename if contentType is generic
+    if (contentType === 'application/octet-stream' || contentType === 'reference' || !contentType) {
+      if (contentUrl && /\.(png|jpe?g|gif|webp|bmp|svg)/i.test(contentUrl)) {
+        contentType = 'image/png';
+      } else if (name && /\.(png|jpe?g|gif|webp|bmp|svg)/i.test(name)) {
+        contentType = 'image/png';
+      }
+    }
+
+    // Only include if it has a real file name, content URL or thumbnail
+    if ((name && name !== 'Unknown File') || (contentUrl && contentUrl !== '#') || thumbUrl) {
       attachments.push({
         id: att.id || `att-${Math.random().toString(36).substring(2, 9)}`,
-        name: name || 'Shared File',
+        name: name || (contentType?.startsWith('image/') ? 'Image.png' : 'Shared File'),
         contentType: contentType,
-        contentUrl: contentUrl || att.thumbnailUrl || '#',
-        thumbnailUrl: att.thumbnailUrl,
+        contentUrl: contentUrl || thumbUrl || '#',
+        thumbnailUrl: thumbUrl || (contentType?.startsWith('image/') ? (contentUrl || null) : null),
         teamsAppId: att.teamsAppId
       });
     }

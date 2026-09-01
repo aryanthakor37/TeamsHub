@@ -115,10 +115,11 @@ function ChatImageAttachment({ attachment, chatOwner, onImageClick }) {
 }
 
 // Teams-style Attachment Card Component
-function TeamsAttachmentCard({ attachment, onClick }) {
+function TeamsAttachmentCard({ attachment, onClick, chatOwner }) {
   const fileName = attachment.name || 'Attachment';
   const meta = getFileCategoryMeta(fileName, attachment.contentType);
   const Icon = meta.icon;
+  const previewImg = attachment.thumbnailUrl || attachment.previewUrl;
 
   return (
     <div
@@ -127,51 +128,61 @@ function TeamsAttachmentCard({ attachment, onClick }) {
         onClick(attachment);
       }}
       style={{
-        width: '240px',
-        backgroundColor: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '8px',
+        width: '260px',
+        backgroundColor: 'var(--bg-secondary)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '10px',
         overflow: 'hidden',
         cursor: 'pointer',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'flex',
         flexDirection: 'column',
         textAlign: 'left',
         userSelect: 'none',
-        margin: '4px 0'
+        margin: '6px 0'
       }}
       title={`Click to preview ${fileName}`}
     >
+      {previewImg && (
+        <div style={{ width: '100%', height: '110px', backgroundColor: 'rgba(0,0,0,0.1)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img
+            src={previewImg}
+            alt={fileName}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+        </div>
+      )}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '8px 10px',
-        backgroundColor: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
+        padding: '9px 12px',
+        backgroundColor: 'var(--bg-tertiary)',
+        borderTop: previewImg ? '1px solid var(--border-color)' : 'none',
         gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
           <div style={{
-            width: '22px',
-            height: '22px',
-            borderRadius: '4px',
+            width: '24px',
+            height: '24px',
+            borderRadius: '5px',
             backgroundColor: meta.color,
             color: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            fontSize: '0.62rem',
+            fontSize: '0.65rem',
             fontWeight: 'bold'
           }}>
-            {meta.category === 'Word' ? 'W' : meta.category === 'Excel' ? 'X' : meta.category === 'PDF' ? 'PDF' : <Icon size={12} />}
+            {meta.category === 'Word' ? 'W' : meta.category === 'Excel' ? 'X' : meta.category === 'PDF' ? 'PDF' : <Icon size={13} />}
           </div>
           <span style={{
-            fontSize: '0.78rem',
+            fontSize: '0.8rem',
             fontWeight: '600',
-            color: '#1e293b',
+            color: 'var(--text-primary)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis'
@@ -179,7 +190,7 @@ function TeamsAttachmentCard({ attachment, onClick }) {
             {fileName}
           </span>
         </div>
-        <ExternalLink size={12} style={{ color: '#64748b', flexShrink: 0 }} />
+        <ExternalLink size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
       </div>
     </div>
   );
@@ -1197,10 +1208,13 @@ export default function ChatConversationPane({
                         {msg.attachments && msg.attachments.length > 0 && (
                           <div style={{ marginTop: (msg.content && msg.content !== '.' && msg.content !== ' ') ? '8px' : '0', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {msg.attachments.map((att) => {
-                              const isImg = (att.contentType && att.contentType.startsWith('image/')) ||
+                              const isImg = (att.contentType && (att.contentType.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(att.contentType.toLowerCase()))) ||
                                             (att.name && /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(att.name)) ||
                                             att.thumbnailUrl ||
-                                            (att.contentUrl && /\.(png|jpe?g|gif|webp|bmp)$/i.test(att.contentUrl.split('?')[0]));
+                                            (att.contentUrl && /\.(png|jpe?g|gif|webp|bmp|svg)/i.test(att.contentUrl.split('?')[0])) ||
+                                            (att.contentUrl && att.contentUrl.includes('hostedContents')) ||
+                                            (att.contentUrl && att.contentUrl.includes('image')) ||
+                                            (att.name === 'Attachment' && att.contentUrl && att.contentUrl !== '#' && !att.name.includes('.'));
 
                               if (isImg) {
                                 return (
@@ -1217,6 +1231,7 @@ export default function ChatConversationPane({
                                 <TeamsAttachmentCard
                                   key={att.id || att.name}
                                   attachment={att}
+                                  chatOwner={chatOwner}
                                   onClick={(a) => {
                                     if (onPreviewDoc) {
                                       onPreviewDoc({
