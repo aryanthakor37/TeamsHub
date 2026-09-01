@@ -14,10 +14,13 @@ export default function MicrosoftModal({ isOpen, onClose }) {
     setIsSubmitting(true);
     let options = {};
     if (showAdvanced && guestTenantDomain.trim()) {
-      const cleanDomain = guestTenantDomain.trim();
+      let cleanDomain = guestTenantDomain.trim();
+      // Sanitize input if user pasted a URL or trailing slash
+      cleanDomain = cleanDomain.replace(/^https?:\/\//i, '').replace(/login\.microsoftonline\.com\//i, '').replace(/\/.*$/, '').trim();
+      const orgName = cleanDomain.includes('.') ? cleanDomain.split('.')[0].toUpperCase() : cleanDomain.substring(0, 12).toUpperCase();
       options = {
         guestTenantId: cleanDomain,
-        guestOrgName: cleanDomain.split('.')[0].toUpperCase()
+        guestOrgName: orgName
       };
     }
     const res = await loginWithMicrosoft(options);
