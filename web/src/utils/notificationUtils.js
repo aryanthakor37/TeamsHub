@@ -103,8 +103,11 @@ export const flashBrowserTabTitle = (senderName) => {
   window.addEventListener('focus', resetOnFocus);
 };
 
-// Trigger Browser Desktop Notification
+// Trigger Browser Desktop Notification (Disabled by default to prevent OS popup clutter)
 export const showDesktopNotification = (title, body, onClick) => {
+  const isEnabled = typeof window !== 'undefined' && localStorage.getItem('teamshub_desktop_notifications_enabled') === 'true';
+  if (!isEnabled) return;
+
   flashBrowserTabTitle(title);
 
   if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -126,8 +129,6 @@ export const showDesktopNotification = (title, body, onClick) => {
       } catch (e) {
         console.warn('[Notification] Desktop notification error:', e.message);
       }
-    } else if (Notification.permission === 'default') {
-      requestNotificationPermission();
     }
   }
 };

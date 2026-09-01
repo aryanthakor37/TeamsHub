@@ -131,23 +131,7 @@ ipcMain.on('window:maximize', () => {
 ipcMain.on('window:close', () => mainWindow?.hide());
 
 ipcMain.on('notification:show', (event, { title, body, onClickData }) => {
-  if (Notification.isSupported()) {
-    const notif = new Notification({
-      title: title || 'TeamsHub',
-      body: body || 'New incoming message',
-      icon: path.join(__dirname, '..', 'web', 'public', 'favicon.ico')
-    });
-    notif.on('click', () => {
-      if (mainWindow) {
-        mainWindow.show();
-        mainWindow.focus();
-        if (onClickData) {
-          mainWindow.webContents.send('navigate:chat', onClickData);
-        }
-      }
-    });
-    notif.show();
-  }
+  // Suppressed Windows OS notifications to avoid popup clutter
 });
 
 ipcMain.on('badge:update', (event, count) => {
