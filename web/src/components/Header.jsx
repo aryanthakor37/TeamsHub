@@ -7,7 +7,7 @@ import AccountSwitcher from './AccountSwitcher';
 import { getInitials, getAvatarColor } from '../utils/avatarUtils';
 
 export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, theme, toggleTheme }) {
-  const [healthStatus, setHealthStatus] = useState({ loading: true, online: false });
+  const [healthStatus, setHealthStatus] = useState({ loading: false, online: true });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   const [imgError, setImgError] = useState(false);
