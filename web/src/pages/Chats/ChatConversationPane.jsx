@@ -1154,6 +1154,43 @@ export default function ChatConversationPane({
                           border: msg.isOutgoing ? 'none' : '1px solid var(--border-color)'
                         }}
                       >
+                        {/* Teams-style Quote Reply Preview Card */}
+                        {msg.quoteReply && (
+                          <div style={{
+                            padding: '6px 10px',
+                            marginBottom: '7px',
+                            borderRadius: '5px',
+                            backgroundColor: msg.isOutgoing ? 'rgba(255, 255, 255, 0.16)' : 'var(--bg-tertiary)',
+                            borderLeft: msg.isOutgoing ? '3px solid #ffffff' : '3px solid var(--accent-primary)',
+                            fontSize: '0.78rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '2px',
+                            maxWidth: '100%',
+                            overflow: 'hidden'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: '700', color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)' }}>
+                                {msg.quoteReply.sender || 'Chat Participant'}
+                              </span>
+                              {msg.quoteReply.date && (
+                                <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>
+                                  {new Date(msg.quoteReply.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{
+                              color: msg.isOutgoing ? 'rgba(255, 255, 255, 0.9)' : 'var(--text-secondary)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              fontSize: '0.76rem'
+                            }}>
+                              {msg.quoteReply.text || ''}
+                            </div>
+                          </div>
+                        )}
+
                         {translatedMessages[msgId] ? (
                           <div style={{ margin: 0, fontWeight: '500' }}>
                             {translatedMessages[msgId]}

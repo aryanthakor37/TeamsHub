@@ -963,66 +963,68 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
   (graphMessage.attachments || []).forEach(att => {
     let contentUrl = att.contentUrl;
     let name = att.name;
-    let contentType = att.contentType || 'application/octet-stream';
+    let contentType = (att.contentType || '').toLowerCase().trim();
+
+    let parsed = null;
+    if (att.content) {
+      try {
+        parsed = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
+      } catch (e) { }
+    }
 
     // 1. Check if this is a quote/reply reference
-    if (
-      contentType.includes('messageReference') ||
-      contentType.includes('quote') ||
-      att.teamsAppId === 'quote'
-    ) {
-      if (att.content) {
-        try {
-          const parsed = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
-          const senderName = parsed.messageFrom?.user?.displayName ||
-            parsed.from?.user?.displayName ||
-            parsed.sender?.displayName ||
-            parsed.sender ||
-            parsed.user?.displayName ||
-            parsed.author ||
-            '';
-          let quotedContent = parsed.messageBody?.content ||
-            parsed.body?.content ||
-            parsed.content ||
-            parsed.text ||
-            '';
-          if (typeof quotedContent === 'string') {
-            quotedContent = quotedContent.replace(/<[^>]*>/g, '').trim();
-          }
-          const quotedDate = parsed.messageDateTime || parsed.createdDateTime || parsed.date || '';
+    const isQuote = contentType.includes('messagereference') ||
+                    contentType.includes('quote') ||
+                    contentType.includes('reply') ||
+                    contentType === 'application/vnd.microsoft.card.message' ||
+                    att.teamsAppId === 'quote' ||
+                    (parsed && (parsed.messageId || parsed.messageBody || parsed.messageFrom || parsed.itemType === 'messageReference' || parsed.replyToId));
 
-          if (senderName || quotedContent) {
-            quoteReply = {
-              messageId: parsed.messageId || parsed.id,
-              sender: senderName || 'User',
-              text: quotedContent,
-              date: quotedDate
-            };
-          }
-        } catch (e) { }
+    if (isQuote) {
+      if (parsed) {
+        const senderName = parsed.messageFrom?.user?.displayName ||
+          parsed.from?.user?.displayName ||
+          parsed.sender?.displayName ||
+          parsed.sender ||
+          parsed.user?.displayName ||
+          parsed.author ||
+          '';
+        let quotedContent = parsed.messageBody?.content ||
+          parsed.body?.content ||
+          parsed.content ||
+          parsed.text ||
+          '';
+        if (typeof quotedContent === 'string') {
+          quotedContent = quotedContent.replace(/<[^>]*>/g, '').trim();
+        }
+        const quotedDate = parsed.messageDateTime || parsed.createdDateTime || parsed.date || '';
+
+        if (senderName || quotedContent) {
+          quoteReply = {
+            messageId: parsed.messageId || parsed.id,
+            sender: senderName || 'User',
+            text: quotedContent,
+            date: quotedDate
+          };
+        }
       }
       return; // Do NOT render quote as a file attachment!
     }
 
     let thumbUrl = att.thumbnailUrl;
-    if (att.content) {
-      try {
-        const parsed = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
-        if (parsed.downloadUrl) contentUrl = parsed.downloadUrl;
-        else if (parsed.webUrl && !contentUrl) contentUrl = parsed.webUrl;
-        
-        if (parsed.thumbnailUrl) thumbUrl = parsed.thumbnailUrl;
-        else if (parsed.previewUrl) thumbUrl = parsed.previewUrl;
+    if (parsed) {
+      if (parsed.downloadUrl) contentUrl = parsed.downloadUrl;
+      else if (parsed.webUrl && !contentUrl) contentUrl = parsed.webUrl;
+      
+      if (parsed.thumbnailUrl) thumbUrl = parsed.thumbnailUrl;
+      else if (parsed.previewUrl) thumbUrl = parsed.previewUrl;
 
-        if (parsed.fileType) contentType = parsed.fileType;
-        else if (parsed.contentType) contentType = parsed.contentType;
-        else if (parsed.itemType === 'image') contentType = 'image/png';
+      if (parsed.fileType) contentType = parsed.fileType;
+      else if (parsed.contentType) contentType = parsed.contentType;
+      else if (parsed.itemType === 'image') contentType = 'image/png';
 
-        if (parsed.fileName && (!name || name === 'Unknown File' || name === 'Attachment')) name = parsed.fileName;
-        else if (parsed.name && (!name || name === 'Unknown File' || name === 'Attachment')) name = parsed.name;
-      } catch (e) {
-        // Not JSON
-      }
+      if (parsed.fileName && (!name || name === 'Unknown File' || name === 'Attachment')) name = parsed.fileName;
+      else if (parsed.name && (!name || name === 'Unknown File' || name === 'Attachment')) name = parsed.name;
     }
 
     // Detect image content from URL or filename if contentType is generic
@@ -1035,7 +1037,7 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     }
 
     // Only include if it has a real file name, content URL or thumbnail
-    if ((name && name !== 'Unknown File') || (contentUrl && contentUrl !== '#') || thumbUrl) {
+    if ((name && name !== 'Unknown File' && name !== 'Attachment') || (contentUrl && contentUrl !== '#') || thumbUrl) {
       attachments.push({
         id: att.id || `att-${Math.random().toString(36).substring(2, 9)}`,
         name: name || (contentType?.startsWith('image/') ? 'Image.png' : 'Shared File'),
