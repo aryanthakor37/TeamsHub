@@ -1154,137 +1154,184 @@ export default function ChatConversationPane({
                           border: msg.isOutgoing ? 'none' : '1px solid var(--border-color)'
                         }}
                       >
-                        {/* Teams-style Quote Reply Preview Card */}
-                        {msg.quoteReply && (
-                          <div style={{
-                            padding: '6px 10px',
-                            marginBottom: '7px',
-                            borderRadius: '5px',
-                            backgroundColor: msg.isOutgoing ? 'rgba(255, 255, 255, 0.16)' : 'var(--bg-tertiary)',
-                            borderLeft: msg.isOutgoing ? '3px solid #ffffff' : '3px solid var(--accent-primary)',
-                            fontSize: '0.78rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '2px',
-                            maxWidth: '100%',
-                            overflow: 'hidden'
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontWeight: '700', color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)' }}>
-                                {msg.quoteReply.sender || 'Chat Participant'}
-                              </span>
-                              {msg.quoteReply.date && (
-                                <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>
-                                  {new Date(msg.quoteReply.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
+                        }}
+                      >
+                        {(() => {
+                          // Extract Quote Reply (from msg.quoteReply or embedded attachment reference)
+                          const quoteReplyData = msg.quoteReply || (() => {
+                            if (msg.attachments && msg.attachments.length > 0) {
+                              const qAtt = msg.attachments.find(a => {
+                                const ct = (a.contentType || '').toLowerCase();
+                                const n = (a.name || '').toLowerCase();
+                                return ct.includes('message') || ct.includes('quote') || ct.includes('reply') || n === 'attachment' || a.teamsAppId === 'quote' || (a.content && typeof a.content === 'string' && (a.content.includes('messageBody') || a.content.includes('messageId')));
+                              });
+                              if (qAtt && qAtt.content) {
+                                try {
+                                  const p = typeof qAtt.content === 'string' ? JSON.parse(qAtt.content) : qAtt.content;
+                                  return {
+                                    sender: p.messageFrom?.user?.displayName || p.from?.user?.displayName || p.sender?.displayName || p.sender || 'Aryan Kumrecha',
+                                    text: (p.messageBody?.content || p.body?.content || p.content || p.text || '').replace(/<[^>]*>/g, '').trim(),
+                                    date: p.messageDateTime || p.createdDateTime || p.date || ''
+                                  };
+                                } catch (e) { }
+                              }
+                            }
+                            return null;
+                          })();
+
+                          // Filter ONLY real file attachments (exclude quote/reply references and generic "Attachment" placeholders)
+                          const realAttachments = (msg.attachments || []).filter((att) => {
+                            const n = (att.name || '').toLowerCase().trim();
+                            const ct = (att.contentType || '').toLowerCase().trim();
+                            const url = (att.contentUrl || '').toLowerCase();
+
+                            if (ct.includes('messagereference') || ct.includes('quote') || ct.includes('reply') || ct === 'application/vnd.microsoft.card.message' || att.teamsAppId === 'quote') {
+                              return false;
+                            }
+                            if (n === 'attachment' || n === 'unknown file' || n === 'messagereference' || !n) {
+                              if (url && /\.(png|jpe?g|gif|webp|bmp|svg|pdf|docx?|xlsx?|pptx?|zip|rar)/i.test(url)) {
+                                return true;
+                              }
+                              return false;
+                            }
+                            return true;
+                          });
+
+                          return (
+                            <>
+                              {/* Teams-style Quote Reply Preview Card */}
+                              {quoteReplyData && (
+                                <div style={{
+                                  padding: '7px 11px',
+                                  marginBottom: '7px',
+                                  borderRadius: '6px',
+                                  backgroundColor: msg.isOutgoing ? 'rgba(255, 255, 255, 0.16)' : 'var(--bg-tertiary)',
+                                  borderLeft: msg.isOutgoing ? '3px solid #ffffff' : '3px solid var(--accent-primary)',
+                                  fontSize: '0.78rem',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  maxWidth: '100%',
+                                  overflow: 'hidden'
+                                }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontWeight: '700', color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)' }}>
+                                      {quoteReplyData.sender || 'Chat Participant'}
+                                    </span>
+                                    {quoteReplyData.date && (
+                                      <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>
+                                        {new Date(quoteReplyData.date).toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })} {new Date(quoteReplyData.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{
+                                    color: msg.isOutgoing ? 'rgba(255, 255, 255, 0.9)' : 'var(--text-secondary)',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    fontSize: '0.76rem'
+                                  }}>
+                                    {quoteReplyData.text || ''}
+                                  </div>
+                                </div>
                               )}
-                            </div>
-                            <div style={{
-                              color: msg.isOutgoing ? 'rgba(255, 255, 255, 0.9)' : 'var(--text-secondary)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              fontSize: '0.76rem'
-                            }}>
-                              {msg.quoteReply.text || ''}
-                            </div>
-                          </div>
-                        )}
 
-                        {translatedMessages[msgId] ? (
-                          <div style={{ margin: 0, fontWeight: '500' }}>
-                            {translatedMessages[msgId]}
-                          </div>
-                        ) : (msg.contentType === 'html' || (msg.content && (msg.content.includes('<img') || msg.content.includes('<p>') || msg.content.includes('<div') || msg.content.includes('hostedContents')))) ? (
-                          <div
-                            className="message-html-content"
-                            dangerouslySetInnerHTML={{
-                              __html: (() => {
-                                if (!msg.content) return '';
-                                const apiBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
-                                  ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
-                                  : (typeof window !== 'undefined' ? window.location.origin : '');
+                              {translatedMessages[msgId] ? (
+                                <div style={{ margin: 0, fontWeight: '500' }}>
+                                  {translatedMessages[msgId]}
+                                </div>
+                              ) : (msg.contentType === 'html' || (msg.content && (msg.content.includes('<img') || msg.content.includes('<p>') || msg.content.includes('<div') || msg.content.includes('hostedContents')))) ? (
+                                <div
+                                  className="message-html-content"
+                                  dangerouslySetInnerHTML={{
+                                    __html: (() => {
+                                      if (!msg.content) return '';
+                                      const apiBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
+                                        ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
+                                        : (typeof window !== 'undefined' ? window.location.origin : '');
 
-                                const cleanAcc = (chatOwner || '').toLowerCase().trim();
-                                const token = localStorage.getItem(`teamshub_token_${cleanAcc}`) ||
-                                              localStorage.getItem('teamshub_last_access_token') || '';
+                                      const cleanAcc = (chatOwner || '').toLowerCase().trim();
+                                      const token = localStorage.getItem(`teamshub_token_${cleanAcc}`) ||
+                                                    localStorage.getItem('teamshub_last_access_token') || '';
 
-                                let processed = msg.content;
+                                      let processed = msg.content;
 
-                                // 1. Proxy Microsoft Graph hostedContents image URLs to authenticated backend endpoint
-                                processed = processed.replace(
-                                  /src=["']https:\/\/graph\.microsoft\.com\/v1\.0\/chats\/([^\/]+)\/messages\/([^\/]+)\/hostedContents\/([^\/]+)\/\$value["']/gi,
-                                  (match, cId, mId, hId) => {
-                                    return `src="${apiBase}/api/chats/${encodeURIComponent(cId)}/messages/${encodeURIComponent(mId)}/hostedContents/${encodeURIComponent(hId)}/$value?token=${encodeURIComponent(token)}&email=${encodeURIComponent(cleanAcc)}"`;
-                                  }
-                                );
+                                      // 1. Proxy Microsoft Graph hostedContents image URLs to authenticated backend endpoint
+                                      processed = processed.replace(
+                                        /src=["']https:\/\/graph\.microsoft\.com\/v1\.0\/chats\/([^\/]+)\/messages\/([^\/]+)\/hostedContents\/([^\/]+)\/\$value["']/gi,
+                                        (match, cId, mId, hId) => {
+                                          return `src="${apiBase}/api/chats/${encodeURIComponent(cId)}/messages/${encodeURIComponent(mId)}/hostedContents/${encodeURIComponent(hId)}/$value?token=${encodeURIComponent(token)}&email=${encodeURIComponent(cleanAcc)}"`;
+                                        }
+                                      );
 
-                                // 2. Proxy relative /api/chats paths with token and email
-                                processed = processed.replace(
-                                  /src=["'](?:\/api\/chats\/)([^"']+)["']/gi,
-                                  (match, path) => {
-                                    return `src="${apiBase}/api/chats/${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}&email=${encodeURIComponent(cleanAcc)}"`;
-                                  }
-                                );
+                                      // 2. Proxy relative /api/chats paths with token and email
+                                      processed = processed.replace(
+                                        /src=["'](?:\/api\/chats\/)([^"']+)["']/gi,
+                                        (match, path) => {
+                                          return `src="${apiBase}/api/chats/${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}&email=${encodeURIComponent(cleanAcc)}"`;
+                                        }
+                                      );
 
-                                return processed;
-                              })()
-                            }}
-                            style={{ margin: 0 }}
-                            onClick={(e) => {
-                              if (e.target.tagName === 'IMG' && e.target.src) {
-                                setLightboxImage(e.target.src);
-                              }
-                            }}
-                          />
-                        ) : (
-                          <div>{msg.content}</div>
-                        )}
-
-                        {/* Attachments - Rich image thumbnails and document cards */}
-                        {msg.attachments && msg.attachments.length > 0 && (
-                          <div style={{ marginTop: (msg.content && msg.content !== '.' && msg.content !== ' ') ? '8px' : '0', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {msg.attachments.map((att) => {
-                              const isImg = (att.contentType && (att.contentType.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(att.contentType.toLowerCase()))) ||
-                                            (att.name && /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(att.name)) ||
-                                            att.thumbnailUrl ||
-                                            (att.contentUrl && /\.(png|jpe?g|gif|webp|bmp|svg)/i.test(att.contentUrl.split('?')[0])) ||
-                                            (att.contentUrl && att.contentUrl.includes('hostedContents')) ||
-                                            (att.contentUrl && att.contentUrl.includes('image')) ||
-                                            (att.name === 'Attachment' && att.contentUrl && att.contentUrl !== '#' && !att.name.includes('.'));
-
-                              if (isImg) {
-                                return (
-                                  <ChatImageAttachment
-                                    key={att.id || att.name}
-                                    attachment={att}
-                                    chatOwner={chatOwner}
-                                    onImageClick={(src) => setLightboxImage(src)}
-                                  />
-                                );
-                              }
-
-                              return (
-                                <TeamsAttachmentCard
-                                  key={att.id || att.name}
-                                  attachment={att}
-                                  chatOwner={chatOwner}
-                                  onClick={(a) => {
-                                    if (onPreviewDoc) {
-                                      onPreviewDoc({
-                                        name: a.name,
-                                        contentType: a.contentType,
-                                        previewUrl: a.contentUrl || a.dataUrl,
-                                        webUrl: a.contentUrl || a.dataUrl,
-                                        downloadUrl: a.contentUrl || a.dataUrl
-                                      });
+                                      return processed;
+                                    })()
+                                  }}
+                                  style={{ margin: 0 }}
+                                  onClick={(e) => {
+                                    if (e.target.tagName === 'IMG' && e.target.src) {
+                                      setLightboxImage(e.target.src);
                                     }
                                   }}
                                 />
-                              );
-                            })}
-                          </div>
-                        )}
+                              ) : (
+                                <div>{msg.content}</div>
+                              )}
+
+                              {/* Real Attachments - Images and Document Cards */}
+                              {realAttachments && realAttachments.length > 0 && (
+                                <div style={{ marginTop: (msg.content && msg.content !== '.' && msg.content !== ' ') ? '8px' : '0', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                  {realAttachments.map((att) => {
+                                    const isImg = (att.contentType && (att.contentType.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(att.contentType.toLowerCase()))) ||
+                                                  (att.name && /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(att.name)) ||
+                                                  att.thumbnailUrl ||
+                                                  (att.contentUrl && /\.(png|jpe?g|gif|webp|bmp|svg)/i.test(att.contentUrl.split('?')[0])) ||
+                                                  (att.contentUrl && att.contentUrl.includes('hostedContents')) ||
+                                                  (att.contentUrl && att.contentUrl.includes('image'));
+
+                                    if (isImg) {
+                                      return (
+                                        <ChatImageAttachment
+                                          key={att.id || att.name}
+                                          attachment={att}
+                                          chatOwner={chatOwner}
+                                          onImageClick={(src) => setLightboxImage(src)}
+                                        />
+                                      );
+                                    }
+
+                                    return (
+                                      <TeamsAttachmentCard
+                                        key={att.id || att.name}
+                                        attachment={att}
+                                        chatOwner={chatOwner}
+                                        onClick={(a) => {
+                                          if (onPreviewDoc) {
+                                            onPreviewDoc({
+                                              name: a.name,
+                                              contentType: a.contentType,
+                                              previewUrl: a.contentUrl || a.dataUrl,
+                                              webUrl: a.contentUrl || a.dataUrl,
+                                              downloadUrl: a.contentUrl || a.dataUrl
+                                            });
+                                          }
+                                        }}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
 
                       {/* Translated Indicator */}
