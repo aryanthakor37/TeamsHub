@@ -690,11 +690,14 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
       {/* Floating Circular Action Bubble (Chat & Notifications Hub) */}
       <div
         onClick={() => {
-          if (isOpen && isMinimized) {
-            setIsMinimized(false);
+          if (isOpen && !isMinimized) {
+            setIsOpen(false);
           } else {
-            setIsOpen(!isOpen);
+            setIsOpen(true);
             setIsMinimized(false);
+            if (totalUnread > 0) {
+              setActiveTab('notifications');
+            }
           }
           setHasNewPulse(false);
         }}
