@@ -1095,8 +1095,23 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // grid | list
-  const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [files, setFiles] = useState(() => {
+    try {
+      const cached = localStorage.getItem('teamshub_cached_files');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem('teamshub_cached_files');
+      const parsed = cached ? JSON.parse(cached) : [];
+      return parsed.length === 0;
+    } catch (e) {
+      return true;
+    }
+  });
   const [error, setError] = useState(null);
   const [previewFile, setPreviewFile] = useState(initialFile || null);
   const [targetFile, setTargetFile] = useState(initialFile || null);
@@ -1202,7 +1217,14 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     setError(null);
     try {
       const data = await fetchFilesFromBackend('all');
-      setFiles(data || []);
+      if (Array.isArray(data) && data.length > 0) {
+        setFiles(data);
+        try {
+          localStorage.setItem('teamshub_cached_files', JSON.stringify(data));
+        } catch (e) { }
+      } else if (Array.isArray(data)) {
+        setFiles(data);
+      }
     } catch (err) {
       console.warn('[FilesPage] Fetch error:', err.message);
       setError(err.message || 'Failed to load files from Microsoft Graph.');

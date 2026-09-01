@@ -565,10 +565,21 @@ const fetchGraphMessageImage = async (accessToken, chatId, msgId, contentId) => 
   throw lastError || new GraphApiError('IMAGE_FETCH_FAILED', 'Failed to fetch image', 404);
 };
 
+// In-Memory cache for Graph Files (TTL 45 seconds)
+const filesCache = new Map();
+
 /**
  * Fetch all user files across OneDrive and Teams Chats — GET /me/drive/... + /me/chats
  */
 const fetchGraphRecentFiles = async (accessToken) => {
+  if (!accessToken) return { value: [], isNormalized: true };
+
+  const cacheKey = accessToken.substring(accessToken.length - 32);
+  const cached = filesCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 45000) {
+    return { value: cached.data, isNormalized: true };
+  }
+
   const fileMap = new Map(); // key -> normalized file object
 
   const addFile = (item, sourceName = 'Microsoft Teams') => {
@@ -637,7 +648,7 @@ const fetchGraphRecentFiles = async (accessToken) => {
     }
   };
 
-  // 1. Fetch drives in parallel (Recent, Teams Chat Files, Root Drive, Shared)
+  // 1. Fetch all primary drives in parallel (Recent, Teams Chat Files, Root Drive, Shared)
   const drivePromises = [
     graphRequest(accessToken, '/me/drive/recent?$top=50&$expand=thumbnails').catch(() => null),
     graphRequest(accessToken, '/me/drive/root:/Microsoft Teams Chat Files:/children?$top=50&$expand=thumbnails').catch(() => null),
@@ -652,77 +663,79 @@ const fetchGraphRecentFiles = async (accessToken) => {
     }
   });
 
-  // 2. Scan recent chat messages for shared attachments, PDFs, and inline photos
-  try {
-    const chatsRes = await graphRequest(accessToken, '/me/chats?$expand=members&$top=20').catch(() => null);
-    if (chatsRes && Array.isArray(chatsRes.value)) {
-      const msgPromises = chatsRes.value.map(async (chat) => {
-        try {
-          const msgsRes = await graphRequest(accessToken, `/chats/${encodeURIComponent(chat.id)}/messages?$top=30`);
-          if (msgsRes && Array.isArray(msgsRes.value)) {
-            msgsRes.value.forEach((msg) => {
-              const sender = msg.from?.user?.displayName || 'Chat Participant';
-              const bodyHtml = msg.body?.content || '';
+  // 2. Fast bounded scan of top 6 recent chat messages for shared attachments with 1.8s timeout
+  const chatScanPromise = (async () => {
+    try {
+      const chatsRes = await graphRequest(accessToken, '/me/chats?$expand=members&$top=6').catch(() => null);
+      if (chatsRes && Array.isArray(chatsRes.value)) {
+        const msgPromises = chatsRes.value.map(async (chat) => {
+          try {
+            const msgsRes = await graphRequest(accessToken, `/chats/${encodeURIComponent(chat.id)}/messages?$top=12`);
+            if (msgsRes && Array.isArray(msgsRes.value)) {
+              msgsRes.value.forEach((msg) => {
+                const sender = msg.from?.user?.displayName || 'Chat Participant';
+                const bodyHtml = msg.body?.content || '';
 
-              // Scan inline hosted images (<img src=".../hostedContents/{contentId}/$value">)
-              const imgMatches = bodyHtml.matchAll(/hostedContents\/([^"'\s]+?)\/\$value/gi);
-              for (const match of imgMatches) {
-                const contentId = match[1];
-                const hostedUrl = `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chat.id)}/messages/${encodeURIComponent(msg.id)}/hostedContents/${encodeURIComponent(contentId)}/$value`;
-                const date = new Date(msg.createdDateTime || Date.now());
-                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                // Scan inline hosted images (<img src=".../hostedContents/{contentId}/$value">)
+                const imgMatches = bodyHtml.matchAll(/hostedContents\/([^"'\s]+?)\/\$value/gi);
+                for (const match of imgMatches) {
+                  const contentId = match[1];
+                  const hostedUrl = `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chat.id)}/messages/${encodeURIComponent(msg.id)}/hostedContents/${encodeURIComponent(contentId)}/$value`;
 
-                addFile({
-                  id: `hosted-${chat.id}-${msg.id}-${contentId.substring(0, 16)}`,
-                  name: `Photo from ${sender}`,
-                  contentType: 'image/png',
-                  size: 0,
-                  lastModifiedDateTime: msg.createdDateTime,
-                  senderName: sender,
-                  webUrl: hostedUrl,
-                  downloadUrl: hostedUrl,
-                  thumbnailUrl: hostedUrl
-                }, chat.topic || 'Teams Chat');
-              }
-
-              // Scan message attachments
-              (msg.attachments || []).forEach((att) => {
-                if (att.name && att.name !== 'Unknown File') {
-                  let contentUrl = att.contentUrl;
-                  let thumb = att.thumbnailUrl;
-                  if (!contentUrl && att.content) {
-                    try {
-                      const p = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
-                      contentUrl = p.downloadUrl || p.webUrl;
-                      thumb = thumb || p.thumbnailUrl;
-                    } catch (e) { }
-                  }
                   addFile({
-                    id: att.id || `att-${Math.random().toString(36).substring(2, 9)}`,
-                    name: att.name,
-                    contentType: att.contentType,
+                    id: `hosted-${chat.id}-${msg.id}-${contentId.substring(0, 16)}`,
+                    name: `Photo from ${sender}`,
+                    contentType: 'image/png',
                     size: 0,
                     lastModifiedDateTime: msg.createdDateTime,
                     senderName: sender,
-                    webUrl: contentUrl || '#',
-                    thumbnailUrl: thumb,
-                    downloadUrl: contentUrl
+                    webUrl: hostedUrl,
+                    downloadUrl: hostedUrl,
+                    thumbnailUrl: hostedUrl
                   }, chat.topic || 'Teams Chat');
                 }
-              });
-            });
-          }
-        } catch (e) {
-          // ignore chat error
-        }
-      });
-      await Promise.all(msgPromises);
-    }
-  } catch (e) {
-    console.warn('[GraphService] Chat attachment scan warning:', e.message);
-  }
 
-  return { value: Array.from(fileMap.values()), isNormalized: true };
+                // Scan message attachments
+                (msg.attachments || []).forEach((att) => {
+                  if (att.name && att.name !== 'Unknown File') {
+                    let contentUrl = att.contentUrl;
+                    let thumb = att.thumbnailUrl;
+                    if (!contentUrl && att.content) {
+                      try {
+                        const p = typeof att.content === 'string' ? JSON.parse(att.content) : att.content;
+                        contentUrl = p.downloadUrl || p.webUrl;
+                        thumb = thumb || p.thumbnailUrl;
+                      } catch (e) { }
+                    }
+                    addFile({
+                      id: att.id || `att-${Math.random().toString(36).substring(2, 9)}`,
+                      name: att.name,
+                      contentType: att.contentType,
+                      size: 0,
+                      lastModifiedDateTime: msg.createdDateTime,
+                      senderName: sender,
+                      webUrl: contentUrl || '#',
+                      thumbnailUrl: thumb,
+                      downloadUrl: contentUrl
+                    }, chat.topic || 'Teams Chat');
+                  }
+                });
+              });
+            }
+          } catch (e) { }
+        });
+        await Promise.all(msgPromises);
+      }
+    } catch (e) { }
+  })();
+
+  const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1800));
+  await Promise.race([chatScanPromise, timeoutPromise]);
+
+  const finalFiles = Array.from(fileMap.values());
+  filesCache.set(cacheKey, { timestamp: Date.now(), data: finalFiles });
+
+  return { value: finalFiles, isNormalized: true };
 };
 
 // ============================================================
