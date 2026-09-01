@@ -1154,8 +1154,6 @@ export default function ChatConversationPane({
                           border: msg.isOutgoing ? 'none' : '1px solid var(--border-color)'
                         }}
                       >
-                        }}
-                      >
                         {(() => {
                           // Extract Quote Reply (from msg.quoteReply or embedded attachment reference)
                           const quoteReplyData = msg.quoteReply || (() => {
