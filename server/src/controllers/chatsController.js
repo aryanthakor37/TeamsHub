@@ -1328,6 +1328,19 @@ const getMessageImage = async (req, res) => {
       });
     }
 
+    if (global.liveInMemoryAccounts && global.liveInMemoryAccounts.size > 0) {
+      for (const [key, acc] of global.liveInMemoryAccounts.entries()) {
+        if (acc && acc.microsoftAccessToken) {
+          const accEmail = (acc.email || '').toLowerCase().trim();
+          if (clientEmail && accEmail === clientEmail) {
+            if (!candidateTokens.includes(acc.microsoftAccessToken)) candidateTokens.unshift(acc.microsoftAccessToken);
+          } else if (!candidateTokens.includes(acc.microsoftAccessToken)) {
+            candidateTokens.push(acc.microsoftAccessToken);
+          }
+        }
+      }
+    }
+
     if (candidateTokens.length > 0 && microsoftChatId) {
       const decodedContentId = decodeURIComponent(contentId);
       for (const token of candidateTokens) {

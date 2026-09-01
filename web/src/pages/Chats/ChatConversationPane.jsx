@@ -1060,8 +1060,31 @@ export default function ChatConversationPane({
                                 if (!msg.content) return '';
                                 const apiBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
                                   ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
-                                  : '';
-                                return apiBase ? msg.content.replace(/src=["'](?:\/api\/chats\/)/gi, `src="${apiBase}/api/chats/`) : msg.content;
+                                  : (typeof window !== 'undefined' ? window.location.origin : '');
+
+                                const cleanAcc = (chatOwner || '').toLowerCase().trim();
+                                const token = localStorage.getItem(`teamshub_token_${cleanAcc}`) ||
+                                              localStorage.getItem('teamshub_last_access_token') || '';
+
+                                let processed = msg.content;
+
+                                // 1. Proxy Microsoft Graph hostedContents image URLs to authenticated backend endpoint
+                                processed = processed.replace(
+                                  /src=["']https:\/\/graph\.microsoft\.com\/v1\.0\/chats\/([^\/]+)\/messages\/([^\/]+)\/hostedContents\/([^\/]+)\/\$value["']/gi,
+                                  (match, cId, mId, hId) => {
+                                    return `src="${apiBase}/api/chats/${encodeURIComponent(cId)}/messages/${encodeURIComponent(mId)}/hostedContents/${encodeURIComponent(hId)}/$value?token=${encodeURIComponent(token)}&email=${encodeURIComponent(cleanAcc)}"`;
+                                  }
+                                );
+
+                                // 2. Proxy relative /api/chats paths with token and email
+                                processed = processed.replace(
+                                  /src=["'](?:\/api\/chats\/)([^"']+)["']/gi,
+                                  (match, path) => {
+                                    return `src="${apiBase}/api/chats/${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}&email=${encodeURIComponent(cleanAcc)}"`;
+                                  }
+                                );
+
+                                return processed;
                               })()
                             }}
                             style={{ margin: 0 }}

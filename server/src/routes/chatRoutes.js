@@ -27,7 +27,7 @@ router.post('/:id/messages/:msgId/delete', protect, deleteMessage);
 router.post('/:id/messages/:msgId/reactions', protect, setMessageReaction);
 router.delete('/:id/messages/:msgId/reactions', protect, unsetMessageReaction);
 router.post('/:id/messages/:msgId/unsetReaction', protect, unsetMessageReaction);
-router.get('/:id/messages/:msgId/hostedContents/:contentId', protect, getMessageImage);
-router.get('/:id/messages/:msgId/hostedContents/:contentId/\\$value', protect, getMessageImage);
+router.get('/:id/messages/:msgId/hostedContents/:contentId', getMessageImage);
+router.get('/:id/messages/:msgId/hostedContents/:contentId/\\$value', getMessageImage);
 
 module.exports = router;
