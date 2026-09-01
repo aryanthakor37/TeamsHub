@@ -278,8 +278,8 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
               </button>
             </div>
 
-            {/* Window Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            {/* Window Controls: Expand to Full Chat & Close */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
                 onClick={() => {
                   setIsOpen(false);
@@ -291,14 +291,6 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                 style={{ width: '26px', height: '26px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}
               >
                 <Maximize2 size={13} />
-              </button>
-              <button
-                onClick={() => setIsMinimized(true)}
-                className="tab-pill-3d"
-                title="Minimize"
-                style={{ width: '26px', height: '26px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}
-              >
-                <Minimize2 size={13} />
               </button>
               <button
                 onClick={() => setIsOpen(false)}
