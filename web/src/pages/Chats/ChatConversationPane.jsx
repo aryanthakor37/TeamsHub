@@ -4,7 +4,7 @@ import {
   FileText, Paperclip, Image as ImageIcon, Download, X, ExternalLink,
   Eye, Smile, LogIn, ArrowLeft, Columns, ChevronDown, Split, Search,
   Pin, Bookmark, Check, CornerUpLeft, MessageSquareQuote, Edit3,
-  Copy, Trash2, Languages
+  Copy, Trash2, Languages, Loader2
 } from 'lucide-react';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../hooks/useAuth';
@@ -13,6 +13,7 @@ import { getFileCategoryMeta } from '../../components/DocumentPreviewModal';
 import EmojiPicker from '../../components/EmojiPicker';
 import MessageReactionsBar, { getEmojiForReactionType, TEAMS_REACTIONS } from '../../components/MessageReactionsBar';
 import { translateTeamsMessage } from '../../utils/translationUtils';
+import { fetchFileBlob } from '../../services/fileService';
 
 // Helper to format date divider headers like Teams
 const formatMessageDate = (dateStr) => {
@@ -26,6 +27,92 @@ const formatMessageDate = (dateStr) => {
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
   return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 };
+
+// Rich Image Attachment Card for Teams Chat
+function ChatImageAttachment({ attachment, chatOwner, onImageClick }) {
+  const targetUrl = attachment.thumbnailUrl || attachment.contentUrl || attachment.previewUrl || attachment.dataUrl;
+  const fileName = attachment.name || 'Image';
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!targetUrl || targetUrl === '#') {
+      setError(true);
+      setLoading(false);
+      return;
+    }
+
+    if (targetUrl.startsWith('data:') || targetUrl.startsWith('blob:')) {
+      setBlobUrl(targetUrl);
+      setLoading(false);
+      return;
+    }
+
+    const cleanAcc = (chatOwner || '').toLowerCase().trim();
+    fetchFileBlob(targetUrl, cleanAcc).then((src) => {
+      if (active) {
+        if (src) {
+          setBlobUrl(src);
+          setError(false);
+        } else {
+          setBlobUrl(targetUrl);
+        }
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (active) {
+        setBlobUrl(targetUrl);
+        setLoading(false);
+      }
+    });
+
+    return () => { active = false; };
+  }, [targetUrl, chatOwner]);
+
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        onImageClick(blobUrl || targetUrl);
+      }}
+      style={{
+        maxWidth: '380px',
+        maxHeight: '280px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        marginTop: '6px',
+        display: 'inline-block',
+        backgroundColor: 'rgba(0,0,0,0.25)',
+        position: 'relative',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.2)'
+      }}
+      title={`Click to expand ${fileName}`}
+    >
+      {loading ? (
+        <div style={{ width: '220px', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+          <Loader2 size={22} className="spinner" />
+        </div>
+      ) : (
+        <img
+          src={blobUrl || targetUrl}
+          alt={fileName}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '280px',
+            objectFit: 'contain',
+            display: 'block',
+            borderRadius: '7px'
+          }}
+          onError={() => setError(true)}
+        />
+      )}
+    </div>
+  );
+}
 
 // Teams-style Attachment Card Component
 function TeamsAttachmentCard({ attachment, onClick }) {
@@ -1052,7 +1139,7 @@ export default function ChatConversationPane({
                           <div style={{ margin: 0, fontWeight: '500' }}>
                             {translatedMessages[msgId]}
                           </div>
-                        ) : msg.contentType === 'html' ? (
+                        ) : (msg.contentType === 'html' || (msg.content && (msg.content.includes('<img') || msg.content.includes('<p>') || msg.content.includes('<div') || msg.content.includes('hostedContents')))) ? (
                           <div
                             className="message-html-content"
                             dangerouslySetInnerHTML={{
@@ -1098,26 +1185,44 @@ export default function ChatConversationPane({
                           <div>{msg.content}</div>
                         )}
 
-                        {/* Attachments */}
+                        {/* Attachments - Rich image thumbnails and document cards */}
                         {msg.attachments && msg.attachments.length > 0 && (
-                          <div style={{ marginTop: msg.content ? '8px' : '0', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {msg.attachments.map((att) => (
-                              <TeamsAttachmentCard
-                                key={att.id || att.name}
-                                attachment={att}
-                                onClick={(a) => {
-                                  if (onPreviewDoc) {
-                                    onPreviewDoc({
-                                      name: a.name,
-                                      contentType: a.contentType,
-                                      previewUrl: a.contentUrl || a.dataUrl,
-                                      webUrl: a.contentUrl || a.dataUrl,
-                                      downloadUrl: a.contentUrl || a.dataUrl
-                                    });
-                                  }
-                                }}
-                              />
-                            ))}
+                          <div style={{ marginTop: (msg.content && msg.content !== '.' && msg.content !== ' ') ? '8px' : '0', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {msg.attachments.map((att) => {
+                              const isImg = (att.contentType && att.contentType.startsWith('image/')) ||
+                                            (att.name && /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(att.name)) ||
+                                            att.thumbnailUrl ||
+                                            (att.contentUrl && /\.(png|jpe?g|gif|webp|bmp)$/i.test(att.contentUrl.split('?')[0]));
+
+                              if (isImg) {
+                                return (
+                                  <ChatImageAttachment
+                                    key={att.id || att.name}
+                                    attachment={att}
+                                    chatOwner={chatOwner}
+                                    onImageClick={(src) => setLightboxImage(src)}
+                                  />
+                                );
+                              }
+
+                              return (
+                                <TeamsAttachmentCard
+                                  key={att.id || att.name}
+                                  attachment={att}
+                                  onClick={(a) => {
+                                    if (onPreviewDoc) {
+                                      onPreviewDoc({
+                                        name: a.name,
+                                        contentType: a.contentType,
+                                        previewUrl: a.contentUrl || a.dataUrl,
+                                        webUrl: a.contentUrl || a.dataUrl,
+                                        downloadUrl: a.contentUrl || a.dataUrl
+                                      });
+                                    }
+                                  }}
+                                />
+                              );
+                            })}
                           </div>
                         )}
                       </div>
