@@ -396,6 +396,7 @@ export default function ChatConversationPane({
     const ownerName = (matchedAccount?.displayName || matchedAccount?.name || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
     const ownerUser = ownerEmail ? ownerEmail.split('@')[0] : '';
     const pName = (chat?.participant || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
+    const isGroupChat = !!(chat?.isGroup || chat?.chatType === 'group' || (chat?.members && chat.members.length > 2));
 
     return sorted.map((m) => {
       const rawSender = m.senderName || m.sender;
@@ -407,18 +408,28 @@ export default function ChatConversationPane({
       let isOutgoing = false;
 
       // 1. If sender is explicitly the participant (the other chatter), it's INCOMING (Left side)
-      if (pName && (cleanSender === pName || (pName.length > 3 && cleanSender.includes(pName)))) {
+      if (pName && (cleanSender === pName || (pName.length > 3 && (cleanSender.includes(pName) || pName.includes(cleanSender))))) {
         isOutgoing = false;
-      // 2. If sender email matches this chat pane's owner email, it's OUTGOING (Right side)
+      // 2. In 1-on-1 direct chats, ANY message NOT from the participant is OUTGOING (Right side)
+      } else if (pName && !isGroupChat) {
+        isOutgoing = true;
+      // 3. If sender email matches this chat pane's owner email, it's OUTGOING (Right side)
       } else if (ownerEmail && senderEmail && (senderEmail === ownerEmail || (ownerUser && senderUser === ownerUser))) {
         isOutgoing = true;
-      // 3. If sender name matches this chat pane's owner name, it's OUTGOING (Right side)
+      // 4. If sender name matches this chat pane's owner name, it's OUTGOING (Right side)
       } else if (ownerName && (cleanSender === ownerName || (ownerName.length > 3 && cleanSender.includes(ownerName)))) {
         isOutgoing = true;
-      // 4. If explicit flag isFromMe is present
+      // 5. If sender matches any connected account in user's workspace
+      } else if (connectedAccounts && connectedAccounts.some(a => {
+        const aName = (a.displayName || a.name || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
+        const aEmail = (a.email || '').toLowerCase().trim();
+        return (aName && (cleanSender === aName || cleanSender.includes(aName) || aName.includes(cleanSender))) ||
+               (aEmail && (senderEmail === aEmail || (aEmail.split('@')[0] && senderUser === aEmail.split('@')[0])));
+      })) {
+        isOutgoing = true;
+      // 6. Fallback to explicit flags
       } else if (m.isFromMe !== undefined) {
         isOutgoing = !!m.isFromMe;
-      // 5. Fallback to m.isOutgoing if already set
       } else if (m.isOutgoing !== undefined) {
         isOutgoing = !!m.isOutgoing;
       }

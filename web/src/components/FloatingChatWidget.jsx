@@ -115,6 +115,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
     const ownerName = (matchedAccount?.displayName || matchedAccount?.name || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
     const ownerUser = ownerEmail ? ownerEmail.split('@')[0] : '';
     const pName = (activeChat?.participant || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
+    const isGroupChat = !!(activeChat?.isGroup || activeChat?.chatType === 'group' || (activeChat?.members && activeChat.members.length > 2));
 
     return sorted.map((m) => {
       const rawSender = m.senderName || m.sender;
@@ -123,11 +124,20 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
       const senderUser = senderEmail ? senderEmail.split('@')[0] : '';
 
       let isOutgoing = false;
-      if (pName && (cleanSender === pName || (pName.length > 3 && cleanSender.includes(pName)))) {
+      if (pName && (cleanSender === pName || (pName.length > 3 && (cleanSender.includes(pName) || pName.includes(cleanSender))))) {
         isOutgoing = false;
+      } else if (pName && !isGroupChat) {
+        isOutgoing = true;
       } else if (ownerEmail && senderEmail && (senderEmail === ownerEmail || (ownerUser && senderUser === ownerUser))) {
         isOutgoing = true;
       } else if (ownerName && (cleanSender === ownerName || (ownerName.length > 3 && cleanSender.includes(ownerName)))) {
+        isOutgoing = true;
+      } else if (connectedAccounts && connectedAccounts.some(a => {
+        const aName = (a.displayName || a.name || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
+        const aEmail = (a.email || '').toLowerCase().trim();
+        return (aName && (cleanSender === aName || cleanSender.includes(aName) || aName.includes(cleanSender))) ||
+               (aEmail && (senderEmail === aEmail || (aEmail.split('@')[0] && senderUser === aEmail.split('@')[0])));
+      })) {
         isOutgoing = true;
       } else if (m.isFromMe !== undefined) {
         isOutgoing = !!m.isFromMe;
