@@ -84,13 +84,63 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
       const match = chats.find(c => (c._id === activeMiniChatId || c.microsoftChatId === activeMiniChatId || c.id === activeMiniChatId));
       if (match) return match;
     }
+    // Default to the first unread incoming chat with new notification
+    const unreadChat = chats.find(c => (c.unreadCount || 0) > 0 && !c.isLastMessageOutgoing && !c.isOutgoing && !c.isSelfChat);
+    if (unreadChat) return unreadChat;
+
     return chats[0];
   }, [chats, activeMiniChatKey, activeMiniChatId]);
 
   const chatOwner = activeChat?.accountEmail || activeChat?.connectedAccountId;
   const targetChatId = activeChat?._id || activeChat?.microsoftChatId || activeChat?.id;
-  const { messages, loading, sendMessage } = useMessages(targetChatId, chatOwner);
-  const rawMessages = Array.isArray(messages) ? messages : [];
+  const { messages, loading, sendMessage } = useMessages(targetChatId, chatOwner, activeChat);
+
+  // Chronologically sorted messages with accurate incoming/outgoing alignment
+  const safeMessages = useMemo(() => {
+    if (!Array.isArray(messages)) return [];
+
+    const sorted = [...messages].sort((a, b) => {
+      const timeA = new Date(a.createdDateTime || a.timestamp || 0).getTime();
+      const timeB = new Date(b.createdDateTime || b.timestamp || 0).getTime();
+      return timeA - timeB;
+    });
+
+    const chatOwnerEmail = (activeChat?.accountEmail || activeChat?.connectedAccountId || '').toLowerCase().trim();
+    const matchedAccount = (connectedAccounts || []).find(a => {
+      const aEmail = (a.email || a.username || '').toLowerCase().trim();
+      return aEmail && chatOwnerEmail && (aEmail === chatOwnerEmail || aEmail.includes(chatOwnerEmail.split('@')[0]));
+    });
+
+    const ownerEmail = (matchedAccount?.email || chatOwnerEmail || '').toLowerCase().trim();
+    const ownerName = (matchedAccount?.displayName || matchedAccount?.name || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
+    const ownerUser = ownerEmail ? ownerEmail.split('@')[0] : '';
+    const pName = (activeChat?.participant || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
+
+    return sorted.map((m) => {
+      const rawSender = m.senderName || m.sender;
+      const cleanSender = (typeof rawSender === 'string' ? rawSender : (rawSender?.displayName || rawSender?.name || '')).toLowerCase().replace(/[`'"\\]/g, '').trim();
+      const senderEmail = (m.senderEmail || m.email || m.from?.user?.email || m.from?.user?.userPrincipalName || '').toLowerCase().trim();
+      const senderUser = senderEmail ? senderEmail.split('@')[0] : '';
+
+      let isOutgoing = false;
+      if (pName && (cleanSender === pName || (pName.length > 3 && cleanSender.includes(pName)))) {
+        isOutgoing = false;
+      } else if (ownerEmail && senderEmail && (senderEmail === ownerEmail || (ownerUser && senderUser === ownerUser))) {
+        isOutgoing = true;
+      } else if (ownerName && (cleanSender === ownerName || (ownerName.length > 3 && cleanSender.includes(ownerName)))) {
+        isOutgoing = true;
+      } else if (m.isFromMe !== undefined) {
+        isOutgoing = !!m.isFromMe;
+      } else if (m.isOutgoing !== undefined) {
+        isOutgoing = !!m.isOutgoing;
+      }
+
+      return {
+        ...m,
+        isOutgoing
+      };
+    });
+  }, [messages, activeChat, connectedAccounts]);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -99,7 +149,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
     if (isOpen && !isMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOpen, isMinimized]);
+  }, [safeMessages, isOpen, isMinimized]);
 
   const handleSend = async (e) => {
     if (e) e.preventDefault();
@@ -513,18 +563,18 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                 gap: '8px',
                 backgroundColor: 'var(--bg-primary)'
               }}>
-                {loading && rawMessages.length === 0 ? (
+                {loading && safeMessages.length === 0 ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                     Loading conversation...
                   </div>
-                ) : rawMessages.length === 0 ? (
+                ) : safeMessages.length === 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', textAlign: 'center', padding: '16px' }}>
                     <MessageSquare size={28} style={{ opacity: 0.4, marginBottom: '6px' }} />
                     <div style={{ fontSize: '0.82rem', fontWeight: '600' }}>No messages yet</div>
                     <div style={{ fontSize: '0.72rem' }}>Type below to send a quick message</div>
                   </div>
                 ) : (
-                  rawMessages.map((msg, idx) => {
+                  safeMessages.map((msg, idx) => {
                     const isMe = !!msg.isOutgoing;
                     const body = (msg.content || '').replace(/<[^>]*>/g, '').trim();
                     if (!body) return null;
