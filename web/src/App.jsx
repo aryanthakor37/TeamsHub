@@ -266,10 +266,8 @@ function MainLayout() {
         </div>
       )}
 
-      {/* Global Floating Quick-Reply Chat Head Widget (Hidden on full Chats page to avoid covering Pane 2 composer) */}
-      {activeTab !== 'chats' && (
-        <FloatingChatWidget onOpenFullChat={(chatId) => setActiveTab('chats')} />
-      )}
+      {/* Global Floating Quick-Reply Chat Head Widget */}
+      <FloatingChatWidget onOpenFullChat={(chatId) => setActiveTab('chats')} />
 
       {/* Microsoft Integration Dialog & Login Trigger */}
       <MicrosoftModal

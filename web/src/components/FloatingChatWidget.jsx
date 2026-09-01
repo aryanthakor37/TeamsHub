@@ -126,8 +126,8 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '24px',
-      right: '24px',
+      bottom: '86px',
+      right: '20px',
       zIndex: 9999,
       display: 'flex',
       flexDirection: 'column',
