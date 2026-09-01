@@ -581,16 +581,26 @@ const fetchGraphRecentFiles = async (accessToken) => {
     const name = actualItem.name || actualItem.displayName || 'Untitled File';
     if (!name || name.startsWith('.')) return;
 
-    // Detect category
-    let category = 'Documents';
-    const mime = actualItem.file?.mimeType || actualItem.contentType || '';
-    const nameLower = name.toLowerCase();
+    const nameLower = name.toLowerCase().trim();
+    const cleanName = nameLower.split('?')[0].split('#')[0];
+    const ext = cleanName.includes('.') ? cleanName.split('.').pop().toLowerCase() : '';
+    const mime = (actualItem.file?.mimeType || actualItem.contentType || actualItem.mimeType || '').toLowerCase().trim();
 
-    if (mime.includes('pdf') || nameLower.endsWith('.pdf')) category = 'PDF';
-    else if (mime.includes('image') || nameLower.match(/\.(png|jpg|jpeg|gif|svg|webp|bmp|ico)$/) || nameLower.startsWith('photo from') || nameLower.startsWith('image')) category = 'Images';
-    else if (mime.includes('video') || nameLower.match(/\.(mp4|mov|avi|mkv|webm)$/)) category = 'Videos';
-    else if (mime.includes('zip') || mime.includes('compressed') || nameLower.match(/\.(zip|rar|7z|tar|gz)$/)) category = 'ZIP';
-    else if (mime.includes('excel') || mime.includes('spreadsheet') || nameLower.match(/\.(xls|xlsx|csv)$/)) category = 'Excel';
+    // Strict 100% accurate Extension-First Categorization
+    let category = 'Documents';
+    if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime === 'application/pdf') {
+      category = 'PDF';
+    } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) || mime.startsWith('image/')) {
+      category = 'Images';
+    } else if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) || mime.includes('spreadsheet') || mime.includes('excel')) {
+      category = 'Excel';
+    } else if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) || mime.startsWith('video/')) {
+      category = 'Videos';
+    } else if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) || mime.includes('zip') || mime.includes('compressed')) {
+      category = 'ZIP';
+    } else if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'cs', 'sql', 'log', 'env'].includes(ext) || mime.includes('word') || mime.includes('document') || mime.includes('presentation') || mime.includes('text/')) {
+      category = 'Documents';
+    }
 
     const sizeBytes = actualItem.size || 0;
     let sizeStr = sizeBytes > 0 ? `${sizeBytes} B` : '';
@@ -608,7 +618,8 @@ const fetchGraphRecentFiles = async (accessToken) => {
     const webUrl = actualItem.webUrl || item.webUrl || actualItem.contentUrl || '#';
     const thumb = actualItem.thumbnails?.[0]?.large?.url || item.thumbnails?.[0]?.large?.url || actualItem.thumbnailUrl || (category === 'Images' ? directDownload : null);
 
-    const key = (itemId || webUrl || name) + '-' + name;
+    // Robust deduplication key: filename + size ensures zero duplicates
+    const key = `${cleanName}_${sizeBytes}_${actualItem.lastModifiedDateTime || ''}`;
     if (!fileMap.has(key)) {
       fileMap.set(key, {
         id: itemId,

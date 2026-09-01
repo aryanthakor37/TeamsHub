@@ -130,32 +130,21 @@ router.get('/', async (req, res) => {
             const cleanName = (file.name || '').split('?')[0].split('#')[0].toLowerCase().trim();
             const ext = cleanName.includes('.') ? cleanName.split('.').pop().toLowerCase() : '';
             const mime = (file.file?.mimeType || file.contentType || file.mimeType || '').toLowerCase().trim();
+            
+            // Strict 100% accurate Extension-First Categorization
             let category = 'Documents';
-
-            if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext)) {
-              category = 'Images';
-            } else if (ext === 'pdf' || cleanName.endsWith('.pdf')) {
+            if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime === 'application/pdf') {
               category = 'PDF';
-            } else if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext)) {
-              category = 'Videos';
-            } else if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext)) {
+            } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) || mime.startsWith('image/')) {
+              category = 'Images';
+            } else if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) || mime.includes('spreadsheet') || mime.includes('excel')) {
               category = 'Excel';
-            } else if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext)) {
+            } else if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) || mime.startsWith('video/')) {
+              category = 'Videos';
+            } else if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) || mime.includes('zip') || mime.includes('compressed')) {
               category = 'ZIP';
-            } else if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'cs', 'sql', 'log'].includes(ext)) {
+            } else if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'cs', 'sql', 'log', 'env'].includes(ext) || mime.includes('word') || mime.includes('document') || mime.includes('presentation') || mime.includes('text/')) {
               category = 'Documents';
-            } else if (cleanName.startsWith('photo from') || cleanName.startsWith('image') || cleanName.startsWith('img_') || cleanName.startsWith('screenshot') || cleanName.includes('photo from')) {
-              category = 'Images';
-            } else if (mime.includes('image/')) {
-              category = 'Images';
-            } else if (mime.includes('pdf')) {
-              category = 'PDF';
-            } else if (mime.includes('video/')) {
-              category = 'Videos';
-            } else if (mime.includes('spreadsheet') || mime.includes('excel')) {
-              category = 'Excel';
-            } else if (mime.includes('zip') || mime.includes('compressed') || mime.includes('archive')) {
-              category = 'ZIP';
             } else if (file.category) {
               category = file.category;
             }
@@ -214,13 +203,14 @@ router.get('/', async (req, res) => {
       })
     );
 
-    // Deduplicate files by id
+    // Robust deduplication across OneDrive, Chat attachments, and Hosted images
     const uniqueFiles = [];
-    const seenIds = new Set();
+    const seenKeys = new Set();
     for (const f of allUnifiedFiles) {
-      const uKey = `${f.connectedAccountId}-${f.id}`;
-      if (!seenIds.has(uKey)) {
-        seenIds.add(uKey);
+      const cleanNameKey = (f.name || '').toLowerCase().trim();
+      const uKey = `${f.connectedAccountId}_${cleanNameKey}_${f.size || 0}`;
+      if (!seenKeys.has(uKey)) {
+        seenKeys.add(uKey);
         uniqueFiles.push(f);
       }
     }

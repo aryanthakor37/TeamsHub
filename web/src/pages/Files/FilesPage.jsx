@@ -1335,57 +1335,37 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     const cleanName = name.split('?')[0].split('#')[0];
     const ext = cleanName.includes('.') ? cleanName.split('.').pop().toLowerCase() : '';
     const mime = (file.file?.mimeType || file.contentType || file.mimeType || '').toLowerCase().trim();
-    const rawCat = (file.category || '').toLowerCase().trim();
-    const iconType = (file.iconType || '').toLowerCase().trim();
-    const idStr = (file.id || '').toLowerCase().trim();
 
-    // 1. IMAGES (100% Guaranteed Strict Image Classification)
+    // 1. PDF (Strict extension and mime check)
+    if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime === 'application/pdf') {
+      return 'PDF';
+    }
+
+    // 2. Images (Strict image extensions and mime)
     if (
       ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) ||
+      mime.startsWith('image/') ||
       cleanName.startsWith('photo from') ||
-      cleanName.startsWith('image') ||
-      cleanName.startsWith('img_') ||
-      cleanName.startsWith('screenshot') ||
-      cleanName.includes('photo from') ||
-      cleanName === 'image.jpg' ||
-      mime.includes('image/') ||
-      rawCat === 'images' ||
-      rawCat === 'image' ||
-      iconType === 'image' ||
-      idStr.includes('photo') ||
-      idStr.includes('hosted') ||
-      idStr.includes('image')
+      cleanName === 'image.jpg'
     ) {
       return 'Images';
     }
 
-    // 2. PDF
-    if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime.includes('pdf') || rawCat === 'pdf' || iconType === 'pdf') {
-      return 'PDF';
-    }
-
-    // 3. Videos
-    if (
-      ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) ||
-      mime.includes('video/') ||
-      rawCat === 'videos' ||
-      rawCat === 'video' ||
-      iconType === 'video'
-    ) {
-      return 'Videos';
-    }
-
-    // 4. Excel / Spreadsheets
+    // 3. Excel / Spreadsheets
     if (
       ['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) ||
       mime.includes('spreadsheet') ||
-      mime.includes('excel') ||
-      rawCat === 'excel' ||
-      rawCat === 'spreadsheet' ||
-      iconType === 'excel' ||
-      iconType === 'spreadsheet'
+      mime.includes('excel')
     ) {
       return 'Excel';
+    }
+
+    // 4. Videos
+    if (
+      ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) ||
+      mime.startsWith('video/')
+    ) {
+      return 'Videos';
     }
 
     // 5. ZIP / Compressed Archives
@@ -1393,11 +1373,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) ||
       mime.includes('zip') ||
       mime.includes('compressed') ||
-      mime.includes('archive') ||
-      rawCat === 'zip' ||
-      rawCat === 'archive' ||
-      iconType === 'zip' ||
-      iconType === 'archive'
+      mime.includes('archive')
     ) {
       return 'ZIP';
     }
@@ -1408,11 +1384,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       mime.includes('word') ||
       mime.includes('document') ||
       mime.includes('presentation') ||
-      mime.includes('text/') ||
-      rawCat === 'documents' ||
-      rawCat === 'document' ||
-      iconType === 'doc' ||
-      iconType === 'document'
+      mime.includes('text/')
     ) {
       return 'Documents';
     }
@@ -1475,7 +1447,19 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     return false;
   });
 
-  const filteredFiles = accountScopedFiles.filter((file) => {
+  // Strict deduplication so no file is ever rendered twice
+  const uniqueAccountScopedFiles = React.useMemo(() => {
+    const seen = new Set();
+    return accountScopedFiles.filter(f => {
+      const cleanName = (f.name || '').toLowerCase().trim();
+      const uKey = `${f.connectedAccountId || f.accountEmail || ''}_${cleanName}_${f.size || 0}`;
+      if (seen.has(uKey)) return false;
+      seen.add(uKey);
+      return true;
+    });
+  }, [accountScopedFiles]);
+
+  const filteredFiles = uniqueAccountScopedFiles.filter((file) => {
     const actualCategory = getFileCategory(file);
     const matchesCategory = selectedCategory === 'All' || actualCategory.toLowerCase() === selectedCategory.toLowerCase();
     const q = searchQuery.toLowerCase().trim();
@@ -1518,33 +1502,24 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     });
   };
 
-  // Toggle select all visible filtered files
-  const handleSelectAllVisible = () => {
-    const visibleIds = filteredFiles.map(f => f.id || f._id || f.name);
-    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedFileIds.has(id));
-    if (allSelected) {
+  // Select/Deselect all filtered files
+  const toggleSelectAll = () => {
+    if (selectedFileIds.size === filteredFiles.length && filteredFiles.length > 0) {
       setSelectedFileIds(new Set());
     } else {
-      setSelectedFileIds(new Set(visibleIds));
+      const allIds = new Set(filteredFiles.map(f => f.id || f._id || f.name));
+      setSelectedFileIds(allIds);
     }
   };
 
-  // Clear all selections
-  const handleClearSelection = () => {
-    setSelectedFileIds(new Set());
-  };
-
   // Batch download selected files as ZIP
-  const handleBatchDownloadZip = async () => {
-    const selectedFiles = filteredFiles.filter(f => selectedFileIds.has(f.id || f._id || f.name));
-    if (selectedFiles.length === 0) return;
-
+  const handleBatchZipDownload = async () => {
+    if (selectedFileIds.size === 0) return;
     setIsZipping(true);
-    setZipProgress({ current: 0, total: selectedFiles.length, currentFileName: 'Initializing...' });
-
+    setError(null);
     try {
-      const categoryLabel = selectedCategory === 'All' ? 'Files' : selectedCategory;
-      const zipName = `TeamsHub_${categoryLabel}_Bundle_${selectedFiles.length}.zip`;
+      const selectedFiles = filteredFiles.filter(f => selectedFileIds.has(f.id || f._id || f.name));
+      const zipName = `TeamsHub_Files_${new Date().toISOString().split('T')[0]}.zip`;
       await downloadFilesAsZip(selectedFiles, zipName, (progress) => {
         setZipProgress(progress);
       });
@@ -1578,8 +1553,8 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
           const Icon = cat.icon;
           const isActive = selectedCategory === cat.name;
           const count = cat.name === 'All'
-            ? accountScopedFiles.length
-            : accountScopedFiles.filter(f => getFileCategory(f).toLowerCase() === cat.name.toLowerCase()).length;
+            ? uniqueAccountScopedFiles.length
+            : uniqueAccountScopedFiles.filter(f => getFileCategory(f).toLowerCase() === cat.name.toLowerCase()).length;
 
           return (
             <button
