@@ -11,14 +11,28 @@ import {
   FileSpreadsheet,
   Archive,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  Send,
+  Loader2,
+  Calendar,
+  X,
+  Eye,
+  Download,
+  Zap,
+  Check
 } from 'lucide-react';
 import { mockDashboardStats } from '../../services/mockDataService';
 import { useAuth } from '../../hooks/useAuth';
 import { useChats } from '../../hooks/useChats';
-import { fetchFilesFromBackend } from '../../services/fileService';
+import { fetchFilesFromBackend, fetchFileBlob } from '../../services/fileService';
+import { sendMessageToBackend, fetchTodayCalendarMeetings } from '../../services/chatService';
 import { getInitials, getAvatarColor } from '../../utils/avatarUtils';
+import DocumentPreviewModal from '../../components/DocumentPreviewModal';
 
+/**
+ * Helper to sort files descending by date
+ */
 const sortFilesByDate = (list = []) => {
   return [...list].sort((a, b) => {
     const timeA = new Date(a.lastModifiedDateTime || a.createdDateTime || a.timestamp || a.date || a.createdAt || 0).getTime();
@@ -27,6 +41,9 @@ const sortFilesByDate = (list = []) => {
   });
 };
 
+/**
+ * In-Memory & Fast Local Cache Hydration for Instant 0ms Paint
+ */
 const getStoredCachedFiles = () => {
   try {
     const raw = localStorage.getItem('teamshub_cached_files');
@@ -45,6 +62,28 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
   const connectedCount = connectedAccounts ? connectedAccounts.length : 0;
   const activeAccName = activeAccount ? (activeAccount.displayName || activeAccount.email) : 'No Active Account';
 
+  // =========================================================================
+  // FEATURE 1: Direct Memory-to-Memory Document Preview (Zero Disk Footprint)
+  // =========================================================================
+  const [previewDocModal, setPreviewDocModal] = useState(null);
+
+  // =========================================================================
+  // FEATURE 2: Direct Graph Pass-Through Quick Reply (No DB Write)
+  // =========================================================================
+  const [quickReplyChat, setQuickReplyChat] = useState(null);
+  const [quickReplyText, setQuickReplyText] = useState('');
+  const [quickReplySending, setQuickReplySending] = useState(false);
+  const [quickReplyStatus, setQuickReplyStatus] = useState(null); // 'success' | 'error' | null
+  const [localMessageOverrides, setLocalMessageOverrides] = useState({});
+
+  // =========================================================================
+  // FEATURE 3: Live "Today's Agenda / Meetings" (Direct Graph Query)
+  // =========================================================================
+  const [todayMeetings, setTodayMeetings] = useState([]);
+  const [loadingMeetings, setLoadingMeetings] = useState(false);
+  const [showMeetingsModal, setShowMeetingsModal] = useState(false);
+
+  // 1. Fetch Shared Files (Pass-Through Stream)
   useEffect(() => {
     let active = true;
     if (connectedAccounts && connectedAccounts.length > 0) {
@@ -67,6 +106,27 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
     }
     return () => { active = false; };
   }, [connectedAccounts?.length]);
+
+  // 2. Fetch Today's Meetings (Direct Graph /me/calendarView Query)
+  useEffect(() => {
+    let active = true;
+    if (connectedAccounts && connectedAccounts.length > 0) {
+      setLoadingMeetings(true);
+      fetchTodayCalendarMeetings(activeAccount?.accountId || 'all')
+        .then((meetings) => {
+          if (active && Array.isArray(meetings)) {
+            setTodayMeetings(meetings);
+          }
+        })
+        .catch(() => { })
+        .finally(() => {
+          if (active) setLoadingMeetings(false);
+        });
+    } else {
+      setTodayMeetings([]);
+    }
+    return () => { active = false; };
+  }, [connectedAccounts?.length, activeAccount?.accountId]);
 
   const getChatOwnerEmail = (c) => {
     if (!c) return '';
@@ -147,21 +207,79 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
   const realUnreadCount = visibleChats ? visibleChats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0) : 0;
   const isConnected = connectedCount > 0;
 
+  // Handle Direct Graph Pass-Through Quick Reply Send
+  const handleSendQuickReply = async (e) => {
+    if (e) e.preventDefault();
+    if (!quickReplyChat || !quickReplyText.trim() || quickReplySending) return;
+
+    const chatId = quickReplyChat._id || quickReplyChat.id || quickReplyChat.microsoftChatId;
+    const textToSend = quickReplyText.trim();
+    setQuickReplySending(true);
+    setQuickReplyStatus(null);
+
+    try {
+      // Direct pass-through dispatch — zero DB write
+      await sendMessageToBackend(chatId, textToSend, quickReplyChat.connectedAccountId);
+      
+      // Update in-memory override for instant UI reflection
+      setLocalMessageOverrides(prev => ({
+        ...prev,
+        [chatId]: {
+          preview: `You: ${textToSend}`,
+          timestamp: new Date().toISOString()
+        }
+      }));
+
+      setQuickReplyStatus('success');
+      setQuickReplyText('');
+      setTimeout(() => {
+        setQuickReplyChat(null);
+        setQuickReplyStatus(null);
+      }, 1800);
+    } catch (err) {
+      console.warn('[Quick Reply Error]:', err.message);
+      setQuickReplyStatus('error');
+    } finally {
+      setQuickReplySending(false);
+    }
+  };
+
+  // Next upcoming meeting for the card
+  const nextMeeting = todayMeetings && todayMeetings.length > 0 ? todayMeetings[0] : null;
+
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-      {/* Header Banner */}
-      <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Header Banner & Zero-Storage Compliance Badge */}
+      <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <h2 style={{ fontSize: '1.85rem', fontWeight: '800', marginBottom: '6px', letterSpacing: '-0.02em' }}>
             {isConnected ? `Good morning, ${user?.name || activeAccount?.displayName || 'User'} 👋` : 'Welcome to TeamsHub 👋'}
           </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Active Workspace: <strong style={{ color: isConnected ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: '700' }}>{activeAccName}</strong>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <span>Active Workspace: <strong style={{ color: isConnected ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: '700' }}>{activeAccName}</strong></span>
             <span style={{ opacity: 0.4 }}>•</span>
             <span className={isConnected ? "badge badge-company-a" : "badge"} style={{ backgroundColor: isConnected ? undefined : 'var(--bg-tertiary)', color: isConnected ? undefined : 'var(--text-muted)' }}>
               {connectedCount} connected account{connectedCount !== 1 ? 's' : ''}
             </span>
-          </p>
+            <span style={{ opacity: 0.4 }}>•</span>
+            
+            {/* Zero-Storage Direct Stream Guarantee Badge */}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '0.75rem',
+              fontWeight: '700',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              color: '#10b981',
+              border: '1px solid rgba(16, 185, 129, 0.25)'
+            }} title="Pure In-Memory Passthrough. No messages or files are stored in our database.">
+              <ShieldCheck size={14} />
+              <span>Zero-Storage Live Stream</span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -172,6 +290,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
         gap: '22px',
         marginBottom: '36px'
       }}>
+        {/* Card 1: Unread Messages */}
         <div className="glass-card glass-card-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
           <div style={{
             width: '52px',
@@ -192,6 +311,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
         </div>
 
+        {/* Card 2: Shared Files */}
         <div className="glass-card glass-card-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
           <div style={{
             width: '52px',
@@ -212,6 +332,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
         </div>
 
+        {/* Card 3: Connected Accounts */}
         <div className="glass-card glass-card-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
           <div style={{
             width: '52px',
@@ -232,7 +353,21 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
         </div>
 
-        <div className="glass-card glass-card-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+        {/* Card 4: FEATURE 3 - Today's Meetings (Replaced Follow-ups 0) */}
+        <div 
+          onClick={() => {
+            if (todayMeetings && todayMeetings.length > 0) setShowMeetingsModal(true);
+          }}
+          className="glass-card glass-card-interactive" 
+          style={{ 
+            padding: '22px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '18px',
+            cursor: todayMeetings.length > 0 ? 'pointer' : 'default'
+          }}
+          title={todayMeetings.length > 0 ? "Click to view today's meetings agenda" : "No meetings scheduled today"}
+        >
           <div style={{
             width: '52px',
             height: '52px',
@@ -244,11 +379,26 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
             justifyContent: 'center',
             boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
           }}>
-            <Clock size={24} />
+            <Calendar size={24} />
           </div>
-          <div>
-            <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Follow-ups</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2 }}>0</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Today's Meetings</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2 }}>
+              {loadingMeetings ? '...' : isConnected ? todayMeetings.length : 0}
+            </div>
+            {nextMeeting && (
+              <div style={{ 
+                fontSize: '0.72rem', 
+                color: 'var(--accent-primary)', 
+                fontWeight: '600',
+                marginTop: '2px', 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap' 
+              }}>
+                Next: {nextMeeting.startTimeStr}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -260,8 +410,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
         gap: '28px',
         marginBottom: '36px'
       }}>
-        {/* Recent Conversations */}
-        <div className="glass-card" style={{ padding: '28px' }}>
+        {/* Recent Conversations with FEATURE 2: Quick Reply */}
+        <div className="glass-card" style={{ padding: '28px', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
             <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Recent Conversations</h3>
             <button
@@ -274,61 +424,190 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {isConnected && visibleChats && visibleChats.length > 0 ? (
-              visibleChats.slice(0, 4).map((chat) => (
-                <div
-                  key={chat._id || chat.id}
-                  onClick={() => {
-                    if (onSelectChat) {
-                      onSelectChat(chat._id || chat.id, chat.participant);
-                    } else {
-                      setActiveTab('chats');
-                    }
-                  }}
-                  className="glass-card-interactive"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    padding: '14px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    boxShadow: 'var(--shadow-sm)',
-                    cursor: 'pointer',
-                    transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)'
-                  }}
-                >
-                  <div className="avatar-3d" style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '50%',
-                    backgroundColor: getAvatarColor(chat.participant),
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '700',
-                    fontSize: '0.92rem'
-                  }}>
-                    {getInitials(chat.participant)}
-                  </div>
+              visibleChats.slice(0, 4).map((chat) => {
+                const chatId = chat._id || chat.id;
+                const override = localMessageOverrides[chatId];
+                const displayPreview = override ? override.preview : chat.lastMessagePreview;
+                const displayTime = override 
+                  ? new Date(override.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : (chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                      <span style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>{chat.participant}</span>
-                      <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: '500' }}>
-                        {chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                const isQuickReplying = quickReplyChat && (quickReplyChat._id || quickReplyChat.id) === chatId;
+
+                return (
+                  <div
+                    key={chatId}
+                    className="glass-card-interactive"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: isQuickReplying ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      boxShadow: 'var(--shadow-sm)',
+                      transition: 'all var(--transition-fast)',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {/* Chat Item Main Row */}
+                    <div
+                      onClick={() => {
+                        if (onSelectChat) {
+                          onSelectChat(chat._id || chat.id, chat.participant);
+                        } else {
+                          setActiveTab('chats');
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        padding: '14px 16px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div className="avatar-3d" style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        backgroundColor: getAvatarColor(chat.participant),
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '700',
+                        fontSize: '0.92rem',
+                        position: 'relative',
+                        flexShrink: 0
+                      }}>
+                        {getInitials(chat.participant)}
+                        {/* Live In-Memory Online Presence Dot */}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '-1px',
+                          right: '-1px',
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '50%',
+                          backgroundColor: chat.onlineStatus === 'busy' ? '#ef4444' : '#10b981',
+                          border: '2px solid var(--bg-secondary)',
+                          boxShadow: '0 0 6px rgba(16, 185, 129, 0.4)'
+                        }} />
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                          <span style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>{chat.participant}</span>
+                          <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+                            {displayTime}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                          {displayPreview}
+                        </div>
+                      </div>
+
+                      {/* Quick Reply Trigger Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isQuickReplying) {
+                            setQuickReplyChat(null);
+                          } else {
+                            setQuickReplyChat(chat);
+                            setQuickReplyText('');
+                            setQuickReplyStatus(null);
+                          }
+                        }}
+                        className="tab-pill-3d"
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: isQuickReplying ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                          color: isQuickReplying ? '#fff' : 'var(--text-secondary)',
+                          border: '1px solid var(--border-color)',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          flexShrink: 0
+                        }}
+                        title="Direct Graph Pass-Through Quick Reply"
+                      >
+                        <Zap size={13} />
+                        <span>{isQuickReplying ? 'Close' : 'Quick Reply'}</span>
+                      </button>
+
+                      <span className={`badge ${chat.accountBadge || 'badge-company-a'}`} style={{ flexShrink: 0 }}>
+                        {chat.company}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      {chat.lastMessagePreview}
-                    </div>
+
+                    {/* FEATURE 2: Inline Quick Reply Input Box (Pass-Through Stream) */}
+                    {isQuickReplying && (
+                      <div style={{
+                        padding: '10px 16px 14px 16px',
+                        borderTop: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}>
+                        <form onSubmit={handleSendQuickReply} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            value={quickReplyText}
+                            onChange={(e) => setQuickReplyText(e.target.value)}
+                            placeholder={`Reply directly to ${chat.participant}... (No DB store)`}
+                            autoFocus
+                            disabled={quickReplySending}
+                            style={{
+                              flex: 1,
+                              padding: '8px 12px',
+                              borderRadius: 'var(--radius-sm)',
+                              backgroundColor: 'var(--bg-primary)',
+                              border: '1px solid var(--border-color)',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.85rem',
+                              outline: 'none'
+                            }}
+                          />
+                          <button
+                            type="submit"
+                            disabled={!quickReplyText.trim() || quickReplySending}
+                            className="btn btn-primary"
+                            style={{
+                              padding: '8px 14px',
+                              fontSize: '0.82rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {quickReplySending ? <Loader2 size={14} className="spin" /> : <Send size={14} />}
+                            <span>Send</span>
+                          </button>
+                        </form>
+
+                        {/* Direct Stream Status Notice */}
+                        {quickReplyStatus === 'success' && (
+                          <div style={{ fontSize: '0.75rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}>
+                            <Check size={13} />
+                            <span>Message dispatched directly via Microsoft Graph!</span>
+                          </div>
+                        )}
+                        {quickReplyStatus === 'error' && (
+                          <div style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '600' }}>
+                            Failed to send. Please check your connection.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <span className={`badge ${chat.accountBadge || 'badge-company-a'}`}>
-                    {chat.company}
-                  </span>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
                 <MessageSquare size={32} style={{ marginBottom: '10px', opacity: 0.4 }} />
@@ -339,7 +618,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
         </div>
 
-        {/* Recent Shared Files */}
+        {/* Recent Shared Files with FEATURE 1: Direct Memory-to-Memory Preview */}
         <div className="glass-card" style={{ padding: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
             <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Recent Shared Files</h3>
@@ -360,11 +639,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                   <div
                     key={file.id || file.name}
                     onClick={() => {
-                      if (onSelectFile) {
-                        onSelectFile(file);
-                      } else {
-                        setActiveTab('files');
-                      }
+                      // Open Direct Memory-to-Memory Document Preview Modal
+                      setPreviewDocModal(file);
                     }}
                     className="glass-card-interactive"
                     style={{
@@ -379,6 +655,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                       cursor: 'pointer',
                       transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)'
                     }}
+                    title={`Click to preview ${file.name} directly in memory`}
                   >
                     <div style={{
                       width: '40px',
@@ -409,6 +686,19 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                         {meta.label} • {file.size || 'Shared File'} • {file.sender || file.account}
                       </div>
+                    </div>
+
+                    {/* In-Memory Instant Preview Icon */}
+                    <div style={{
+                      padding: '6px',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--accent-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Eye size={15} />
                     </div>
 
                     <span className="badge" style={{
@@ -442,7 +732,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
             ) : isConnected && loadingFiles ? (
               <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
                 <Folder size={32} style={{ marginBottom: '10px', opacity: 0.4 }} className="spin" />
-                <div>Fetching latest shared files from Microsoft Graph...</div>
+                <div>Streaming shared files directly from Microsoft Graph...</div>
               </div>
             ) : isConnected ? (
               <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
@@ -482,7 +772,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                 </div>
                 <div>
                   <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>Connected Workspace: {activeAccName}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Microsoft Graph Connected • Active</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Microsoft Graph Live Passthrough Active (Zero DB Footprint)</div>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
@@ -500,7 +790,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                   <CheckCircle2 size={16} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>Synced {chats ? chats.length : 0} Teams conversations</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>Synced {chats ? chats.length : 0} Teams conversations in-memory</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Real-time Socket.IO Sync Active</div>
                 </div>
               </div>
@@ -512,6 +802,138 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           )}
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* FEATURE 1 MODAL: Direct Memory-to-Memory Document Preview Modal           */}
+      {/* ========================================================================= */}
+      {previewDocModal && (
+        <DocumentPreviewModal
+          file={previewDocModal}
+          accountId={previewDocModal.connectedAccountId || activeAccount?.accountId}
+          onClose={() => setPreviewDocModal(null)}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* FEATURE 3 MODAL: Today's Meetings Schedule Popup                          */}
+      {/* ========================================================================= */}
+      {showMeetingsModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(8px)',
+          padding: '20px'
+        }}>
+          <div className="glass-card" style={{
+            width: '100%',
+            maxWidth: '520px',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+            boxShadow: 'var(--shadow-xl)',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                  color: '#f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Today's Teams Schedule</h3>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Direct Graph In-Memory Query</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMeetingsModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '380px', overflowY: 'auto' }}>
+              {todayMeetings.map((evt) => (
+                <div
+                  key={evt.id}
+                  style={{
+                    padding: '14px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '2px' }}>
+                      {evt.subject}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      🕒 {evt.startTimeStr} {evt.endTimeStr ? `– ${evt.endTimeStr}` : ''} • By {evt.organizer}
+                    </div>
+                  </div>
+
+                  {evt.joinUrl ? (
+                    <a
+                      href={evt.joinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary"
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '0.78rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        textDecoration: 'none',
+                        flexShrink: 0
+                      }}
+                    >
+                      <Video size={13} />
+                      <span>Join Call</span>
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Scheduled</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+              <button
+                onClick={() => setShowMeetingsModal(false)}
+                className="btn btn-secondary"
+                style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

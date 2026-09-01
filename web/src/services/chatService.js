@@ -655,3 +655,75 @@ export const refreshChatsOnBackend = async (accountId = 'all') => {
     return { success: false, error: error.message };
   }
 };
+
+/**
+ * Fetch Today's Calendar Meetings (In-Memory Direct Graph Query - Zero DB Storage)
+ */
+export const fetchTodayCalendarMeetings = async (accountId = null) => {
+  try {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0).toISOString();
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
+
+    let allAccounts = [];
+    try {
+      allAccounts = msalInstance.getAllAccounts() || [];
+    } catch (e) {}
+
+    // Find token for active account
+    let token = null;
+    if (accountId && accountId !== 'all') {
+      const cleanAcc = accountId.toString().toLowerCase().trim();
+      token = localStorage.getItem(`teamshub_token_${cleanAcc}`);
+    }
+    if (!token) {
+      const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+      if (activeEmail) {
+        token = localStorage.getItem(`teamshub_token_${activeEmail}`);
+      }
+    }
+    if (!token) {
+      token = localStorage.getItem('teamshub_last_access_token');
+    }
+
+    if (token) {
+      try {
+        const res = await fetch(
+          `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${encodeURIComponent(startOfDay)}&endDateTime=${encodeURIComponent(endOfDay)}&$orderby=start/dateTime&$top=10`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.value)) {
+            return data.value.map(evt => {
+              const startDt = evt.start?.dateTime ? new Date(evt.start.dateTime + 'Z') : null;
+              const endDt = evt.end?.dateTime ? new Date(evt.end.dateTime + 'Z') : null;
+              return {
+                id: evt.id,
+                subject: evt.subject || 'Teams Meeting',
+                startTimeStr: startDt ? startDt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+                endTimeStr: endDt ? endDt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+                startRaw: startDt,
+                organizer: evt.organizer?.emailAddress?.name || 'Organizer',
+                joinUrl: evt.onlineMeeting?.joinUrl || evt.webLink || null,
+                isOnline: !!evt.isOnlineMeeting || !!evt.onlineMeeting?.joinUrl
+              };
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[Calendar Direct Fetch Error]:', err.message);
+      }
+    }
+    return [];
+  } catch (error) {
+    console.warn('[fetchTodayCalendarMeetings] Error:', error.message);
+    return [];
+  }
+};
+
