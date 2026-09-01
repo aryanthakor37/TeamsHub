@@ -381,32 +381,40 @@ export default function ChatConversationPane({
       (chat?.accountBadge && a.displayName && a.displayName.toLowerCase() === chat.accountBadge.toLowerCase())
     );
 
-    const ownerEmail = (matchedAccount?.email || chat?.accountEmail || localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
-    const ownerName = (matchedAccount?.displayName || matchedAccount?.name || chat?.accountBadge || chat?.company || localStorage.getItem('teamshub_active_name') || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
-    const ownerFirst = ownerName ? ownerName.split(' ')[0] : '';
+    const ownerEmail = (matchedAccount?.email || chat?.accountEmail || chat?.connectedAccountId || '').toLowerCase().trim();
+    const ownerName = (matchedAccount?.displayName || matchedAccount?.name || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
+    const ownerUser = ownerEmail ? ownerEmail.split('@')[0] : '';
     const pName = (chat?.participant || '').toLowerCase().replace(/[`'"\\]/g, '').trim();
 
     return sorted.map((m) => {
       const rawSender = m.senderName || m.sender;
       const senderStr = getSenderString(rawSender);
       const cleanSender = senderStr.toLowerCase().replace(/[`'"\\]/g, '').trim();
-      const senderFirst = cleanSender ? cleanSender.split(' ')[0] : '';
+      const senderEmail = (m.senderEmail || m.email || m.from?.user?.email || m.from?.user?.userPrincipalName || '').toLowerCase().trim();
+      const senderUser = senderEmail ? senderEmail.split('@')[0] : '';
 
-      const isMeByEmail = ownerEmail && (m.senderEmail?.toLowerCase() === ownerEmail || m.email?.toLowerCase() === ownerEmail || cleanSender.includes(ownerEmail));
-      const isMeByName = (
-        cleanSender === 'you' ||
-        cleanSender === 'aryan kumrecha' ||
-        cleanSender === 'keval trivedi' ||
-        cleanSender === 'kaushal nimavat' ||
-        (ownerFirst && senderFirst === ownerFirst) ||
-        (ownerName && (cleanSender === ownerName || cleanSender.includes(ownerName) || ownerName.includes(cleanSender)))
-      );
+      let isOutgoing = false;
 
-      const isOutgoing = m.isOutgoing !== undefined
-        ? m.isOutgoing
-        : (isMeByEmail || isMeByName);
+      // 1. If sender is explicitly the participant (the other chatter), it's INCOMING (Left side)
+      if (pName && (cleanSender === pName || (pName.length > 3 && cleanSender.includes(pName)))) {
+        isOutgoing = false;
+      // 2. If sender email matches this chat pane's owner email, it's OUTGOING (Right side)
+      } else if (ownerEmail && senderEmail && (senderEmail === ownerEmail || (ownerUser && senderUser === ownerUser))) {
+        isOutgoing = true;
+      // 3. If sender name matches this chat pane's owner name, it's OUTGOING (Right side)
+      } else if (ownerName && (cleanSender === ownerName || (ownerName.length > 3 && cleanSender.includes(ownerName)))) {
+        isOutgoing = true;
+      // 4. If explicit flag isFromMe is present
+      } else if (m.isFromMe !== undefined) {
+        isOutgoing = !!m.isFromMe;
+      // 5. Fallback to m.isOutgoing if already set
+      } else if (m.isOutgoing !== undefined) {
+        isOutgoing = !!m.isOutgoing;
+      }
 
-      let resolvedSenderName = isOutgoing ? (ownerName ? (ownerName.charAt(0).toUpperCase() + ownerName.slice(1)) : 'You') : (senderStr || pName || 'Teams User');
+      let resolvedSenderName = isOutgoing
+        ? (ownerName ? (ownerName.charAt(0).toUpperCase() + ownerName.slice(1)) : 'You')
+        : (senderStr || pName || 'Teams User');
 
       return {
         ...m,
