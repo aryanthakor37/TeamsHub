@@ -417,6 +417,34 @@ export const fetchChatsFromBackend = async (accountId = 'all', page = 1, limit =
  * Fetch Conversation Message History with Direct Graph Fallback
  */
 export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limit = 50) => {
+  if (!chatId) return { chatId, items: [], messages: [], total: 0 };
+
+  const cleanAcc = (accountId || '').toLowerCase().trim();
+
+  // 1. Fast Direct Microsoft Graph call if token is available locally (100ms ultra fast!)
+  try {
+    let localToken = cleanAcc ? localStorage.getItem(`teamshub_token_${cleanAcc}`) : null;
+    if (!localToken) {
+      const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
+      if (activeEmail) localToken = localStorage.getItem(`teamshub_token_${activeEmail}`);
+    }
+    if (localToken && !isTokenExpired(localToken)) {
+      const directMsgs = await fetchMessagesDirectFromGraph(localToken, chatId, cleanAcc);
+      if (directMsgs && directMsgs.length > 0) {
+        return {
+          chatId,
+          items: directMsgs,
+          messages: directMsgs,
+          page: 1,
+          limit: directMsgs.length,
+          total: directMsgs.length,
+          hasMore: false
+        };
+      }
+    }
+  } catch (e) {}
+
+  // 2. Backend API Pass-Through with multi-account auth headers
   try {
     const headers = await getAuthHeaders(accountId);
     const accParam = accountId ? `&connectedAccountId=${encodeURIComponent(accountId)}` : '';
@@ -426,7 +454,6 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
     );
 
     const result = await response.json();
-
     const responseItems = result.data?.items || result.data?.messages || [];
     if (response.ok && Array.isArray(responseItems) && responseItems.length > 0) {
       return {
@@ -440,9 +467,9 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
       };
     }
 
-    // Direct Graph fallback
+    // 3. Direct Graph fallback with silent token refresh
     const allAccounts = msalInstance.getAllAccounts() || [];
-    const target = allAccounts.find(a => (a.username && a.username.toLowerCase() === accountId?.toLowerCase())) || allAccounts[0];
+    const target = allAccounts.find(a => (a.username && a.username.toLowerCase() === cleanAcc)) || allAccounts[0];
     if (target) {
       let token = localStorage.getItem(`teamshub_token_${target.username.toLowerCase()}`);
       if (!token) token = await acquireGraphToken(target.homeAccountId || target.username);
@@ -462,22 +489,10 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
       }
     }
 
-    return { chatId: chatId, items: responseItems, messages: responseItems, total: responseItems.length, hasMore: false };
+    return { chatId: chatId, items: [], messages: [], total: 0, hasMore: false };
   } catch (error) {
-    console.warn('[TeamsHub Chat API] Direct messages fallback:', error.message);
-    const allAccounts = msalInstance.getAllAccounts() || [];
-    const target = allAccounts[0];
-    if (target) {
-      let token = localStorage.getItem(`teamshub_token_${target.username?.toLowerCase()}`);
-      if (!token) token = await acquireGraphToken(target.homeAccountId || target.username);
-      if (token) {
-        const directMsgs = await fetchMessagesDirectFromGraph(token, chatId, target.username);
-        if (directMsgs.length > 0) {
-          return { chatId: chatId, items: directMsgs, messages: directMsgs, page: 1, limit: 50, total: directMsgs.length, hasMore: false };
-        }
-      }
-    }
-    throw error;
+    console.warn('[TeamsHub Chat Messages Error]:', error.message);
+    return { chatId: chatId, items: [], messages: [], total: 0, hasMore: false };
   }
 };
 

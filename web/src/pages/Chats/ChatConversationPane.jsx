@@ -250,7 +250,7 @@ export default function ChatConversationPane({
   const chatId = chat?._id || chat?.microsoftChatId || chat?.id;
   const chatOwner = chat?.accountEmail || chat?.connectedAccountId;
 
-  const { messages, loading: messagesLoading, error: messagesError, sendMessage, toggleReaction, deleteMessage, editMessage } = useMessages(chatId, chatOwner);
+  const { messages, loading: messagesLoading, error: messagesError, sendMessage, toggleReaction, deleteMessage, editMessage } = useMessages(chatId, chatOwner, chat);
   const rawMessages = Array.isArray(messages) ? messages : [];
   const activeEmail = (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim();
 

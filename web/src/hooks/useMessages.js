@@ -27,15 +27,18 @@ const getDeletedIds = () => {
   }
 };
 
-export const useMessages = (chatId, accountId) => {
+export const useMessages = (chatId, accountId, chatPreviewObj) => {
   const activeChatIdRef = useRef(chatId);
   useEffect(() => {
     activeChatIdRef.current = chatId;
   }, [chatId]);
 
-  const getInitialMessages = (id) => {
+  const getInitialMessages = (id, preview) => {
     if (!id) return [];
-    if (messageMemoryCache.has(id)) return messageMemoryCache.get(id);
+    if (messageMemoryCache.has(id)) {
+      const cached = messageMemoryCache.get(id);
+      if (Array.isArray(cached) && cached.length > 0) return cached;
+    }
     try {
       const stored = localStorage.getItem(`teamshub_msgs_${id}`);
       if (stored) {
@@ -46,18 +49,33 @@ export const useMessages = (chatId, accountId) => {
         }
       }
     } catch (e) {}
+
+    // Instant Seed from chat item's lastMessagePreview (0ms instant paint!)
+    if (preview?.lastMessagePreview) {
+      const seedMsg = {
+        _id: `seed-${id}`,
+        microsoftMessageId: `seed-${id}`,
+        chatId: id,
+        senderName: preview.lastMessageSender || preview.participant || 'Participant',
+        senderEmail: preview.lastMessageSenderEmail || '',
+        isFromMe: preview.isLastMessageOutgoing || preview.isOutgoing || false,
+        content: preview.lastMessagePreview,
+        contentType: 'text',
+        timestamp: preview.lastMessageTimestamp || new Date().toISOString(),
+        createdDateTime: preview.lastMessageTimestamp || new Date().toISOString(),
+        reactions: [],
+        status: 'delivered'
+      };
+      return [seedMsg];
+    }
     return [];
   };
 
-  const [messages, setMessages] = useState(() => getInitialMessages(chatId));
-  const [loading, setLoading] = useState(() => {
-    if (!chatId) return false;
-    const initial = getInitialMessages(chatId);
-    return initial.length === 0;
-  });
+  const [messages, setMessages] = useState(() => getInitialMessages(chatId, chatPreviewObj));
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Synchronously switch message view to cache (0ms instant Teams jump)
+  // Synchronously switch message view to cache or instant preview seed (0ms instant Teams jump)
   useEffect(() => {
     activeChatIdRef.current = chatId;
     if (!chatId) {
@@ -65,29 +83,16 @@ export const useMessages = (chatId, accountId) => {
       setLoading(false);
       return;
     }
-    const cached = getInitialMessages(chatId);
-    if (cached && cached.length > 0) {
-      setMessages(cached);
-      setLoading(false);
-    } else {
-      setMessages([]);
-      setLoading(true);
-    }
-  }, [chatId]);
+    const init = getInitialMessages(chatId, chatPreviewObj);
+    setMessages(init);
+    setLoading(false);
+  }, [chatId, chatPreviewObj?.lastMessagePreview]);
 
   const loadMessages = useCallback(async () => {
     if (!chatId) {
       setMessages([]);
       setLoading(false);
       return;
-    }
-
-    const cached = messageMemoryCache.get(chatId) || getInitialMessages(chatId);
-    if (cached && cached.length > 0) {
-      setMessages(cached);
-      setLoading(false);
-    } else {
-      setLoading(true);
     }
 
     setError(null);
@@ -106,7 +111,7 @@ export const useMessages = (chatId, accountId) => {
         return !delIds.some(d => isSameMessageId(d, m.microsoftMessageId || m._id || m.id));
       });
 
-      if (items.length > 0 || rawItems.length > 0) {
+      if (items.length > 0) {
         setMessages(items);
         messageMemoryCache.set(chatId, items);
         try {
@@ -115,10 +120,6 @@ export const useMessages = (chatId, accountId) => {
       }
     } catch (err) {
       if (activeChatIdRef.current !== chatId) return;
-      if (!cached || cached.length === 0) {
-        setError(err.message || 'Failed to load conversation messages.');
-        setMessages([]);
-      }
     } finally {
       if (activeChatIdRef.current === chatId) {
         setLoading(false);
