@@ -20,7 +20,7 @@ export default function ChatsPage({
   initialParticipant,
   initialMessageId,
   initialKeyword,
-  layoutMode: externalLayoutMode = 'triple',
+  layoutMode: externalLayoutMode = 'single',
   onSetLayoutMode
 }) {
   const { connectedAccounts } = useAuth();
@@ -30,7 +30,7 @@ export default function ChatsPage({
   const [activeChatKey, setActiveChatKey] = useState(null);
 
   // Multi-Pane Workspace States: 'single' | 'dual' | 'triple' | 'quad'
-  const [layoutMode, setLayoutMode] = useState(externalLayoutMode || 'triple');
+  const [layoutMode, setLayoutMode] = useState(externalLayoutMode || 'single');
   const [splitChatId, setSplitChatId] = useState(null);
   const [splitChatKey, setSplitChatKey] = useState(null);
   const [pane3ChatId, setPane3ChatId] = useState(null);

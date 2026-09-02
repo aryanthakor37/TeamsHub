@@ -7,7 +7,7 @@ import AccountSwitcher from './AccountSwitcher';
 import { getInitials, getAvatarColor } from '../utils/avatarUtils';
 import { sanitizeDisplayName } from '../utils/textUtils';
 
-export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, isSidebarCollapsed, onToggleSidebar, layoutMode = 'triple', onSetLayoutMode }) {
+export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, isSidebarCollapsed, onToggleSidebar, layoutMode = 'single', onSetLayoutMode }) {
   const [healthStatus, setHealthStatus] = useState({ loading: false, online: true });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);

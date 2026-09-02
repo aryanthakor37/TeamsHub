@@ -29,7 +29,7 @@ function MainLayout() {
     return localStorage.getItem('teamshub_theme') || 'dark';
   });
   const [activeToast, setActiveToast] = useState(null);
-  const [layoutMode, setLayoutMode] = useState('triple');
+  const [layoutMode, setLayoutMode] = useState('single');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Global chats hook for real-time unread count and notifications
