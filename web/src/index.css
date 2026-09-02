@@ -933,68 +933,135 @@ button:focus, button:focus-visible, button:active {
 }
 
 /* ==========================================================================
-   Ultra-Modern Professional Enterprise 3D Glassmorphic Styles
+   Ultra-Modern Professional Enterprise 3D Glassmorphic Styles & Animations
    ========================================================================== */
 
+@keyframes badgeLevitate {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0px);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-3.5px);
+  }
+}
+
+@keyframes neonPulseCyan {
+  0%, 100% {
+    box-shadow: 0 4px 18px rgba(0, 242, 254, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 28px rgba(0, 242, 254, 0.85), 0 0 12px rgba(0, 242, 254, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes neonPulseMint {
+  0%, 100% {
+    box-shadow: 0 4px 18px rgba(56, 239, 125, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 28px rgba(56, 239, 125, 0.8), 0 0 12px rgba(56, 239, 125, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes neonPulsePink {
+  0%, 100% {
+    box-shadow: 0 4px 18px rgba(240, 147, 251, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 28px rgba(240, 147, 251, 0.85), 0 0 12px rgba(240, 147, 251, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.6);
+  }
+}
+
+/* 3D Dynamic Card Tilt & Hover Elevation */
+.card-3d-interactive {
+  background: rgba(13, 19, 34, 0.72) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 14px 36px -6px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
+  transform-style: preserve-3d;
+}
+
+.card-3d-interactive:hover {
+  transform: translateY(-6px) scale(1.012) !important;
+  border-color: rgba(0, 242, 254, 0.45) !important;
+  box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.75), 0 0 25px rgba(0, 242, 254, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Sidebar Active Nav Item 3D Glowing Pill */
+.sidebar-active-glow {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.16) 0%, rgba(99, 102, 241, 0.12) 100%) !important;
+  border: 1px solid rgba(0, 242, 254, 0.45) !important;
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  color: #00f2fe !important;
+}
+
+.sidebar-active-glow svg {
+  color: #00f2fe !important;
+  filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.6));
+}
+
 .modern-floating-pane {
-  background: var(--bg-primary);
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.25);
+  background: rgba(12, 17, 30, 0.68) !important;
+  backdrop-filter: blur(30px) !important;
+  -webkit-backdrop-filter: blur(30px) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
   position: relative;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
-[data-theme='dark'] .modern-floating-pane {
-  background: rgba(14, 20, 36, 0.82) !important;
-  backdrop-filter: blur(28px) !important;
-  -webkit-backdrop-filter: blur(28px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+.modern-floating-pane:hover {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 26px 56px -8px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 242, 254, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
 }
 
 /* Floating Neon Top Badge Pills */
 .neon-floating-badge {
   position: absolute;
-  top: -11px;
+  top: -13px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 3px 14px;
+  padding: 4px 16px;
   border-radius: 20px;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   color: #ffffff;
   text-transform: uppercase;
-  z-index: 20;
+  z-index: 25;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
   pointer-events: none;
+  animation: badgeLevitate 3s ease-in-out infinite;
 }
 
 .neon-floating-badge.badge-pane-1 {
   background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-  box-shadow: 0 4px 18px rgba(0, 242, 254, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.3);
+  animation: badgeLevitate 3s ease-in-out infinite, neonPulseCyan 3s infinite ease-in-out;
   color: #032030;
 }
 
 .neon-floating-badge.badge-pane-2 {
   background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%);
-  box-shadow: 0 4px 18px rgba(56, 239, 125, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.3);
+  animation: badgeLevitate 3s ease-in-out infinite 0.5s, neonPulseMint 3s infinite ease-in-out 0.5s;
   color: #02231c;
 }
 
 .neon-floating-badge.badge-pane-3 {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  box-shadow: 0 4px 18px rgba(240, 147, 251, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.3);
+  animation: badgeLevitate 3s ease-in-out infinite 1s, neonPulsePink 3s infinite ease-in-out 1s;
   color: #2b0416;
 }
 

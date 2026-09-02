@@ -102,70 +102,73 @@ export default function WelcomePage({ onOpenMicrosoftModal, onGoToDashboard }) {
           * Multi-tenant guest workspaces available with native Windows Desktop companion.
         </p>
 
-        {/* Feature Cards Grid */}
+        {/* Feature Cards Grid with 3D Physics */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '20px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '22px',
           marginTop: '60px',
           textAlign: 'left'
         }}>
-          <div className="glass-card" style={{ padding: '24px' }}>
+          <div className="card-3d-interactive" style={{ padding: '26px', borderTop: '2px solid #6366f1' }}>
             <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              color: '#6366f1',
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(99, 102, 241, 0.15)',
+              color: '#818cf8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '16px'
+              marginBottom: '16px',
+              boxShadow: '0 0 16px rgba(99, 102, 241, 0.3)'
             }}>
               <Globe size={24} />
             </div>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '8px' }}>Unified Accounts</h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', color: '#ffffff' }}>Unified Accounts</h3>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
               Switch between work, client, and freelance accounts effortlessly in a single UI.
             </p>
           </div>
 
-          <div className="glass-card" style={{ padding: '24px' }}>
+          <div className="card-3d-interactive" style={{ padding: '26px', borderTop: '2px solid #00f2fe' }}>
             <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'rgba(14, 165, 233, 0.12)',
-              color: '#0ea5e9',
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(0, 242, 254, 0.15)',
+              color: '#00f2fe',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '16px'
+              marginBottom: '16px',
+              boxShadow: '0 0 16px rgba(0, 242, 254, 0.35)'
             }}>
               <Zap size={24} />
             </div>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '8px' }}>Centralized Inbox</h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', color: '#ffffff' }}>Centralized Inbox</h3>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
               View unread chats and urgent follow-ups across all organizations without logging out.
             </p>
           </div>
 
-          <div className="glass-card" style={{ padding: '24px' }}>
+          <div className="card-3d-interactive" style={{ padding: '26px', borderTop: '2px solid #10b981' }}>
             <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
               color: '#10b981',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '16px'
+              marginBottom: '16px',
+              boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)'
             }}>
               <ShieldCheck size={24} />
             </div>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '8px' }}>Enterprise Security</h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', color: '#ffffff' }}>Enterprise Security</h3>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
               Built with zero password scraping and strict OAuth MSAL standards.
             </p>
           </div>

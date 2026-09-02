@@ -35,8 +35,10 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
   return (
     <aside className="sidebar-container" style={{
       width: '240px',
-      backgroundColor: 'var(--bg-secondary)',
-      borderRight: '1px solid var(--border-color)',
+      backgroundColor: 'rgba(10, 14, 26, 0.82)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      borderRight: '1px solid rgba(255, 255, 255, 0.08)',
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
@@ -44,32 +46,32 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
     }}>
       {/* Brand Header */}
       <div className="sidebar-brand-container" style={{
-        padding: '22px 24px',
+        padding: '20px 22px',
         display: 'flex',
         alignItems: 'center',
-        gap: '14px',
-        borderBottom: '1px solid var(--border-color)'
+        gap: '12px',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
       }}>
         <div style={{
           width: '38px',
           height: '38px',
           borderRadius: '12px',
-          background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
+          background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#ffffff',
+          color: '#032030',
           fontWeight: '800',
-          fontSize: '1.25rem',
-          boxShadow: '0 6px 16px -2px rgba(79, 70, 229, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.4)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
+          fontSize: '1.2rem',
+          boxShadow: '0 4px 18px rgba(0, 242, 254, 0.45)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
           flexShrink: 0
         }}>
           TH
         </div>
         <div className="sidebar-brand-text">
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', lineHeight: 1.2, letterSpacing: '-0.01em' }}>TeamsHub</h2>
-          <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: '700' }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: '800', lineHeight: 1.2, letterSpacing: '-0.01em', color: '#ffffff' }}>TeamsHub</h2>
+          <span style={{ fontSize: '0.68rem', color: '#00f2fe', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: '700' }}>
             Enterprise Workspace
           </span>
         </div>
@@ -84,7 +86,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className="tab-pill-3d sidebar-item-btn"
+              className={`tab-pill-3d sidebar-item-btn ${isActive ? 'sidebar-active-glow' : ''}`}
               style={{
                 width: '100%',
                 display: 'flex',
@@ -92,21 +94,21 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
                 justifyContent: 'space-between',
                 padding: '11px 16px',
                 marginBottom: '6px',
-                borderRadius: 'var(--radius-md)',
-                border: isActive ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
+                borderRadius: '12px',
+                border: isActive ? '1px solid rgba(0, 242, 254, 0.45)' : '1px solid transparent',
                 outline: 'none',
                 background: isActive 
-                  ? 'linear-gradient(135deg, rgba(79, 70, 229, 0.14) 0%, rgba(99, 102, 241, 0.06) 100%)' 
+                  ? 'linear-gradient(135deg, rgba(0, 242, 254, 0.14) 0%, rgba(99, 102, 241, 0.1) 100%)' 
                   : 'transparent',
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                color: isActive ? '#00f2fe' : 'var(--text-secondary)',
                 fontWeight: isActive ? '700' : '500',
                 cursor: 'pointer',
-                boxShadow: isActive ? '0 4px 12px rgba(79, 70, 229, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5)' : 'none',
-                transition: 'all var(--transition-fast)'
+                boxShadow: isActive ? '0 0 20px rgba(0, 242, 254, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25)' : 'none',
+                transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
             >
               <div className="sidebar-item-inner" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Icon size={19} color={isActive ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                <Icon size={19} color={isActive ? '#00f2fe' : 'var(--text-secondary)'} />
                 <span className="sidebar-item-label" style={{ fontSize: '0.9rem' }}>{item.label}</span>
               </div>
 
