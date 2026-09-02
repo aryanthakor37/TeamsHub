@@ -25,7 +25,9 @@ function MainLayout() {
     return hasActiveAccount ? 'dashboard' : 'welcome';
   });
   const [isMicrosoftModalOpen, setIsMicrosoftModalOpen] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('teamshub_theme') || 'dark';
+  });
   const [activeToast, setActiveToast] = useState(null);
 
   // Global chats hook for real-time unread count and notifications
@@ -85,7 +87,11 @@ function MainLayout() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setTheme((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      localStorage.setItem('teamshub_theme', next);
+      return next;
+    });
   };
 
   const [selectedSearchChatId, setSelectedSearchChatId] = useState(null);
