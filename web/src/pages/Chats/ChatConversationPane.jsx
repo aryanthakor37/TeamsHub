@@ -1852,25 +1852,6 @@ export default function ChatConversationPane({
         </form>
       </div>
 
-      {/* Lightbox Modal */}
-      {lightboxImage && (
-        <div
-          onClick={() => setLightboxImage(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000,
-            padding: '24px'
-          }}
-        >
-          <img src={lightboxImage} alt="Expanded" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '8px', objectFit: 'contain' }} />
-        </div>
-      )}
-
       {/* Toast Notification Banner */}
       {toastNotification && (
         <div
