@@ -125,29 +125,49 @@ const getChats = async (req, res) => {
       });
     }
 
+const decodeTokenMeta = (token) => {
+  if (!token || typeof token !== 'string') return { email: '', name: '' };
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return { email: '', name: '' };
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+    const email = (payload.preferred_username || payload.upn || payload.email || payload.unique_name || '').toLowerCase().trim();
+    const name = (payload.name || payload.given_name || '').trim();
+    return { email, name };
+  } catch (e) {
+    return { email: '', name: '' };
+  }
+};
+
     // ── Real Mode: Find Tokens & Fetch Live Graph Chats across ALL connected accounts ──
     const dbAvailable = ConnectedAccount.db && ConnectedAccount.db.readyState === 1;
     let targetAccounts = [];
 
-    // 1. If caller sent a direct Bearer headerToken, ALWAYS include it as primary target account
+    // 1. If caller sent a direct Bearer headerToken, ALWAYS accurately decode email/name
     if (headerToken) {
-      const primaryEmail = clientUserEmail || 'active-user';
+      const { email: jwtEmail, name: jwtName } = decodeTokenMeta(headerToken);
+      const primaryEmail = jwtEmail || clientUserEmail || 'active-user';
+      const primaryName = jwtName || (primaryEmail.includes('@') ? primaryEmail.split('@')[0] : 'Microsoft User');
       targetAccounts.push({
         _id: `acc-bearer-${primaryEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
         email: primaryEmail,
-        displayName: primaryEmail.includes('@') ? primaryEmail.split('@')[0] : 'Microsoft User',
+        displayName: primaryName,
         microsoftAccessToken: headerToken
       });
     }
 
-    // 2. Populate all accounts from accountTokensMap
+    // 2. Populate all accounts from accountTokensMap with token verification
     Object.entries(accountTokensMap).forEach(([email, token]) => {
       const cleanEmail = email.toLowerCase().trim();
-      if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === cleanEmail)) {
+      const { email: jwtEmail, name: jwtName } = decodeTokenMeta(token);
+      const finalEmail = jwtEmail || cleanEmail;
+      const finalName = jwtName || (finalEmail.includes('@') ? finalEmail.split('@')[0] : 'Microsoft User');
+
+      if (token && !targetAccounts.some(a => (a.email || '').toLowerCase() === finalEmail)) {
         targetAccounts.push({
-          _id: `acc-token-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-          email: cleanEmail,
-          displayName: cleanEmail.split('@')[0],
+          _id: `acc-token-${finalEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          email: finalEmail,
+          displayName: finalName,
           microsoftAccessToken: token
         });
       }

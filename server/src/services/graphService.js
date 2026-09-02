@@ -943,9 +943,13 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     const cleanParticipant = sanitizeDisplayName(participantName);
     const cleanCompany = sanitizeDisplayName(detectedCompany);
 
+    const compositeChatId = currentEmail ? `${currentEmail}_${graphChat.id}` : graphChat.id;
+
     return {
-      _id: graphChat.id,
-      connectedAccountId,
+      _id: compositeChatId,
+      id: compositeChatId,
+      connectedAccountId: connectedAccountId || currentEmail,
+      accountEmail: currentEmail,
       microsoftChatId: graphChat.id,
       participant: cleanParticipant,
       role: graphChat.chatType === 'oneOnOne' ? 'Direct Message' : graphChat.chatType === 'group' ? 'Group Chat' : 'Meeting Chat',

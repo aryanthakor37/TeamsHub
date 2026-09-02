@@ -111,13 +111,44 @@ const parseApiError = (responseData) => {
   return { code: 'UNKNOWN_ERROR', message: 'An unexpected error occurred.' };
 };
 
+export const getEmailFromJwt = (tokenStr) => {
+  if (!tokenStr || typeof tokenStr !== 'string') return '';
+  try {
+    const parts = tokenStr.split('.');
+    if (parts.length < 2) return '';
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    const payload = JSON.parse(jsonPayload);
+    return (payload.preferred_username || payload.upn || payload.email || payload.unique_name || '').toLowerCase().trim();
+  } catch (e) {
+    return '';
+  }
+};
+
+export const getNameFromJwt = (tokenStr) => {
+  if (!tokenStr || typeof tokenStr !== 'string') return '';
+  try {
+    const parts = tokenStr.split('.');
+    if (parts.length < 2) return '';
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    const payload = JSON.parse(jsonPayload);
+    return (payload.name || payload.given_name || '').trim();
+  } catch (e) {
+    return '';
+  }
+};
+
 /**
  * Direct Client-Side Microsoft Graph API Chat Fetcher (Resilient Fallback)
  */
 export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisplayName) => {
   if (!token) return [];
-  const cleanEmail = (accountEmail || '').toLowerCase().trim();
-  const cleanName = accountDisplayName || cleanEmail.split('@')[0];
+  const jwtEmail = getEmailFromJwt(token);
+  const jwtName = getNameFromJwt(token);
+
+  const cleanEmail = (jwtEmail || accountEmail || '').toLowerCase().trim();
+  const cleanName = jwtName || accountDisplayName || (cleanEmail.includes('@') ? cleanEmail.split('@')[0] : 'User');
 
   let rawList = [];
   let activeToken = token;
