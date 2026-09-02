@@ -839,7 +839,7 @@ export default function ChatsPage({
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: isSplitActive ? 'var(--bg-tertiary)' : 'var(--bg-primary)',
+          backgroundColor: 'transparent',
           overflow: 'hidden',
           height: '100%',
           position: 'relative'
@@ -847,11 +847,13 @@ export default function ChatsPage({
       >
         {isAccountConnected && activeChat ? (
           <>
-            {/* Top Workspace Bar: Layout Mode Switcher Toolbar */}
+            {/* Top Workspace Bar: Sleek Translucent Glass Toolbar */}
             <div style={{
-              padding: '6px 14px',
-              borderBottom: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-secondary)',
+              padding: '8px 18px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+              backgroundColor: 'rgba(12, 17, 30, 0.65)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -859,18 +861,18 @@ export default function ChatsPage({
               zIndex: 10,
               flexShrink: 0
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Workspace Layout:
                 </span>
                 <div style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  backgroundColor: 'var(--bg-tertiary)',
-                  padding: '2px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  gap: '2px'
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  padding: '3px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  gap: '3px'
                 }}>
                   <button
                     onClick={() => setLayout('single')}

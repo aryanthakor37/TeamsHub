@@ -716,36 +716,17 @@ export default function ChatConversationPane({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              fontSize: '0.72rem',
+              fontSize: '0.74rem',
               color: 'var(--text-muted)',
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               marginTop: '1px'
             }}>
-              {/* Split Mode Pane Tag */}
-              {isSplit && (
-                <span style={{
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  background: paneTheme.headerBadgeBg,
-                  color: paneTheme.headerBadgeText,
-                  fontSize: '0.62rem',
-                  fontWeight: '800',
-                  letterSpacing: '0.02em',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                  flexShrink: 0
-                }}>
-                  {paneTheme.pillText}
-                </span>
-              )}
-              <strong style={{ color: paneTheme.accentColor, fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {sanitizeDisplayName(chat.company || chat.accountBadge || 'Teams')}
-              </strong>
-              {chat.accountEmail && (
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', opacity: 0.85 }}>
-                  • {chat.accountEmail}
-                </span>
-              )}
+              <span style={{ color: 'var(--text-secondary)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {sanitizeDisplayName(chat.company || chat.accountBadge || 'Microsoft Teams')}
+              </span>
+              <span>•</span>
+              <span style={{ color: '#10b981', fontWeight: '600' }}>Active</span>
             </div>
           </div>
         </div>
@@ -1191,15 +1172,15 @@ export default function ChatConversationPane({
                           });
                         }}
                         style={{
-                          padding: '9px 13px',
-                          borderRadius: msg.isOutgoing ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                          background: msg.isOutgoing ? paneTheme.bubbleBg : 'var(--bg-secondary)',
+                          padding: '10px 14px',
+                          borderRadius: msg.isOutgoing ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                          background: msg.isOutgoing ? paneTheme.bubbleBg : 'rgba(255, 255, 255, 0.055)',
                           color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)',
                           fontSize: '0.84rem',
-                          lineHeight: '1.45',
+                          lineHeight: '1.48',
                           wordBreak: 'break-word',
-                          boxShadow: msg.isOutgoing ? paneTheme.bubbleShadow : '0 1px 3px rgba(0,0,0,0.05)',
-                          border: msg.isOutgoing ? 'none' : '1px solid var(--border-color)'
+                          boxShadow: msg.isOutgoing ? paneTheme.bubbleShadow : '0 2px 10px rgba(0,0,0,0.2)',
+                          border: msg.isOutgoing ? 'none' : '1px solid rgba(255, 255, 255, 0.08)'
                         }}
                       >
                         {(() => {
