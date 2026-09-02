@@ -418,9 +418,9 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
     setMessages((prev) => {
       const updated = prev.map((m) => {
         const isMatch =
-          m.microsoftMessageId === messageId ||
-          m._id === messageId ||
-          m.id === messageId;
+          isSameMessageId(m.microsoftMessageId, messageId) ||
+          isSameMessageId(m._id, messageId) ||
+          isSameMessageId(m.id, messageId);
         if (!isMatch) return m;
         return { ...m, content: newContent, isEdited: true };
       });
