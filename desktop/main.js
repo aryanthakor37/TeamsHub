@@ -54,7 +54,7 @@ function createWindow() {
   mainWindow.removeMenu();
 
   // Load production application with full Microsoft OAuth redirect support
-  mainWindow.loadURL('https://teamshub-1.onrender.com');
+  mainWindow.loadURL('https://teamshub-web.onrender.com');
 
   // Handle external link clicks
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
