@@ -643,9 +643,39 @@ export default function ChatsPage({
               {filteredChats.map((c) => {
                 const chatId = c._id || c.microsoftChatId || c.id;
                 const uniqueKey = getChatUniqueKey(c);
-                const isPrimarySelected = activeChat && getChatUniqueKey(activeChat) === uniqueKey;
-                const isSplitSelected = isSplitActive && splitChat && getChatUniqueKey(splitChat) === uniqueKey;
-                const isSelected = isPrimarySelected;
+                const isPane1Selected = activeChat && getChatUniqueKey(activeChat) === uniqueKey;
+                const isPane2Selected = isSplitActive && splitChat && getChatUniqueKey(splitChat) === uniqueKey;
+                const isPane3Selected = (layoutMode === 'triple' || layoutMode === 'quad') && pane3Chat && getChatUniqueKey(pane3Chat) === uniqueKey;
+                const isPane4Selected = layoutMode === 'quad' && pane4Chat && getChatUniqueKey(pane4Chat) === uniqueKey;
+
+                let activeBorder = '1px solid transparent';
+                let activeBg = 'transparent';
+                let activeBorderLeft = '3.5px solid transparent';
+                let paneBadge = null;
+
+                if (isPane1Selected) {
+                  activeBorder = '2px solid #6366f1';
+                  activeBg = 'rgba(99, 102, 241, 0.18)';
+                  activeBorderLeft = '3.5px solid #6366f1';
+                  paneBadge = 'P1';
+                } else if (isPane2Selected) {
+                  activeBorder = '2px solid #00f2fe';
+                  activeBg = 'rgba(0, 242, 254, 0.18)';
+                  activeBorderLeft = '3.5px solid #00f2fe';
+                  paneBadge = 'P2';
+                } else if (isPane3Selected) {
+                  activeBorder = '2px solid #ec4899';
+                  activeBg = 'rgba(236, 72, 153, 0.18)';
+                  activeBorderLeft = '3.5px solid #ec4899';
+                  paneBadge = 'P3';
+                } else if (isPane4Selected) {
+                  activeBorder = '2px solid #f59e0b';
+                  activeBg = 'rgba(245, 158, 11, 0.18)';
+                  activeBorderLeft = '3.5px solid #f59e0b';
+                  paneBadge = 'P4';
+                }
+
+                const isAnyPaneSelected = isPane1Selected || isPane2Selected || isPane3Selected || isPane4Selected;
 
                 if (isSidebarCollapsed) {
                   return (
@@ -665,10 +695,12 @@ export default function ChatsPage({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: isSelected ? 'var(--accent-light)' : (isSplitSelected ? 'rgba(2, 132, 199, 0.12)' : 'transparent'),
-                        border: isSelected ? '2px solid var(--accent-primary)' : (isSplitSelected ? '2px solid #0284c7' : '1px solid transparent'),
+                        backgroundColor: activeBg,
+                        border: activeBorder,
+                        boxShadow: isAnyPaneSelected ? `0 0 14px ${isPane1Selected ? 'rgba(99,102,241,0.3)' : isPane2Selected ? 'rgba(0,242,254,0.3)' : isPane3Selected ? 'rgba(236,72,153,0.3)' : 'rgba(245,158,11,0.3)'}` : 'none',
                         cursor: 'pointer',
-                        position: 'relative'
+                        position: 'relative',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       <div className="avatar-3d" style={{
@@ -716,17 +748,18 @@ export default function ChatsPage({
                       setActiveChatKey(uniqueKey);
                       markChatAsRead(chatId, c.connectedAccountId);
                     }}
-                    className={isSelected ? 'chat-item-3d active' : 'chat-item-3d'}
+                    className={isAnyPaneSelected ? 'chat-item-3d active' : 'chat-item-3d'}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
                       padding: '9px 10px',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: isSelected ? 'var(--accent-light)' : (isSplitSelected ? 'rgba(2, 132, 199, 0.08)' : 'transparent'),
-                      borderLeft: isSelected ? '3.5px solid var(--accent-primary)' : (isSplitSelected ? '3.5px solid #0284c7' : '3.5px solid transparent'),
+                      backgroundColor: activeBg,
+                      borderLeft: activeBorderLeft,
                       cursor: 'pointer',
-                      position: 'relative'
+                      position: 'relative',
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     {/* Avatar with Live Indicator */}
