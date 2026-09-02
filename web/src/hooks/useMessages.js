@@ -33,18 +33,25 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
     activeChatIdRef.current = chatId;
   }, [chatId]);
 
+  const getMsgCacheKey = (id, accId, preview) => {
+    if (!id) return '';
+    const acc = (accId || preview?.accountEmail || preview?.connectedAccountId || '').toLowerCase().trim();
+    return acc ? `${acc}___${id}` : id;
+  };
+
   const getInitialMessages = (id, preview) => {
     if (!id) return [];
-    if (messageMemoryCache.has(id)) {
-      const cached = messageMemoryCache.get(id);
+    const cacheKey = getMsgCacheKey(id, accountId, preview);
+    if (messageMemoryCache.has(cacheKey)) {
+      const cached = messageMemoryCache.get(cacheKey);
       if (Array.isArray(cached) && cached.length > 0) return cached;
     }
     try {
-      const stored = localStorage.getItem(`teamshub_msgs_${id}`);
+      const stored = localStorage.getItem(`teamshub_msgs_${cacheKey}`);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          messageMemoryCache.set(id, parsed);
+          messageMemoryCache.set(cacheKey, parsed);
           return parsed;
         }
       }
@@ -86,7 +93,7 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
     const init = getInitialMessages(chatId, chatPreviewObj);
     setMessages(init);
     setLoading(false);
-  }, [chatId, chatPreviewObj?.lastMessagePreview]);
+  }, [chatId, accountId, chatPreviewObj?.lastMessagePreview]);
 
   const loadMessages = useCallback(async () => {
     if (!chatId) {
@@ -96,6 +103,7 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
     }
 
     setError(null);
+    const cacheKey = getMsgCacheKey(chatId, accountId, chatPreviewObj);
 
     try {
       const data = await fetchMessagesFromBackend(chatId, accountId);
@@ -113,9 +121,9 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
 
       if (items.length > 0) {
         setMessages(items);
-        messageMemoryCache.set(chatId, items);
+        messageMemoryCache.set(cacheKey, items);
         try {
-          localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(items.slice(-50)));
+          localStorage.setItem(`teamshub_msgs_${cacheKey}`, JSON.stringify(items.slice(-50)));
         } catch (e) {}
       }
     } catch (err) {
@@ -125,10 +133,11 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
         setLoading(false);
       }
     }
-  }, [chatId, accountId]);
+  }, [chatId, accountId, chatPreviewObj]);
 
   const loadMessagesSilently = useCallback(async () => {
     if (!chatId) return;
+    const cacheKey = getMsgCacheKey(chatId, accountId, chatPreviewObj);
     try {
       const data = await fetchMessagesFromBackend(chatId, accountId);
       if (activeChatIdRef.current !== chatId) return;
@@ -156,9 +165,9 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
           if (newLast && !newLast.isOutgoing && prevId !== newId) {
             playTeamsNotificationSound();
           }
-          messageMemoryCache.set(chatId, newItems);
+          messageMemoryCache.set(cacheKey, newItems);
           try {
-            localStorage.setItem(`teamshub_msgs_${chatId}`, JSON.stringify(newItems.slice(-50)));
+            localStorage.setItem(`teamshub_msgs_${cacheKey}`, JSON.stringify(newItems.slice(-50)));
           } catch (e) {}
           return newItems;
         }
@@ -167,7 +176,7 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
     } catch (err) {
       console.warn('Silent message sync failed:', err.message);
     }
-  }, [chatId, accountId]);
+  }, [chatId, accountId, chatPreviewObj]);
 
   useEffect(() => {
     loadMessages();

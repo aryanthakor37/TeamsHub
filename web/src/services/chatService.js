@@ -274,8 +274,11 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
     const cleanParticipant = sanitizeDisplayName(participantName);
     const cleanCompany = sanitizeDisplayName(detectedCompany);
 
+    const uniqueCompositeId = `${cleanEmail}_${gc.id}`;
+
     return {
-      _id: gc.id,
+      _id: uniqueCompositeId,
+      id: uniqueCompositeId,
       microsoftChatId: gc.id,
       connectedAccountId: cleanEmail,
       accountEmail: cleanEmail,
@@ -302,6 +305,7 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
  */
 export const fetchMessagesDirectFromGraph = async (token, chatId, userEmail) => {
   if (!chatId) return [];
+  const cleanChatId = chatId.startsWith('19:') ? chatId : (chatId.includes('19:') ? ('19:' + chatId.split('19:')[1]) : chatId);
   const cleanUserEmail = (userEmail || '').toLowerCase().trim();
   let activeToken = token;
 
@@ -312,7 +316,7 @@ export const fetchMessagesDirectFromGraph = async (token, chatId, userEmail) => 
   if (!activeToken) return [];
 
   try {
-    let res = await fetch(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages?$top=50`, {
+    let res = await fetch(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(cleanChatId)}/messages?$top=50`, {
       headers: { Authorization: `Bearer ${activeToken}` }
     });
 
@@ -425,10 +429,21 @@ export const fetchChatsFromBackend = async (accountId = 'all', page = 1, limit =
 /**
  * Fetch Conversation Message History with Direct Graph Fallback
  */
+const toGraphChatId = (id) => {
+  if (!id) return '';
+  if (id.startsWith('19:')) return id;
+  if (id.includes('19:')) return '19:' + id.split('19:')[1];
+  return id;
+};
+
+/**
+ * Fetch Conversation Message History with Direct Graph Fallback
+ */
 export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limit = 50) => {
   if (!chatId) return { chatId, items: [], messages: [], total: 0 };
 
   const cleanAcc = (accountId || '').toLowerCase().trim();
+  const graphChatId = toGraphChatId(chatId);
 
   // 1. Fast Direct Microsoft Graph call if token is available locally (100ms ultra fast!)
   try {
@@ -438,7 +453,7 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
       if (activeEmail) localToken = localStorage.getItem(`teamshub_token_${activeEmail}`);
     }
     if (localToken && !isTokenExpired(localToken)) {
-      const directMsgs = await fetchMessagesDirectFromGraph(localToken, chatId, cleanAcc);
+      const directMsgs = await fetchMessagesDirectFromGraph(localToken, graphChatId, cleanAcc);
       if (directMsgs && directMsgs.length > 0) {
         return {
           chatId,
@@ -458,7 +473,7 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
     const headers = await getAuthHeaders(accountId);
     const accParam = accountId ? `&connectedAccountId=${encodeURIComponent(accountId)}` : '';
     const response = await fetch(
-      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages?page=${page}&limit=${limit}${accParam}`,
+      `${API_BASE_URL}/chats/${encodeURIComponent(graphChatId)}/messages?page=${page}&limit=${limit}${accParam}`,
       { headers }
     );
 
@@ -483,7 +498,7 @@ export const fetchMessagesFromBackend = async (chatId, accountId, page = 1, limi
       let token = localStorage.getItem(`teamshub_token_${target.username.toLowerCase()}`);
       if (!token) token = await acquireGraphToken(target.homeAccountId || target.username);
       if (token) {
-        const directMsgs = await fetchMessagesDirectFromGraph(token, chatId, target.username);
+        const directMsgs = await fetchMessagesDirectFromGraph(token, graphChatId, target.username);
         if (directMsgs.length > 0) {
           return {
             chatId: chatId,
@@ -512,6 +527,7 @@ export const sendMessageToBackend = async (chatId, payload, accountId) => {
   const contentText = typeof payload === 'string' ? payload : (payload?.content || '');
   const attachments = Array.isArray(payload?.attachments) ? payload.attachments : [];
   const image = payload?.image || null;
+  const graphChatId = toGraphChatId(chatId);
 
   // 1. Try Direct Microsoft Graph API sending from browser client
   try {
@@ -521,9 +537,9 @@ export const sendMessageToBackend = async (chatId, payload, accountId) => {
       token = await acquireGraphToken(cleanAcc).catch(() => null);
     }
 
-    if (token && chatId && chatId.startsWith('19:')) {
+    if (token && graphChatId && graphChatId.startsWith('19:')) {
       const graphRes = await fetch(
-        `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages`,
+        `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(graphChatId)}/messages`,
         {
           method: 'POST',
           headers: {
@@ -573,7 +589,7 @@ export const sendMessageToBackend = async (chatId, payload, accountId) => {
     };
 
     const response = await fetch(
-      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages`,
+      `${API_BASE_URL}/chats/${encodeURIComponent(graphChatId)}/messages`,
       {
         method: 'POST',
         headers,
@@ -659,6 +675,7 @@ export const unsetMessageReactionOnBackend = async (chatId, messageId, reactionT
 export const editMessageOnBackend = async (chatId, messageId, content, accountId) => {
   const cleanMsgId = String(messageId).replace(/^msg-/, '').trim();
   const cleanAcc = (accountId || '').toLowerCase().trim();
+  const graphChatId = toGraphChatId(chatId);
   
   // 1. Direct Microsoft Graph API edit from browser client
   try {
@@ -667,7 +684,7 @@ export const editMessageOnBackend = async (chatId, messageId, content, accountId
       token = await acquireGraphToken(cleanAcc).catch(() => null);
     }
 
-    if (token && chatId && chatId.startsWith('19:')) {
+    if (token && graphChatId && graphChatId.startsWith('19:')) {
       const payload = {
         body: {
           contentType: 'html',
@@ -676,7 +693,7 @@ export const editMessageOnBackend = async (chatId, messageId, content, accountId
       };
 
       const res = await fetch(
-        `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
+        `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
         {
           method: 'PATCH',
           headers: {
@@ -689,7 +706,7 @@ export const editMessageOnBackend = async (chatId, messageId, content, accountId
 
       if (!res.ok) {
         await fetch(
-          `https://graph.microsoft.com/beta/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
+          `https://graph.microsoft.com/beta/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
           {
             method: 'PATCH',
             headers: {
@@ -709,7 +726,7 @@ export const editMessageOnBackend = async (chatId, messageId, content, accountId
   try {
     const headers = await getAuthHeaders(accountId);
     const response = await fetch(
-      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
+      `${API_BASE_URL}/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
       {
         method: 'PATCH',
         headers,
@@ -730,6 +747,7 @@ export const editMessageOnBackend = async (chatId, messageId, content, accountId
 export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
   const cleanMsgId = String(messageId).replace(/^msg-/, '').trim();
   const cleanAcc = (accountId || '').toLowerCase().trim();
+  const graphChatId = toGraphChatId(chatId);
 
   // 1. Direct Microsoft Graph softDelete from browser client
   try {
@@ -738,12 +756,12 @@ export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
       token = await acquireGraphToken(cleanAcc).catch(() => null);
     }
 
-    if (token && chatId && chatId.startsWith('19:')) {
+    if (token && graphChatId && graphChatId.startsWith('19:')) {
       // Step A: Try v1.0 softDelete
       let deleted = false;
       try {
         const res = await fetch(
-          `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`,
+          `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`,
           {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
@@ -756,7 +774,7 @@ export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
       if (!deleted) {
         try {
           const res = await fetch(
-            `https://graph.microsoft.com/beta/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`,
+            `https://graph.microsoft.com/beta/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}/softDelete`,
             {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${token}` }
@@ -770,7 +788,7 @@ export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
       if (!deleted) {
         try {
           const res = await fetch(
-            `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
+            `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
             {
               method: 'DELETE',
               headers: { 'Authorization': `Bearer ${token}` }
@@ -784,7 +802,7 @@ export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
       if (!deleted) {
         try {
           await fetch(
-            `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
+            `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}`,
             {
               method: 'PATCH',
               headers: {
@@ -810,7 +828,7 @@ export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
   try {
     const headers = await getAuthHeaders(accountId);
     let response = await fetch(
-      `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}/delete?connectedAccountId=${encodeURIComponent(accountId || '')}`,
+      `${API_BASE_URL}/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}/delete?connectedAccountId=${encodeURIComponent(accountId || '')}`,
       {
         method: 'POST',
         headers,
@@ -819,7 +837,7 @@ export const deleteMessageOnBackend = async (chatId, messageId, accountId) => {
     );
     if (!response.ok) {
       response = await fetch(
-        `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(cleanMsgId)}?connectedAccountId=${encodeURIComponent(accountId || '')}`,
+        `${API_BASE_URL}/chats/${encodeURIComponent(graphChatId)}/messages/${encodeURIComponent(cleanMsgId)}?connectedAccountId=${encodeURIComponent(accountId || '')}`,
         {
           method: 'DELETE',
           headers,
