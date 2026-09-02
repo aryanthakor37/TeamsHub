@@ -2016,6 +2016,115 @@ export default function ChatConversationPane({
           )}
         </div>
       )}
+
+      {/* Interactive Image Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          onClick={() => setLightboxImage(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(5, 8, 16, 0.92)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            animation: 'fadeIn 0.2s ease'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              backgroundColor: 'rgba(16, 22, 38, 0.85)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '16px',
+              padding: '12px',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 242, 254, 0.2)'
+            }}
+          >
+            {/* Top Lightbox Header */}
+            <div style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '10px',
+              padding: '0 4px'
+            }}>
+              <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#00f2fe' }}>
+                Image Preview
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <a
+                  href={lightboxImage}
+                  target="_blank"
+                  rel="noreferrer"
+                  download="image-attachment.png"
+                  className="tab-pill-3d"
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(0, 242, 254, 0.15)',
+                    border: '1px solid rgba(0, 242, 254, 0.4)',
+                    color: '#00f2fe',
+                    fontSize: '0.78rem',
+                    fontWeight: '700',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Download size={13} />
+                  <span>Download</span>
+                </a>
+                <button
+                  onClick={() => setLightboxImage(null)}
+                  className="tab-pill-3d"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Close (Esc)"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Full Image Preview */}
+            <img
+              src={lightboxImage}
+              alt="Preview"
+              style={{
+                maxWidth: '85vw',
+                maxHeight: '80vh',
+                objectFit: 'contain',
+                borderRadius: '10px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
