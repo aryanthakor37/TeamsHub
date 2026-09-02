@@ -1,13 +1,17 @@
+import { sanitizeDisplayName } from './textUtils';
+
 export const getInitials = (name) => {
   if (!name) return 'U';
-  const parts = name.split(' ').filter(Boolean);
+  const clean = sanitizeDisplayName(name);
+  const parts = clean.split(' ').filter(Boolean);
   if (parts.length === 0) return 'U';
   if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
 
 export const getAvatarColor = (name) => {
-  if (!name) return '#6366f1'; // default indigo
+  const clean = sanitizeDisplayName(name);
+  if (!clean) return '#6366f1'; // default indigo
   const colors = [
     '#f87171', // red
     '#fb923c', // orange
@@ -22,8 +26,8 @@ export const getAvatarColor = (name) => {
     '#fb7185'  // rose
   ];
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < clean.length; i++) {
+    hash = clean.charCodeAt(i) + ((hash << 5) - hash);
   }
   const index = Math.abs(hash) % colors.length;
   return colors[index];

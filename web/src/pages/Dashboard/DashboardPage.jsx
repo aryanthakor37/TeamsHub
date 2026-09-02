@@ -28,6 +28,7 @@ import { useChats } from '../../hooks/useChats';
 import { fetchFilesFromBackend, fetchFileBlob } from '../../services/fileService';
 import { sendMessageToBackend, fetchTodayCalendarMeetings } from '../../services/chatService';
 import { getInitials, getAvatarColor } from '../../utils/avatarUtils';
+import { cleanHtmlText, sanitizeDisplayName } from '../../utils/textUtils';
 import DocumentPreviewModal from '../../components/DocumentPreviewModal';
 
 /**
@@ -497,13 +498,13 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
 
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                          <span style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>{chat.participant}</span>
+                          <span style={{ fontWeight: '700', fontSize: '0.92rem', color: 'var(--text-primary)' }}>{sanitizeDisplayName(chat.participant)}</span>
                           <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: '500' }}>
                             {displayTime}
                           </span>
                         </div>
                         <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                          {displayPreview}
+                          {cleanHtmlText(displayPreview)}
                         </div>
                       </div>
 

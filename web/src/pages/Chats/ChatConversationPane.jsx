@@ -9,6 +9,7 @@ import {
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../hooks/useAuth';
 import { getAvatarColor, getInitials } from '../../utils/avatarUtils';
+import { decodeHtmlEntities, cleanHtmlText, sanitizeDisplayName } from '../../utils/textUtils';
 import { getFileCategoryMeta } from '../../components/DocumentPreviewModal';
 import EmojiPicker from '../../components/EmojiPicker';
 import MessageReactionsBar, { getEmojiForReactionType, TEAMS_REACTIONS } from '../../components/MessageReactionsBar';
@@ -662,7 +663,7 @@ export default function ChatConversationPane({
               minWidth: 0
             }}>
               <span style={{ fontWeight: '800', fontSize: '0.94rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
-                {chat.participant}
+                {sanitizeDisplayName(chat.participant)}
               </span>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
@@ -702,7 +703,7 @@ export default function ChatConversationPane({
                 </span>
               )}
               <strong style={{ color: paneTheme.accentColor, fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {chat.company || chat.accountBadge || 'Teams'}
+                {sanitizeDisplayName(chat.company || chat.accountBadge || 'Teams')}
               </strong>
               {chat.accountEmail && (
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', opacity: 0.85 }}>
@@ -876,7 +877,7 @@ export default function ChatConversationPane({
                                       textOverflow: 'ellipsis',
                                       whiteSpace: 'nowrap'
                                     }}>
-                                      {c.participant}
+                                      {sanitizeDisplayName(c.participant)}
                                     </span>
                                     {c.unreadCount > 0 && (
                                       <span style={{
@@ -898,7 +899,7 @@ export default function ChatConversationPane({
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap'
                                   }}>
-                                    {(c.lastMessagePreview || '').replace(/<[^>]*>/g, '').trim() || 'No preview'}
+                                    {cleanHtmlText(c.lastMessagePreview) || 'No preview'}
                                   </div>
                                 </div>
                               </div>
@@ -967,7 +968,7 @@ export default function ChatConversationPane({
             <Pin size={13} style={{ color: 'var(--accent-primary)', transform: 'rotate(45deg)', flexShrink: 0 }} />
             <span style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '0.74rem' }}>Pinned:</span>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.76rem' }}>
-              <strong>{pinnedMessages[pinnedMessages.length - 1].senderName}:</strong> {(pinnedMessages[pinnedMessages.length - 1].content || '').replace(/<[^>]*>/g, '')}
+              <strong>{sanitizeDisplayName(pinnedMessages[pinnedMessages.length - 1].senderName)}:</strong> {cleanHtmlText(pinnedMessages[pinnedMessages.length - 1].content)}
             </span>
           </div>
           <button
@@ -1225,7 +1226,7 @@ export default function ChatConversationPane({
                                 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                                     <span style={{ fontWeight: '700', color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)' }}>
-                                      {quoteReplyData.sender || 'Chat Participant'}
+                                      {sanitizeDisplayName(quoteReplyData.sender) || 'Chat Participant'}
                                     </span>
                                     {quoteReplyData.date && (
                                       <span style={{ fontSize: '0.68rem', opacity: 0.75 }}>
@@ -1240,7 +1241,7 @@ export default function ChatConversationPane({
                                     textOverflow: 'ellipsis',
                                     fontSize: '0.76rem'
                                   }}>
-                                    {quoteReplyData.text || ''}
+                                    {decodeHtmlEntities(quoteReplyData.text) || ''}
                                   </div>
                                 </div>
                               )}
@@ -1292,7 +1293,7 @@ export default function ChatConversationPane({
                                   }}
                                 />
                               ) : (
-                                <div>{msg.content}</div>
+                                <div>{decodeHtmlEntities(msg.content)}</div>
                               )}
 
                               {/* Real Attachments - Images and Document Cards */}
@@ -1541,7 +1542,7 @@ export default function ChatConversationPane({
           <input
             ref={chatInputRef}
             type="text"
-            placeholder={`Type a message to ${chat.participant}... (Alt+${paneIndex})`}
+            placeholder={`Type a message to ${sanitizeDisplayName(chat.participant)}... (Alt+${paneIndex})`}
             value={draftMessage}
             onChange={(e) => setDraftMessage(e.target.value)}
             style={{

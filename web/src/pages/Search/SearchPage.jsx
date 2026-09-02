@@ -3,6 +3,8 @@ import { Search, MessageSquare, FileText, User, ShieldCheck, Loader2 } from 'luc
 import { mockChats, mockMessages, mockFiles } from '../../services/mockDataService';
 import { useAuth } from '../../hooks/useAuth';
 import { useChats } from '../../hooks/useChats';
+import { getInitials, getAvatarColor } from '../../utils/avatarUtils';
+import { cleanHtmlText, sanitizeDisplayName } from '../../utils/textUtils';
 import DocumentPreviewModal from '../../components/DocumentPreviewModal';
 
 export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile }) {
@@ -246,20 +248,20 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
                   >
                     <div style={{
                       width: '42px', height: '42px', borderRadius: '50%',
-                      backgroundColor: 'var(--accent-primary)', color: '#fff',
+                      backgroundColor: getAvatarColor(chat.participant), color: '#fff',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700'
                     }}>
-                      {chat.participant?.substring(0, 2).toUpperCase() || 'TM'}
+                      {getInitials(chat.participant)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: '700', fontSize: '0.95rem' }}>{chat.participant}</span>
+                        <span style={{ fontWeight: '700', fontSize: '0.95rem' }}>{sanitizeDisplayName(chat.participant)}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span className={`badge ${chat.accountBadge || 'badge-company-a'}`}>{chat.company || 'Microsoft Teams'}</span>
+                          <span className={`badge ${chat.accountBadge || 'badge-company-a'}`}>{sanitizeDisplayName(chat.company || 'Microsoft Teams')}</span>
                           <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: '600' }}>Open Chat →</span>
                         </div>
                       </div>
-                      <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>{chat.lastMessagePreview || chat.lastMessage}</p>
+                      <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>{cleanHtmlText(chat.lastMessagePreview || chat.lastMessage)}</p>
                     </div>
                   </div>
                 ))}
@@ -284,7 +286,7 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
                     <MessageSquare size={20} color="var(--accent-primary)" style={{ marginTop: '2px' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: '700', fontSize: '0.9rem' }}>{msg.senderName}</span>
+                        <span style={{ fontWeight: '700', fontSize: '0.9rem' }}>{sanitizeDisplayName(msg.senderName)}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                             {new Date(msg.createdDateTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}
@@ -292,7 +294,7 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
                           <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: '600' }}>Jump to Message →</span>
                         </div>
                       </div>
-                      <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: 0 }}>{msg.content}</p>
+                      <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: 0 }}>{cleanHtmlText(msg.content)}</p>
                     </div>
                   </div>
                 ))}

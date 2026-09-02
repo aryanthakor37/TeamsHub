@@ -1,5 +1,6 @@
 import { acquireGraphToken, syncAllAccountsTokens, isTokenExpired } from './auth/authService';
 import { msalInstance } from './auth/msalConfig';
+import { cleanHtmlText, sanitizeDisplayName } from '../utils/textUtils';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
   ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
@@ -267,20 +268,23 @@ export const fetchChatsDirectFromGraph = async (token, accountEmail, accountDisp
     }
 
     const lastMsgContent = gc.lastMessagePreview?.body?.content
-      ? gc.lastMessagePreview.body.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
+      ? cleanHtmlText(gc.lastMessagePreview.body.content)
       : '';
+
+    const cleanParticipant = sanitizeDisplayName(participantName);
+    const cleanCompany = sanitizeDisplayName(detectedCompany);
 
     return {
       _id: gc.id,
       microsoftChatId: gc.id,
       connectedAccountId: cleanEmail,
       accountEmail: cleanEmail,
-      participant: participantName,
-      lastMessageSender: lastMsgFromName,
+      participant: cleanParticipant,
+      lastMessageSender: sanitizeDisplayName(lastMsgFromName),
       lastMessageSenderEmail: lastMsgFromEmail,
       role: gc.chatType === 'oneOnOne' ? 'Direct Message' : 'Group Chat',
-      company: detectedCompany,
-      accountBadge: detectedCompany,
+      company: cleanCompany,
+      accountBadge: cleanCompany,
       chatType: gc.chatType || 'oneOnOne',
       isSelfChat: !!isSelfChat,
       isLastMessageOutgoing,

@@ -739,8 +739,56 @@ const fetchGraphRecentFiles = async (accessToken) => {
 };
 
 // ============================================================
-// Graph Response Normalization
+// Graph Response Normalization & Sanitization
 // ============================================================
+
+const decodeHtmlEntities = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&mdash;/gi, '—')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&hellip;/gi, '…')
+    .replace(/&bull;/gi, '•')
+    .replace(/&#(\d+);/g, (match, dec) => {
+      try {
+        return String.fromCharCode(parseInt(dec, 10));
+      } catch (e) {
+        return match;
+      }
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => {
+      try {
+        return String.fromCharCode(parseInt(hex, 16));
+      } catch (e) {
+        return match;
+      }
+    });
+};
+
+const cleanPreviewHtml = (html) => {
+  if (!html || typeof html !== 'string') return '';
+  const stripped = html.replace(/<[^>]*>/g, ' ');
+  const decoded = decodeHtmlEntities(stripped);
+  return decoded.replace(/\s+/g, ' ').trim();
+};
+
+const sanitizeDisplayName = (name) => {
+  if (!name || typeof name !== 'string') return '';
+  return name
+    .replace(/[`'"]/g, '')
+    .replace(/\\['"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 /**
  * Normalize Graph chat response into TeamsHub Chat schema
@@ -862,27 +910,30 @@ const normalizeGraphChat = (graphChat, connectedAccountId, company, currentUser 
     }
   }
 
-  return {
-    _id: graphChat.id,
-    connectedAccountId,
-    microsoftChatId: graphChat.id,
-    participant: participantName,
-    role: graphChat.chatType === 'oneOnOne' ? 'Direct Message' : graphChat.chatType === 'group' ? 'Group Chat' : 'Meeting Chat',
-    company: detectedCompany,
-    accountBadge: detectedCompany,
-    chatType: graphChat.chatType || 'oneOnOne',
-    isSelfChat,
-    isLastMessageOutgoing: isFromMe,
-    isOutgoing: isFromMe,
-    lastMessageSender: graphChat.lastMessagePreview?.from?.user?.displayName || '',
-    lastMessageSenderEmail: lastMsgFromEmail,
-    lastMessagePreview: graphChat.lastMessagePreview?.body?.content
-      ? cleanPreviewHtml(graphChat.lastMessagePreview.body.content).substring(0, 120)
-      : '',
-    lastMessageTimestamp,
-    unreadCount: (isFromMe || isSelfChat) ? 0 : unreadCount,
-    onlineStatus: 'online'
-  };
+    const cleanParticipant = sanitizeDisplayName(participantName);
+    const cleanCompany = sanitizeDisplayName(detectedCompany);
+
+    return {
+      _id: graphChat.id,
+      connectedAccountId,
+      microsoftChatId: graphChat.id,
+      participant: cleanParticipant,
+      role: graphChat.chatType === 'oneOnOne' ? 'Direct Message' : graphChat.chatType === 'group' ? 'Group Chat' : 'Meeting Chat',
+      company: cleanCompany,
+      accountBadge: cleanCompany,
+      chatType: graphChat.chatType || 'oneOnOne',
+      isSelfChat,
+      isLastMessageOutgoing: isFromMe,
+      isOutgoing: isFromMe,
+      lastMessageSender: sanitizeDisplayName(graphChat.lastMessagePreview?.from?.user?.displayName || ''),
+      lastMessageSenderEmail: lastMsgFromEmail,
+      lastMessagePreview: graphChat.lastMessagePreview?.body?.content
+        ? cleanPreviewHtml(graphChat.lastMessagePreview.body.content).substring(0, 120)
+        : '',
+      lastMessageTimestamp,
+      unreadCount: (isFromMe || isSelfChat) ? 0 : unreadCount,
+      onlineStatus: 'online'
+    };
 };
 
 /**
@@ -1097,7 +1148,7 @@ const normalizeGraphMessage = (graphMessage, chatId, connectedAccountId, userEma
     connectedAccountId,
     chatId,
     microsoftMessageId: graphMessage.id,
-    senderName: resolvedSenderName,
+    senderName: sanitizeDisplayName(resolvedSenderName),
     senderEmail,
     content: finalContent || '(Message)',
     contentType: graphMessage.body?.contentType === 'html' ? 'html' : 'text',

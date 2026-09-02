@@ -14,6 +14,7 @@ import SettingsPage from './pages/Settings/SettingsPage';
 
 import { useChats } from './hooks/useChats';
 import { getAvatarColor, getInitials } from './utils/avatarUtils';
+import { cleanHtmlText, sanitizeDisplayName } from './utils/textUtils';
 import { getSocket } from './services/socketService';
 import { MessageSquare, X, ExternalLink } from 'lucide-react';
 import FloatingChatWidget from './components/FloatingChatWidget';
@@ -228,21 +229,12 @@ function MainLayout() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
               <span style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {activeToast.participant}
+                {sanitizeDisplayName(activeToast.participant)}
               </span>
               <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: '600' }}>Teams</span>
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {(activeToast.lastMessagePreview || '')
-                .replace(/<[^>]*>/g, '')
-                .replace(/&nbsp;/gi, ' ')
-                .replace(/&amp;/gi, '&')
-                .replace(/&lt;/gi, '<')
-                .replace(/&gt;/gi, '>')
-                .replace(/&quot;/gi, '"')
-                .replace(/&#39;/gi, "'")
-                .replace(/\s+/g, ' ')
-                .trim() || 'Sent you a new message'}
+              {cleanHtmlText(activeToast.lastMessagePreview) || 'Sent you a new message'}
             </div>
           </div>
           <button

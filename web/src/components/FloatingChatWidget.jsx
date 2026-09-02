@@ -7,6 +7,7 @@ import { useChats } from '../hooks/useChats';
 import { useMessages } from '../hooks/useMessages';
 import { useAuth } from '../hooks/useAuth';
 import { getAvatarColor, getInitials } from '../utils/avatarUtils';
+import { decodeHtmlEntities, cleanHtmlText, sanitizeDisplayName } from '../utils/textUtils';
 import EmojiPicker from './EmojiPicker';
 
 export default function FloatingChatWidget({ onOpenFullChat }) {
@@ -362,18 +363,9 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                 ) : (
                   unreadChats.map((chat) => {
                     const chatId = chat._id || chat.id || chat.microsoftChatId;
-                    const participant = chat.participant || 'Teams User';
-                    const preview = (chat.lastMessagePreview || '')
-                      .replace(/<[^>]*>/g, '')
-                      .replace(/&nbsp;/gi, ' ')
-                      .replace(/&amp;/gi, '&')
-                      .replace(/&lt;/gi, '<')
-                      .replace(/&gt;/gi, '>')
-                      .replace(/&quot;/gi, '"')
-                      .replace(/&#39;/gi, "'")
-                      .replace(/\s+/g, ' ')
-                      .trim() || 'Sent you a new message';
-                    const badge = chat.company || chat.accountBadge || 'Teams';
+                    const participant = sanitizeDisplayName(chat.participant || 'Teams User');
+                    const preview = cleanHtmlText(chat.lastMessagePreview) || 'Sent you a new message';
+                    const badge = sanitizeDisplayName(chat.company || chat.accountBadge || 'Teams');
 
                     return (
                       <div
@@ -477,7 +469,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
                   }}>
-                    <span>{activeChat.participant}</span>
+                    <span>{sanitizeDisplayName(activeChat.participant)}</span>
                     <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
                   </div>
                   <div style={{
@@ -488,7 +480,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
                   }}>
-                    {activeChat.company || activeChat.accountBadge || 'Microsoft Teams'}
+                    {sanitizeDisplayName(activeChat.company || activeChat.accountBadge || 'Microsoft Teams')}
                   </div>
                 </div>
               </div>
@@ -544,10 +536,10 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                           {getInitials(c.participant)}
                         </div>
                         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {c.participant}
+                          {sanitizeDisplayName(c.participant)}
                         </div>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                          {c.company || c.accountBadge || 'Teams'}
+                          {sanitizeDisplayName(c.company || c.accountBadge || 'Teams')}
                         </span>
                       </div>
                     );
@@ -578,7 +570,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                 ) : (
                   safeMessages.map((msg, idx) => {
                     const isMe = !!msg.isOutgoing;
-                    const body = (msg.content || '').replace(/<[^>]*>/g, '').trim();
+                    const body = cleanHtmlText(msg.content);
                     if (!body) return null;
 
                     return (
@@ -649,7 +641,7 @@ export default function FloatingChatWidget({ onOpenFullChat }) {
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder={`Reply as ${activeChat.company || 'Teams'}...`}
+                  placeholder={`Reply as ${sanitizeDisplayName(activeChat.company || 'Teams')}...`}
                   value={draftMessage}
                   onChange={(e) => setDraftMessage(e.target.value)}
                   style={{

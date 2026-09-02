@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, Check, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { sanitizeDisplayName } from '../utils/textUtils';
 
 export default function AccountSwitcher({ onOpenMicrosoftModal }) {
   const { connectedAccounts, activeAccount, setActiveAccount, disconnectAccount } = useAuth();
@@ -41,7 +42,7 @@ export default function AccountSwitcher({ onOpenMicrosoftModal }) {
         </div>
         <div style={{ textAlign: 'left', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           <div style={{ fontWeight: '600', fontSize: '0.82rem' }}>
-            {activeAcc ? activeAcc.displayName || activeAcc.email : 'No Account'}
+            {activeAcc ? sanitizeDisplayName(activeAcc.displayName || activeAcc.email) : 'No Account'}
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
             {activeAcc ? activeAcc.email : 'Select workspace'}
@@ -91,7 +92,7 @@ export default function AccountSwitcher({ onOpenMicrosoftModal }) {
                 >
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontWeight: '600', fontSize: '0.85rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
-                      {acc.displayName || acc.company}
+                      {sanitizeDisplayName(acc.displayName || acc.company)}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       {acc.email}

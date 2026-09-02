@@ -6,24 +6,12 @@ import {
 import { useChats } from '../../hooks/useChats';
 import { useAuth } from '../../hooks/useAuth';
 import { getInitials, getAvatarColor } from '../../utils/avatarUtils';
+import { decodeHtmlEntities, cleanHtmlText, sanitizeDisplayName } from '../../utils/textUtils';
 import DocumentPreviewModal from '../../components/DocumentPreviewModal';
 import ChatConversationPane from './ChatConversationPane';
 
 // Helper to decode HTML entities like &nbsp;, &amp;, etc. for clean preview display
-export const formatChatPreview = (str) => {
-  if (!str || typeof str !== 'string') return '';
-  return str
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&apos;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-};
+export const formatChatPreview = (str) => cleanHtmlText(str);
 
 export default function ChatsPage({
   onOpenMicrosoftModal,
@@ -423,7 +411,7 @@ export default function ChatsPage({
 
             {uniqueConnectedAccounts.map((acc) => {
               const email = (acc.email || acc.username || '').toLowerCase().trim();
-              const displayName = acc.displayName || acc.name || (email ? email.split('@')[0] : 'Account');
+              const displayName = sanitizeDisplayName(acc.displayName || acc.name || (email ? email.split('@')[0] : 'Account'));
               const isSelected = selectedFilterAccount === email;
               return (
                 <button
@@ -660,7 +648,7 @@ export default function ChatsPage({
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span style={{ fontWeight: isSelected ? '700' : '600', fontSize: '0.85rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {c.participant}
+                          {sanitizeDisplayName(c.participant)}
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -707,7 +695,7 @@ export default function ChatsPage({
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
                         }}>
-                          {c.company || c.accountBadge || 'Teams'}
+                          {sanitizeDisplayName(c.company || c.accountBadge || 'Teams')}
                         </span>
 
                         {/* Hover Quick Split Button */}
