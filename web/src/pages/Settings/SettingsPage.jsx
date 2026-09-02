@@ -1,7 +1,7 @@
 import React from 'react';
-import { User, Bell, Sun, Moon, Shield, Database, Info, ChevronRight, Lock } from 'lucide-react';
+import { User, Bell, Shield, Database, Info, ChevronRight, Lock } from 'lucide-react';
 
-export default function SettingsPage({ theme, toggleTheme }) {
+export default function SettingsPage() {
   const sections = [
     {
       title: 'Account & Identity',
@@ -20,9 +20,9 @@ export default function SettingsPage({ theme, toggleTheme }) {
     },
     {
       title: 'Appearance',
-      icon: Sun,
+      icon: Shield,
       items: [
-        { label: 'Workspace Theme', description: `Currently using ${theme === 'dark' ? 'Dark' : 'Light'} theme`, action: 'toggleTheme' }
+        { label: 'Workspace Theme', description: 'Unified Dark Cyber Glassmorphic Theme (Always Active)', isPermanent: true }
       ]
     },
     {
@@ -87,15 +87,18 @@ export default function SettingsPage({ theme, toggleTheme }) {
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.description}</div>
                       </div>
 
-                      {item.action === 'toggleTheme' ? (
-                        <button
-                          onClick={toggleTheme}
-                          className="btn btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                        >
-                          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-                          <span>Toggle Theme</span>
-                        </button>
+                      {item.isPermanent ? (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(0, 242, 254, 0.12)',
+                          color: '#00f2fe',
+                          border: '1px solid rgba(0, 242, 254, 0.3)'
+                        }}>
+                          Permanent Dark
+                        </span>
                       ) : (
                         <ChevronRight size={18} color="var(--text-muted)" />
                       )}
