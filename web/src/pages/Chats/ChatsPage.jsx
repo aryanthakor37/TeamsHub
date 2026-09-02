@@ -793,7 +793,7 @@ export default function ChatsPage({
                     {/* Chat Text Details */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                        <span style={{ fontWeight: isSelected ? '700' : '600', fontSize: '0.85rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: isAnyPaneSelected ? '700' : '600', fontSize: '0.85rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {sanitizeDisplayName(c.participant)}
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
