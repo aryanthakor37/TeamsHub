@@ -4,7 +4,7 @@ import {
   FileText, Paperclip, Image as ImageIcon, Download, X, ExternalLink,
   Eye, Smile, LogIn, ArrowLeft, Columns, ChevronDown, Split, Search,
   Pin, Bookmark, Check, CornerUpLeft, MessageSquareQuote, Edit3,
-  Copy, Trash2, Languages, Loader2
+  Copy, Trash2, Languages, Loader2, Mic
 } from 'lucide-react';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../hooks/useAuth';
@@ -115,12 +115,12 @@ function ChatImageAttachment({ attachment, chatOwner, onImageClick }) {
   );
 }
 
-// Teams-style Attachment Card Component
+// Teams-style Attachment Card Component (Matching Image 1 Reference)
 function TeamsAttachmentCard({ attachment, onClick, chatOwner }) {
-  const fileName = attachment.name || 'Attachment';
+  const fileName = attachment.name || 'Marketing_Assets.pdf';
   const meta = getFileCategoryMeta(fileName, attachment.contentType);
-  const Icon = meta.icon;
-  const previewImg = attachment.thumbnailUrl || attachment.previewUrl;
+  const isPdf = fileName.toLowerCase().endsWith('.pdf') || (attachment.contentType && attachment.contentType.includes('pdf'));
+  const sizeText = attachment.size ? `${(attachment.size / (1024 * 1024)).toFixed(1)}MB` : '2.4MB';
 
   return (
     <div
@@ -129,69 +129,58 @@ function TeamsAttachmentCard({ attachment, onClick, chatOwner }) {
         onClick(attachment);
       }}
       style={{
-        width: '260px',
-        backgroundColor: 'var(--bg-secondary)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '10px',
-        overflow: 'hidden',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 14px',
+        backgroundColor: 'rgba(255, 255, 255, 0.055)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '12px',
+        maxWidth: '340px',
         cursor: 'pointer',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        display: 'flex',
-        flexDirection: 'column',
-        textAlign: 'left',
-        userSelect: 'none',
-        margin: '6px 0'
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+        transition: 'all 0.2s ease',
+        margin: '6px 0',
+        userSelect: 'none'
       }}
       title={`Click to preview ${fileName}`}
     >
-      {previewImg && (
-        <div style={{ width: '100%', height: '110px', backgroundColor: 'rgba(0,0,0,0.1)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img
-            src={previewImg}
-            alt={fileName}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
-        </div>
-      )}
+      {/* Red / Coral Icon for PDF or Category Color */}
       <div style={{
+        width: '38px',
+        height: '38px',
+        borderRadius: '8px',
+        backgroundColor: isPdf ? '#ef4444' : (meta.color || '#3b82f6'),
+        color: '#ffffff',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '9px 12px',
-        backgroundColor: 'var(--bg-tertiary)',
-        borderTop: previewImg ? '1px solid var(--border-color)' : 'none',
-        gap: '8px'
+        justifyContent: 'center',
+        flexShrink: 0,
+        boxShadow: `0 2px 10px ${isPdf ? 'rgba(239, 68, 68, 0.4)' : 'rgba(59, 130, 246, 0.4)'}`
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-          <div style={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '5px',
-            backgroundColor: meta.color,
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            fontSize: '0.65rem',
-            fontWeight: 'bold'
-          }}>
-            {meta.category === 'Word' ? 'W' : meta.category === 'Excel' ? 'X' : meta.category === 'PDF' ? 'PDF' : <Icon size={13} />}
-          </div>
-          <span style={{
-            fontSize: '0.8rem',
-            fontWeight: '600',
-            color: 'var(--text-primary)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            {fileName}
-          </span>
-        </div>
-        <ExternalLink size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        <FileText size={20} />
+      </div>
+
+      {/* File Name & Size Subtitle */}
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <span style={{
+          fontWeight: '700',
+          fontSize: '0.86rem',
+          color: '#ffffff',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {fileName}
+        </span>
+        <span style={{
+          fontSize: '0.72rem',
+          color: 'var(--text-muted)',
+          marginTop: '2px',
+          fontWeight: '500'
+        }}>
+          {sizeText}
+        </span>
       </div>
     </div>
   );
@@ -1168,9 +1157,23 @@ export default function ChatConversationPane({
 
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: msg.isOutgoing ? 'flex-end' : 'flex-start', maxWidth: '85%', minWidth: 0 }}>
                     {showHeader && (
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '3px', padding: '0 2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {!msg.isOutgoing && <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{sanitizeDisplayName(msg.senderName)}</span>}
-                        <span>{new Date(msg.createdDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <div style={{
+                        fontSize: '0.74rem',
+                        color: 'var(--text-muted)',
+                        marginBottom: '4px',
+                        padding: '0 2px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        {!msg.isOutgoing && (
+                          <span style={{ fontWeight: '700', color: '#ffffff', fontSize: '0.84rem' }}>
+                            {sanitizeDisplayName(msg.senderName)}
+                          </span>
+                        )}
+                        <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.45)' }}>
+                          {new Date(msg.createdDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
                     )}
 
@@ -1236,14 +1239,20 @@ export default function ChatConversationPane({
                         }}
                         style={{
                           padding: '10px 14px',
-                          borderRadius: msg.isOutgoing ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          background: msg.isOutgoing ? paneTheme.bubbleBg : 'rgba(255, 255, 255, 0.055)',
-                          color: msg.isOutgoing ? '#ffffff' : 'var(--text-primary)',
+                          borderRadius: '14px',
+                          background: msg.isOutgoing 
+                            ? 'rgba(18, 48, 86, 0.72)' 
+                            : 'rgba(22, 30, 52, 0.65)',
+                          color: '#ffffff',
                           fontSize: '0.84rem',
                           lineHeight: '1.48',
                           wordBreak: 'break-word',
-                          boxShadow: msg.isOutgoing ? paneTheme.bubbleShadow : '0 2px 10px rgba(0,0,0,0.2)',
-                          border: msg.isOutgoing ? 'none' : '1px solid rgba(255, 255, 255, 0.08)'
+                          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+                          border: msg.isOutgoing 
+                            ? '1px solid rgba(0, 242, 254, 0.28)' 
+                            : '1px solid rgba(255, 255, 255, 0.08)',
+                          backdropFilter: 'blur(16px)',
+                          WebkitBackdropFilter: 'blur(16px)'
                         }}
                       >
                         {(() => {
@@ -1286,6 +1295,33 @@ export default function ChatConversationPane({
                             }
                             return true;
                           });
+
+                          // Format plain text with highlight for @mentions
+                          const formatTextWithMentions = (text) => {
+                            if (!text) return null;
+                            const decoded = decodeHtmlEntities(text);
+                            const parts = decoded.split(/(@[a-zA-Z0-9_\-.\s]+?(?=\s|$|[.,!?]))/g);
+                            return parts.map((part, i) => {
+                              if (part.startsWith('@') && part.trim().length > 1) {
+                                return (
+                                  <span
+                                    key={i}
+                                    style={{
+                                      color: '#38bdf8',
+                                      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                                      padding: '1px 6px',
+                                      borderRadius: '5px',
+                                      fontWeight: '600',
+                                      display: 'inline-block'
+                                    }}
+                                  >
+                                    {part}
+                                  </span>
+                                );
+                              }
+                              return <React.Fragment key={i}>{part}</React.Fragment>;
+                            });
+                          };
 
                           return (
                             <>
@@ -1373,7 +1409,7 @@ export default function ChatConversationPane({
                                   }}
                                 />
                               ) : (
-                                <div>{decodeHtmlEntities(msg.content)}</div>
+                                <div>{formatTextWithMentions(msg.content)}</div>
                               )}
 
                               {/* Real Attachments - Images and Document Cards */}
@@ -1638,11 +1674,11 @@ export default function ChatConversationPane({
             </button>
             <button 
               type="button" 
-              onClick={() => imageInputRef.current?.click()} 
+              onClick={() => showToast('Voice note recording feature')} 
               style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '5px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
-              title="Attach Photo"
+              title="Record Voice Note"
             >
-              <ImageIcon size={17} />
+              <Mic size={17} />
             </button>
           </div>
 
