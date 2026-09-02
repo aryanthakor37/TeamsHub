@@ -1475,6 +1475,9 @@ export default function ChatConversationPane({
                                         '<span class="teams-mention-tag" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 1px 6px; border-radius: 5px; font-weight: 700; display: inline-block;">$1</span>'
                                       );
 
+                                      // 4. Remove intrusive hardcoded dark background styles from Teams desktop dark theme
+                                      processed = processed.replace(/style=["'][^"']*(?:background|background-color):\s*(?:rgb\(0,\s*0,\s*0\)|#000000|#1[0-9a-f]{5}|#2[0-9a-f]{5}|#3[0-9a-f]{5}|black)[^"']*["']/gi, '');
+
                                       return processed;
                                     })()
                                   }}
