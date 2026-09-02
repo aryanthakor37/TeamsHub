@@ -179,45 +179,7 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
           })}
         </div>
 
-        {/* Notification Bell with Badge */}
-        <button
-          onClick={() => setShowNotificationMenu(!showNotificationMenu)}
-          style={{
-            position: 'relative',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '6px',
-            color: 'var(--text-secondary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          title="Notifications"
-        >
-          <Bell size={18} />
-          {unreadTotal > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '2px',
-              right: '2px',
-              minWidth: '15px',
-              height: '15px',
-              borderRadius: '50%',
-              backgroundColor: '#ef4444',
-              color: '#ffffff',
-              fontSize: '0.62rem',
-              fontWeight: '800',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 2px',
-              boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)'
-            }}>
-              {unreadTotal}
-            </span>
-          )}
-        </button>
+
 
         {/* Live Status Pill */}
         <div style={{
