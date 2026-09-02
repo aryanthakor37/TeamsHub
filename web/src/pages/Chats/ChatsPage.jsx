@@ -968,13 +968,13 @@ export default function ChatsPage({
               </div>
             </div>
 
-            {/* Dynamic Multi-Pane Grid / Flex Container */}
+            {/* Dynamic Multi-Pane Grid / Flex Container with Glassmorphism & Neon Glow Pills */}
             <div style={{
               flex: 1,
               overflow: 'hidden',
-              padding: isSplitActive ? '8px' : '0',
+              padding: isSplitActive ? '16px 12px 12px 12px' : '0',
               display: 'grid',
-              gap: isSplitActive ? '8px' : '0',
+              gap: isSplitActive ? '14px' : '0',
               gridTemplateColumns: layoutMode === 'single'
                 ? '1fr'
                 : layoutMode === 'triple'
@@ -985,144 +985,174 @@ export default function ChatsPage({
                 : '1fr',
               height: 'calc(100% - 41px)'
             }}>
-              {/* Primary Pane 1 (Indigo) */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0,
-                minHeight: 0,
-                height: '100%',
-                backgroundColor: 'var(--bg-primary)',
-                borderRadius: isSplitActive ? '12px' : '0',
-                border: isSplitActive ? '1px solid var(--border-color)' : 'none',
-                borderTop: isSplitActive ? '3px solid #4f46e5' : 'none',
-                boxShadow: isSplitActive ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
-                overflow: 'hidden'
-              }}>
-                <ChatConversationPane
-                  chat={activeChat}
-                  allChats={chats}
-                  onSelectChat={(id, chatObj) => {
-                    setActiveChatId(id);
-                    if (chatObj) setActiveChatKey(getChatUniqueKey(chatObj));
-                  }}
-                  isSplit={isSplitActive}
-                  onToggleSplit={handleToggleSplit}
-                  onOpenMicrosoftModal={onOpenMicrosoftModal}
-                  onPreviewDoc={(doc) => setPreviewDocModal(doc)}
-                  bumpChatToTop={bumpChatToTop}
-                  onBack={() => setActiveChatId(null)}
-                  paneTitle="Primary Chat"
-                  paneIndex={1}
-                />
+              {/* Primary Pane 1 (Cyan / Aqua Neon Pill) */}
+              <div
+                className={isSplitActive ? 'modern-floating-pane' : ''}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minWidth: 0,
+                  minHeight: 0,
+                  height: '100%',
+                  backgroundColor: 'var(--bg-primary)',
+                  borderRadius: isSplitActive ? '18px' : '0',
+                  border: isSplitActive ? '1px solid rgba(255, 255, 255, 0.09)' : 'none',
+                  position: 'relative',
+                  overflow: 'visible'
+                }}
+              >
+                {isSplitActive && (
+                  <div className="neon-floating-badge badge-pane-1">
+                    ⚡ PANE 1 • {sanitizeDisplayName(activeChat?.participant?.split(' ')[0] || 'PRIMARY')}
+                  </div>
+                )}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: isSplitActive ? '18px' : '0', overflow: 'hidden' }}>
+                  <ChatConversationPane
+                    chat={activeChat}
+                    allChats={chats}
+                    onSelectChat={(id, chatObj) => {
+                      setActiveChatId(id);
+                      if (chatObj) setActiveChatKey(getChatUniqueKey(chatObj));
+                    }}
+                    isSplit={isSplitActive}
+                    onToggleSplit={handleToggleSplit}
+                    onOpenMicrosoftModal={onOpenMicrosoftModal}
+                    onPreviewDoc={(doc) => setPreviewDocModal(doc)}
+                    bumpChatToTop={bumpChatToTop}
+                    onBack={() => setActiveChatId(null)}
+                    paneTitle="Primary Chat"
+                    paneIndex={1}
+                  />
+                </div>
               </div>
 
-              {/* Secondary Pane 2 (Sky Blue) */}
+              {/* Secondary Pane 2 (Mint / Emerald Neon Pill) */}
               {isSplitActive && splitChat && (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  minWidth: 0,
-                  minHeight: 0,
-                  height: '100%',
-                  backgroundColor: 'var(--bg-primary)',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-color)',
-                  borderTop: '3px solid #0284c7',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                  overflow: 'hidden'
-                }}>
-                  <ChatConversationPane
-                    chat={splitChat}
-                    allChats={chats}
-                    onSelectChat={(id, chatObj) => {
-                      setSplitChatId(id);
-                      if (chatObj) setSplitChatKey(getChatUniqueKey(chatObj));
-                    }}
-                    isSplit={true}
-                    isSplitSecondPane={true}
-                    onCloseSplit={() => {
-                      if (layoutMode === 'quad') setLayoutMode('triple');
-                      else if (layoutMode === 'triple') setLayoutMode('dual');
-                      else setLayout('single');
-                    }}
-                    onOpenMicrosoftModal={onOpenMicrosoftModal}
-                    onPreviewDoc={(doc) => setPreviewDocModal(doc)}
-                    bumpChatToTop={bumpChatToTop}
-                    paneTitle="Pane 2"
-                    paneIndex={2}
-                  />
+                <div
+                  className="modern-floating-pane"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minWidth: 0,
+                    minHeight: 0,
+                    height: '100%',
+                    backgroundColor: 'var(--bg-primary)',
+                    borderRadius: '18px',
+                    border: '1px solid rgba(255, 255, 255, 0.09)',
+                    position: 'relative',
+                    overflow: 'visible'
+                  }}
+                >
+                  <div className="neon-floating-badge badge-pane-2">
+                    ⚡ PANE 2 • {sanitizeDisplayName(splitChat?.participant?.split(' ')[0] || 'CLIENT B')}
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '18px', overflow: 'hidden' }}>
+                    <ChatConversationPane
+                      chat={splitChat}
+                      allChats={chats}
+                      onSelectChat={(id, chatObj) => {
+                        setSplitChatId(id);
+                        if (chatObj) setSplitChatKey(getChatUniqueKey(chatObj));
+                      }}
+                      isSplit={true}
+                      isSplitSecondPane={true}
+                      onCloseSplit={() => {
+                        if (layoutMode === 'quad') setLayoutMode('triple');
+                        else if (layoutMode === 'triple') setLayoutMode('dual');
+                        else setLayout('single');
+                      }}
+                      onOpenMicrosoftModal={onOpenMicrosoftModal}
+                      onPreviewDoc={(doc) => setPreviewDocModal(doc)}
+                      bumpChatToTop={bumpChatToTop}
+                      paneTitle="Pane 2"
+                      paneIndex={2}
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* Third Pane 3 (Emerald Green) */}
+              {/* Third Pane 3 (Violet / Pink Neon Pill) */}
               {(layoutMode === 'triple' || layoutMode === 'quad') && pane3Chat && (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  minWidth: 0,
-                  minHeight: 0,
-                  height: '100%',
-                  backgroundColor: 'var(--bg-primary)',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-color)',
-                  borderTop: '3px solid #10b981',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                  overflow: 'hidden'
-                }}>
-                  <ChatConversationPane
-                    chat={pane3Chat}
-                    allChats={chats}
-                    onSelectChat={(id, chatObj) => {
-                      setPane3ChatId(id);
-                      if (chatObj) setPane3ChatKey(getChatUniqueKey(chatObj));
-                    }}
-                    isSplit={true}
-                    isSplitSecondPane={true}
-                    onCloseSplit={() => {
-                      if (layoutMode === 'quad') setLayoutMode('triple');
-                      else setLayoutMode('dual');
-                    }}
-                    onOpenMicrosoftModal={onOpenMicrosoftModal}
-                    onPreviewDoc={(doc) => setPreviewDocModal(doc)}
-                    bumpChatToTop={bumpChatToTop}
-                    paneTitle="Pane 3"
-                    paneIndex={3}
-                  />
+                <div
+                  className="modern-floating-pane"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minWidth: 0,
+                    minHeight: 0,
+                    height: '100%',
+                    backgroundColor: 'var(--bg-primary)',
+                    borderRadius: '18px',
+                    border: '1px solid rgba(255, 255, 255, 0.09)',
+                    position: 'relative',
+                    overflow: 'visible'
+                  }}
+                >
+                  <div className="neon-floating-badge badge-pane-3">
+                    ⚡ PANE 3 • {sanitizeDisplayName(pane3Chat?.participant?.split(' ')[0] || 'INTERNAL DEV')}
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '18px', overflow: 'hidden' }}>
+                    <ChatConversationPane
+                      chat={pane3Chat}
+                      allChats={chats}
+                      onSelectChat={(id, chatObj) => {
+                        setPane3ChatId(id);
+                        if (chatObj) setPane3ChatKey(getChatUniqueKey(chatObj));
+                      }}
+                      isSplit={true}
+                      isSplitSecondPane={true}
+                      onCloseSplit={() => {
+                        if (layoutMode === 'quad') setLayoutMode('triple');
+                        else setLayoutMode('dual');
+                      }}
+                      onOpenMicrosoftModal={onOpenMicrosoftModal}
+                      onPreviewDoc={(doc) => setPreviewDocModal(doc)}
+                      bumpChatToTop={bumpChatToTop}
+                      paneTitle="Pane 3"
+                      paneIndex={3}
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* Fourth Pane 4 (Violet) */}
+              {/* Fourth Pane 4 (Sunset Gold Neon Pill) */}
               {layoutMode === 'quad' && pane4Chat && (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  minWidth: 0,
-                  minHeight: 0,
-                  height: '100%',
-                  backgroundColor: 'var(--bg-primary)',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-color)',
-                  borderTop: '3px solid #8b5cf6',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                  overflow: 'hidden'
-                }}>
-                  <ChatConversationPane
-                    chat={pane4Chat}
-                    allChats={chats}
-                    onSelectChat={(id, chatObj) => {
-                      setPane4ChatId(id);
-                      if (chatObj) setPane4ChatKey(getChatUniqueKey(chatObj));
-                    }}
-                    isSplit={true}
-                    isSplitSecondPane={true}
-                    onCloseSplit={() => setLayoutMode('triple')}
-                    onOpenMicrosoftModal={onOpenMicrosoftModal}
-                    onPreviewDoc={(doc) => setPreviewDocModal(doc)}
-                    bumpChatToTop={bumpChatToTop}
-                    paneTitle="Pane 4"
-                    paneIndex={4}
-                  />
+                <div
+                  className="modern-floating-pane"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minWidth: 0,
+                    minHeight: 0,
+                    height: '100%',
+                    backgroundColor: 'var(--bg-primary)',
+                    borderRadius: '18px',
+                    border: '1px solid rgba(255, 255, 255, 0.09)',
+                    position: 'relative',
+                    overflow: 'visible'
+                  }}
+                >
+                  <div className="neon-floating-badge badge-pane-4">
+                    ⚡ PANE 4 • {sanitizeDisplayName(pane4Chat?.participant?.split(' ')[0] || 'MANAGEMENT')}
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '18px', overflow: 'hidden' }}>
+                    <ChatConversationPane
+                      chat={pane4Chat}
+                      allChats={chats}
+                      onSelectChat={(id, chatObj) => {
+                        setPane4ChatId(id);
+                        if (chatObj) setPane4ChatKey(getChatUniqueKey(chatObj));
+                      }}
+                      isSplit={true}
+                      isSplitSecondPane={true}
+                      onCloseSplit={() => setLayoutMode('triple')}
+                      onOpenMicrosoftModal={onOpenMicrosoftModal}
+                      onPreviewDoc={(doc) => setPreviewDocModal(doc)}
+                      bumpChatToTop={bumpChatToTop}
+                      paneTitle="Pane 4"
+                      paneIndex={4}
+                    />
+                  </div>
                 </div>
               )}
             </div>
