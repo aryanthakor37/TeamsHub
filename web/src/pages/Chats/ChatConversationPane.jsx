@@ -557,59 +557,59 @@ export default function ChatConversationPane({
     switch (index) {
       case 2:
         return {
-          accentColor: '#0284c7', // Ocean Cyan / Sky
-          accentHover: '#0369a1',
-          accentLight: 'rgba(2, 132, 199, 0.12)',
-          bubbleBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
-          bubbleShadow: '0 3px 10px rgba(2, 132, 199, 0.35)',
-          headerBadgeBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+          accentColor: '#00f2fe',
+          accentHover: '#0891b2',
+          accentLight: 'rgba(0, 242, 254, 0.15)',
+          bubbleBg: 'linear-gradient(135deg, #00b4db 0%, #0083b0 100%)',
+          bubbleShadow: '0 4px 14px rgba(0, 180, 219, 0.4)',
+          headerBadgeBg: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)',
           headerBadgeText: '#ffffff',
-          pillText: '2️⃣ PANE 2 • DUAL',
-          glowBorder: '1px solid rgba(6, 182, 212, 0.3)',
-          headerBgTint: 'rgba(2, 132, 199, 0.04)',
-          sendBtnBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)'
+          pillText: '2️⃣ PANE 2 • CLIENT B',
+          glowBorder: '1px solid rgba(0, 242, 254, 0.4)',
+          headerBgTint: 'rgba(0, 242, 254, 0.05)',
+          sendBtnBg: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)'
         };
       case 3:
         return {
-          accentColor: '#10b981', // Emerald Green
-          accentHover: '#059669',
-          accentLight: 'rgba(16, 185, 129, 0.12)',
-          bubbleBg: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
-          bubbleShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
-          headerBadgeBg: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
+          accentColor: '#ec4899',
+          accentHover: '#db2777',
+          accentLight: 'rgba(236, 72, 153, 0.15)',
+          bubbleBg: 'linear-gradient(135deg, #ec4899 0%, #d946ef 100%)',
+          bubbleShadow: '0 4px 14px rgba(236, 72, 153, 0.4)',
+          headerBadgeBg: 'linear-gradient(135deg, #ec4899 0%, #d946ef 100%)',
           headerBadgeText: '#ffffff',
-          pillText: '3️⃣ PANE 3 • TRIPLE',
-          glowBorder: '1px solid rgba(16, 185, 129, 0.3)',
-          headerBgTint: 'rgba(16, 185, 129, 0.04)',
-          sendBtnBg: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)'
+          pillText: '3️⃣ PANE 3 • INTERNAL DEV',
+          glowBorder: '1px solid rgba(236, 72, 153, 0.4)',
+          headerBgTint: 'rgba(236, 72, 153, 0.05)',
+          sendBtnBg: 'linear-gradient(135deg, #ec4899 0%, #d946ef 100%)'
         };
       case 4:
         return {
-          accentColor: '#8b5cf6', // Violet / Purple
-          accentHover: '#7c3aed',
-          accentLight: 'rgba(139, 92, 246, 0.12)',
-          bubbleBg: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-          bubbleShadow: '0 3px 10px rgba(139, 92, 246, 0.35)',
-          headerBadgeBg: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+          accentColor: '#f59e0b',
+          accentHover: '#d97706',
+          accentLight: 'rgba(245, 158, 11, 0.15)',
+          bubbleBg: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+          bubbleShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+          headerBadgeBg: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
           headerBadgeText: '#ffffff',
-          pillText: '4️⃣ PANE 4 • QUAD',
-          glowBorder: '1px solid rgba(139, 92, 246, 0.3)',
-          headerBgTint: 'rgba(139, 92, 246, 0.04)',
-          sendBtnBg: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)'
+          pillText: '4️⃣ PANE 4 • MANAGEMENT',
+          glowBorder: '1px solid rgba(245, 158, 11, 0.4)',
+          headerBgTint: 'rgba(245, 158, 11, 0.05)',
+          sendBtnBg: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)'
         };
       case 1:
       default:
         return {
-          accentColor: '#4f46e5', // Indigo / Purple
-          accentHover: '#4338ca',
-          accentLight: 'rgba(79, 70, 229, 0.12)',
+          accentColor: '#6366f1',
+          accentHover: '#4f46e5',
+          accentLight: 'rgba(99, 102, 241, 0.15)',
           bubbleBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-          bubbleShadow: '0 3px 10px rgba(79, 70, 229, 0.32)',
-          headerBadgeBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+          bubbleShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+          headerBadgeBg: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
           headerBadgeText: '#ffffff',
           pillText: '1️⃣ PANE 1 • PRIMARY',
-          glowBorder: '1px solid rgba(99, 102, 241, 0.3)',
-          headerBgTint: 'rgba(79, 70, 229, 0.04)',
+          glowBorder: '1px solid rgba(99, 102, 241, 0.4)',
+          headerBgTint: 'rgba(99, 102, 241, 0.05)',
           sendBtnBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
         };
     }
@@ -1106,7 +1106,7 @@ export default function ChatConversationPane({
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: msg.isOutgoing ? 'flex-end' : 'flex-start', maxWidth: '85%', minWidth: 0 }}>
                     {showHeader && (
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '3px', padding: '0 2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {!msg.isOutgoing && <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{msg.senderName}</span>}
+                        {!msg.isOutgoing && <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{sanitizeDisplayName(msg.senderName)}</span>}
                         <span>{new Date(msg.createdDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     )}
