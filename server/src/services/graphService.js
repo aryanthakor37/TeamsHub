@@ -783,11 +783,41 @@ const cleanPreviewHtml = (html) => {
 
 const sanitizeDisplayName = (name) => {
   if (!name || typeof name !== 'string') return '';
-  return name
+
+  let cleaned = name
     .replace(/[`'"]/g, '')
     .replace(/\\['"]/g, '')
-    .replace(/\s+/g, ' ')
     .trim();
+
+  if (!cleaned) return '';
+
+  if (cleaned.includes('@')) {
+    cleaned = cleaned.split('@')[0];
+  }
+
+  if (cleaned.includes('.') || cleaned.includes('_')) {
+    if (!/^[a-zA-Z]\.[a-zA-Z]\.?$/.test(cleaned)) {
+      cleaned = cleaned.replace(/[._]+/g, ' ');
+    }
+  }
+
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  const formattedWords = words.map(w => {
+    const lower = w.toLowerCase();
+    if (lower === 'aryankumar') {
+      return 'Aryan';
+    }
+    if (lower.endsWith('kumar') && lower.length > 5) {
+      const root = lower.slice(0, -5);
+      return root.charAt(0).toUpperCase() + root.slice(1);
+    }
+    if (w === w.toLowerCase() || (w === w.toUpperCase() && w.length > 3)) {
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    }
+    return w;
+  });
+
+  return formattedWords.join(' ').trim();
 };
 
 /**

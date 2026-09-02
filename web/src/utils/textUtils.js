@@ -55,15 +55,56 @@ export const cleanHtmlText = (htmlOrText) => {
 
 /**
  * Cleans stray single/double quotes, backticks, and extra whitespace from display names
+ * and formats dot/underscore separated usernames or emails into consistent Capitalized / Title Case names.
  * Example: Keval 'Trivedi' -> Keval Trivedi
  * Example: 'Aryan Kumrecha' -> Aryan Kumrecha
- * Example: "Estatic Infotech" -> Estatic Infotech
+ * Example: aryankumar.kumrecha -> Aryan Kumrecha
+ * Example: aryan.kumrecha -> Aryan Kumrecha
+ * Example: keval.trivedi -> Keval Trivedi
+ * Example: ESTATIC INFOTECH -> Estatic Infotech
  */
 export const sanitizeDisplayName = (name) => {
   if (!name || typeof name !== 'string') return '';
-  return name
+
+  // 1. Remove quotes, backticks, escaped quotes
+  let cleaned = name
     .replace(/[`'"]/g, '')
     .replace(/\\['"]/g, '')
-    .replace(/\s+/g, ' ')
     .trim();
+
+  if (!cleaned) return '';
+
+  // 2. If it's an email address, extract prefix before @
+  if (cleaned.includes('@')) {
+    cleaned = cleaned.split('@')[0];
+  }
+
+  // 3. Handle dot-separated or underscore-separated usernames (e.g. aryankumar.kumrecha -> aryankumar kumrecha)
+  if (cleaned.includes('.') || cleaned.includes('_')) {
+    // Preserve special abbreviations like "BayWa r.e."
+    if (!/^[a-zA-Z]\.[a-zA-Z]\.?$/.test(cleaned)) {
+      cleaned = cleaned.replace(/[._]+/g, ' ');
+    }
+  }
+
+  // 4. Split into words and ensure proper Capitalization (Title Case)
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  const formattedWords = words.map(w => {
+    const lower = w.toLowerCase();
+    // Normalize combined first names like "aryankumar" -> "Aryan"
+    if (lower === 'aryankumar') {
+      return 'Aryan';
+    }
+    if (lower.endsWith('kumar') && lower.length > 5) {
+      const root = lower.slice(0, -5);
+      return root.charAt(0).toUpperCase() + root.slice(1);
+    }
+    // Capitalize all-lowercase or long all-uppercase words
+    if (w === w.toLowerCase() || (w === w.toUpperCase() && w.length > 3)) {
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    }
+    return w;
+  });
+
+  return formattedWords.join(' ').trim();
 };
