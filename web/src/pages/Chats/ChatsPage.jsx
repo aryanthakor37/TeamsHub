@@ -976,9 +976,9 @@ export default function ChatsPage({
             <div style={{
               flex: 1,
               overflow: 'hidden',
-              padding: isSplitActive ? '16px 12px 12px 12px' : '0',
+              padding: '16px 14px 14px 14px',
               display: 'grid',
-              gap: isSplitActive ? '14px' : '0',
+              gap: '16px',
               gridTemplateColumns: layoutMode === 'single'
                 ? '1fr'
                 : layoutMode === 'triple'
@@ -991,28 +991,26 @@ export default function ChatsPage({
             }}>
               {/* Primary Pane 1 (Cyan / Aqua Neon Pill) */}
               <div
-                className={isSplitActive ? 'modern-floating-pane' : ''}
+                className="modern-floating-pane"
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   minWidth: 0,
                   minHeight: 0,
                   height: '100%',
-                  backgroundColor: isSplitActive ? 'rgba(12, 17, 30, 0.68)' : 'rgba(12, 17, 30, 0.75)',
-                  backdropFilter: 'blur(30px)',
-                  WebkitBackdropFilter: 'blur(30px)',
-                  borderRadius: isSplitActive ? '20px' : '0',
-                  border: isSplitActive ? '1px solid rgba(255, 255, 255, 0.09)' : 'none',
+                  backgroundColor: 'rgba(16, 22, 38, 0.45)',
+                  backdropFilter: 'blur(28px)',
+                  WebkitBackdropFilter: 'blur(28px)',
+                  borderRadius: '22px',
+                  border: '1px solid rgba(255, 255, 255, 0.09)',
                   position: 'relative',
                   overflow: 'visible'
                 }}
               >
-                {isSplitActive && (
-                  <div className="neon-floating-badge badge-pane-1">
-                    ⚡ PANE 1 • {sanitizeDisplayName(activeChat?.participant?.split(' ')[0] || 'PRIMARY')}
-                  </div>
-                )}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: isSplitActive ? '20px' : '0', overflow: 'hidden' }}>
+                <div className="neon-floating-badge badge-pane-1">
+                  ⚡ {isSplitActive ? `PANE 1 • ${sanitizeDisplayName(activeChat?.participant?.split(' ')[0] || 'PRIMARY')}` : `LIVE CHAT • ${sanitizeDisplayName(activeChat?.participant || 'ACTIVE')}`}
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '22px', overflow: 'hidden' }}>
                   <ChatConversationPane
                     chat={activeChat}
                     allChats={chats}
