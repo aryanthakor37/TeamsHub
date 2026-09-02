@@ -553,32 +553,68 @@ export default function ChatConversationPane({
     e.target.value = '';
   };
 
-  const isPane2 = paneIndex === 2;
-  const paneTheme = isPane2 ? {
-    accentColor: '#0284c7', // Ocean Cyan / Sky
-    accentHover: '#0369a1',
-    accentLight: 'rgba(2, 132, 199, 0.12)',
-    bubbleBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
-    bubbleShadow: '0 3px 10px rgba(2, 132, 199, 0.35)',
-    headerBadgeBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
-    headerBadgeText: '#ffffff',
-    pillText: '2️⃣ PANE 2 • DUAL',
-    glowBorder: '1px solid rgba(6, 182, 212, 0.3)',
-    headerBgTint: 'rgba(2, 132, 199, 0.04)',
-    sendBtnBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)'
-  } : {
-    accentColor: '#4f46e5', // Indigo / Purple
-    accentHover: '#4338ca',
-    accentLight: 'rgba(79, 70, 229, 0.12)',
-    bubbleBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-    bubbleShadow: '0 3px 10px rgba(79, 70, 229, 0.32)',
-    headerBadgeBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-    headerBadgeText: '#ffffff',
-    pillText: '1️⃣ PANE 1 • PRIMARY',
-    glowBorder: '1px solid rgba(99, 102, 241, 0.3)',
-    headerBgTint: 'rgba(79, 70, 229, 0.04)',
-    sendBtnBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
+  const getPaneTheme = (index) => {
+    switch (index) {
+      case 2:
+        return {
+          accentColor: '#0284c7', // Ocean Cyan / Sky
+          accentHover: '#0369a1',
+          accentLight: 'rgba(2, 132, 199, 0.12)',
+          bubbleBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+          bubbleShadow: '0 3px 10px rgba(2, 132, 199, 0.35)',
+          headerBadgeBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+          headerBadgeText: '#ffffff',
+          pillText: '2️⃣ PANE 2 • DUAL',
+          glowBorder: '1px solid rgba(6, 182, 212, 0.3)',
+          headerBgTint: 'rgba(2, 132, 199, 0.04)',
+          sendBtnBg: 'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)'
+        };
+      case 3:
+        return {
+          accentColor: '#10b981', // Emerald Green
+          accentHover: '#059669',
+          accentLight: 'rgba(16, 185, 129, 0.12)',
+          bubbleBg: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
+          bubbleShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+          headerBadgeBg: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
+          headerBadgeText: '#ffffff',
+          pillText: '3️⃣ PANE 3 • TRIPLE',
+          glowBorder: '1px solid rgba(16, 185, 129, 0.3)',
+          headerBgTint: 'rgba(16, 185, 129, 0.04)',
+          sendBtnBg: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)'
+        };
+      case 4:
+        return {
+          accentColor: '#8b5cf6', // Violet / Purple
+          accentHover: '#7c3aed',
+          accentLight: 'rgba(139, 92, 246, 0.12)',
+          bubbleBg: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+          bubbleShadow: '0 3px 10px rgba(139, 92, 246, 0.35)',
+          headerBadgeBg: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+          headerBadgeText: '#ffffff',
+          pillText: '4️⃣ PANE 4 • QUAD',
+          glowBorder: '1px solid rgba(139, 92, 246, 0.3)',
+          headerBgTint: 'rgba(139, 92, 246, 0.04)',
+          sendBtnBg: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)'
+        };
+      case 1:
+      default:
+        return {
+          accentColor: '#4f46e5', // Indigo / Purple
+          accentHover: '#4338ca',
+          accentLight: 'rgba(79, 70, 229, 0.12)',
+          bubbleBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+          bubbleShadow: '0 3px 10px rgba(79, 70, 229, 0.32)',
+          headerBadgeBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+          headerBadgeText: '#ffffff',
+          pillText: '1️⃣ PANE 1 • PRIMARY',
+          glowBorder: '1px solid rgba(99, 102, 241, 0.3)',
+          headerBgTint: 'rgba(79, 70, 229, 0.04)',
+          sendBtnBg: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)'
+        };
+    }
   };
+  const paneTheme = getPaneTheme(paneIndex || 1);
 
   if (!chat) {
     return (
@@ -937,7 +973,7 @@ export default function ChatConversationPane({
               <Columns size={14} style={{ color: 'var(--accent-primary)' }} />
               <span>Split View</span>
             </button>
-          ) : isSplitSecondPane && onCloseSplit ? (
+          ) : onCloseSplit ? (
             <button
               className="tab-pill-3d"
               onClick={onCloseSplit}
@@ -953,7 +989,7 @@ export default function ChatConversationPane({
                 justifyContent: 'center',
                 color: 'var(--text-secondary)'
               }}
-              title="Close Split View"
+              title={`Close Pane ${paneIndex || 2}`}
             >
               <X size={15} />
             </button>

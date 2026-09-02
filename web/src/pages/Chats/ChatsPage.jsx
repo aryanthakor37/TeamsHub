@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Search, RefreshCw, MessageSquare, AlertCircle, Sparkles, LogIn,
-  ArrowLeft, Columns, Split, ExternalLink, PanelLeftClose, PanelLeftOpen
+  ArrowLeft, Columns, Split, ExternalLink, PanelLeftClose, PanelLeftOpen,
+  LayoutGrid, Grid2X2, Square
 } from 'lucide-react';
 import { useChats } from '../../hooks/useChats';
 import { useAuth } from '../../hooks/useAuth';
@@ -25,9 +26,17 @@ export default function ChatsPage({
   const { chats, loading: chatsLoading, refreshing, refresh, bumpChatToTop, markChatAsRead } = useChats();
   const [activeChatId, setActiveChatId] = useState(initialChatId || null);
   const [activeChatKey, setActiveChatKey] = useState(null);
+
+  // Multi-Pane Workspace States: 'single' | 'dual' | 'triple' | 'quad'
+  const [layoutMode, setLayoutMode] = useState('single');
   const [splitChatId, setSplitChatId] = useState(null);
   const [splitChatKey, setSplitChatKey] = useState(null);
-  const [isSplitActive, setIsSplitActive] = useState(false);
+  const [pane3ChatId, setPane3ChatId] = useState(null);
+  const [pane3ChatKey, setPane3ChatKey] = useState(null);
+  const [pane4ChatId, setPane4ChatId] = useState(null);
+  const [pane4ChatKey, setPane4ChatKey] = useState(null);
+
+  const isSplitActive = layoutMode !== 'single';
   const [searchQuery, setSearchQuery] = useState('');
   const [previewDocModal, setPreviewDocModal] = useState(null);
 
@@ -207,7 +216,7 @@ export default function ChatsPage({
 
   const selectedChatId = activeChat ? (activeChat._id || activeChat.microsoftChatId || activeChat.id) : null;
 
-  // Resolve split second chat
+  // Resolve split second chat (Pane 2)
   const splitChat = useMemo(() => {
     if (!isSplitActive || !chats || chats.length === 0) return null;
     if (splitChatKey) {
@@ -218,11 +227,46 @@ export default function ChatsPage({
       const found = chats.find(c => c._id === splitChatId || c.microsoftChatId === splitChatId || c.id === splitChatId);
       if (found) return found;
     }
-    // Default to another conversation (different from activeChat)
     const activeKey = activeChat ? getChatUniqueKey(activeChat) : '';
     const other = chats.find(c => getChatUniqueKey(c) !== activeKey);
     return other || chats[0];
   }, [isSplitActive, splitChatKey, splitChatId, chats, activeChat]);
+
+  // Resolve third chat (Pane 3)
+  const pane3Chat = useMemo(() => {
+    if ((layoutMode !== 'triple' && layoutMode !== 'quad') || !chats || chats.length === 0) return null;
+    if (pane3ChatKey) {
+      const match = chats.find(c => getChatUniqueKey(c) === pane3ChatKey);
+      if (match) return match;
+    }
+    if (pane3ChatId) {
+      const found = chats.find(c => c._id === pane3ChatId || c.microsoftChatId === pane3ChatId || c.id === pane3ChatId);
+      if (found) return found;
+    }
+    const usedKeys = [activeChat ? getChatUniqueKey(activeChat) : '', splitChat ? getChatUniqueKey(splitChat) : ''];
+    const other = chats.find(c => !usedKeys.includes(getChatUniqueKey(c)));
+    return other || chats[2] || chats[0];
+  }, [layoutMode, pane3ChatKey, pane3ChatId, chats, activeChat, splitChat]);
+
+  // Resolve fourth chat (Pane 4)
+  const pane4Chat = useMemo(() => {
+    if (layoutMode !== 'quad' || !chats || chats.length === 0) return null;
+    if (pane4ChatKey) {
+      const match = chats.find(c => getChatUniqueKey(c) === pane4ChatKey);
+      if (match) return match;
+    }
+    if (pane4ChatId) {
+      const found = chats.find(c => c._id === pane4ChatId || c.microsoftChatId === pane4ChatId || c.id === pane4ChatId);
+      if (found) return found;
+    }
+    const usedKeys = [
+      activeChat ? getChatUniqueKey(activeChat) : '',
+      splitChat ? getChatUniqueKey(splitChat) : '',
+      pane3Chat ? getChatUniqueKey(pane3Chat) : ''
+    ];
+    const other = chats.find(c => !usedKeys.includes(getChatUniqueKey(c)));
+    return other || chats[3] || chats[0];
+  }, [layoutMode, pane4ChatKey, pane4ChatId, chats, activeChat, splitChat, pane3Chat]);
 
   // Synchronize active chat ID globally to suppress self-notifications on active view & auto-mark read
   useEffect(() => {
@@ -239,39 +283,87 @@ export default function ChatsPage({
     };
   }, [selectedChatId, activeChat?.connectedAccountId, markChatAsRead]);
 
-  const handleOpenInSplit = (chatIdToSplit, chatObj = null) => {
-    setSplitChatId(chatIdToSplit);
-    if (chatObj) setSplitChatKey(getChatUniqueKey(chatObj));
-    setIsSplitActive(true);
-    markChatAsRead(chatIdToSplit);
-  };
+  // Layout mode switcher helper with smart auto-seeding of panes
+  const setLayout = (mode) => {
+    setLayoutMode(mode);
+    if (mode === 'single') return;
 
-  const handleToggleSplit = () => {
-    if (isSplitActive) {
-      setIsSplitActive(false);
-    } else {
-      setIsSplitActive(true);
-      if (!splitChatId) {
-        const other = chats.find(c => (c._id || c.microsoftChatId || c.id) !== selectedChatId);
-        if (other) {
-          setSplitChatId(other._id || other.microsoftChatId || other.id);
-          setSplitChatKey(getChatUniqueKey(other));
-        }
+    // Auto-collapse sidebar in 3 or 4-pane views for maximum workspace
+    if (mode === 'triple' || mode === 'quad') {
+      setIsSidebarCollapsed(true);
+    }
+
+    // Auto-seed Pane 2
+    if (!splitChatId && chats.length > 1) {
+      const activeKey = activeChat ? getChatUniqueKey(activeChat) : '';
+      const other2 = chats.find(c => getChatUniqueKey(c) !== activeKey);
+      if (other2) {
+        setSplitChatId(other2._id || other2.microsoftChatId || other2.id);
+        setSplitChatKey(getChatUniqueKey(other2));
+      }
+    }
+
+    // Auto-seed Pane 3
+    if ((mode === 'triple' || mode === 'quad') && !pane3ChatId && chats.length > 2) {
+      const usedKeys = [activeChat ? getChatUniqueKey(activeChat) : '', splitChat ? getChatUniqueKey(splitChat) : ''];
+      const other3 = chats.find(c => !usedKeys.includes(getChatUniqueKey(c)));
+      if (other3) {
+        setPane3ChatId(other3._id || other3.microsoftChatId || other3.id);
+        setPane3ChatKey(getChatUniqueKey(other3));
+      }
+    }
+
+    // Auto-seed Pane 4
+    if (mode === 'quad' && !pane4ChatId && chats.length > 3) {
+      const usedKeys = [
+        activeChat ? getChatUniqueKey(activeChat) : '',
+        splitChat ? getChatUniqueKey(splitChat) : '',
+        pane3Chat ? getChatUniqueKey(pane3Chat) : ''
+      ];
+      const other4 = chats.find(c => !usedKeys.includes(getChatUniqueKey(c)));
+      if (other4) {
+        setPane4ChatId(other4._id || other4.microsoftChatId || other4.id);
+        setPane4ChatKey(getChatUniqueKey(other4));
       }
     }
   };
 
-  // Keyboard shortcut: Alt+S to toggle split view
+  const handleOpenInSplit = (chatIdToSplit, chatObj = null) => {
+    setSplitChatId(chatIdToSplit);
+    if (chatObj) setSplitChatKey(getChatUniqueKey(chatObj));
+    if (layoutMode === 'single') {
+      setLayout('dual');
+    }
+    markChatAsRead(chatIdToSplit);
+  };
+
+  const handleToggleSplit = () => {
+    if (layoutMode !== 'single') {
+      setLayout('single');
+    } else {
+      setLayout('dual');
+    }
+  };
+
+  // Global Keyboard shortcuts: Alt+1..4 (focus pane or set layout), Alt+S (dual), Alt+T (triple), Alt+G (quad)
   useEffect(() => {
     const handleGlobalKey = (e) => {
-      if (e.altKey && (e.key === 's' || e.key === 'S')) {
-        e.preventDefault();
-        handleToggleSplit();
+      if (e.altKey) {
+        if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          handleToggleSplit();
+        } else if (e.key === 't' || e.key === 'T') {
+          e.preventDefault();
+          setLayout(layoutMode === 'triple' ? 'single' : 'triple');
+        } else if (e.key === 'g' || e.key === 'G') {
+          e.preventDefault();
+          setLayout(layoutMode === 'quad' ? 'single' : 'quad');
+        }
       }
     };
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
-  }, [isSplitActive, splitChatId, chats, selectedChatId]);
+  }, [layoutMode, splitChatId, chats, selectedChatId, activeChat, splitChat, pane3Chat]);
 
   return (
     <div style={{ display: 'flex', width: '100%', height: 'calc(100vh - 66px)', overflow: 'hidden', backgroundColor: 'var(--bg-primary)' }}>
@@ -740,86 +832,300 @@ export default function ChatsPage({
         </div>
       </div>
 
-      {/* Main Conversation Thread View Pane (Floating 3D Dual Card Layout in Split View) */}
+      {/* Main Conversation Thread View Pane (Supports Single, Dual, Triple & 2x2 Quad Grid) */}
       <div
         className={`chats-active-pane ${!activeChatId ? 'mobile-hidden' : ''}`}
         style={{
           flex: 1,
           display: 'flex',
-          flexDirection: 'row',
+          flexDirection: 'column',
           backgroundColor: isSplitActive ? 'var(--bg-tertiary)' : 'var(--bg-primary)',
           overflow: 'hidden',
-          padding: isSplitActive ? '8px' : '0',
-          gap: isSplitActive ? '8px' : '0'
+          height: '100%',
+          position: 'relative'
         }}
       >
         {isAccountConnected && activeChat ? (
           <>
-            {/* Primary Left Conversation Pane Card */}
+            {/* Top Workspace Bar: Layout Mode Switcher Toolbar */}
             <div style={{
-              flex: 1,
+              padding: '6px 14px',
+              borderBottom: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-secondary)',
               display: 'flex',
-              flexDirection: 'column',
-              minWidth: 0,
-              height: '100%',
-              backgroundColor: 'var(--bg-primary)',
-              borderRadius: isSplitActive ? '12px' : '0',
-              border: isSplitActive ? '1px solid var(--border-color)' : 'none',
-              borderTop: isSplitActive ? '3px solid #4f46e5' : 'none',
-              boxShadow: isSplitActive ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
-              overflow: 'hidden'
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              zIndex: 10,
+              flexShrink: 0
             }}>
-              <ChatConversationPane
-                chat={activeChat}
-                allChats={chats}
-                onSelectChat={(id, chatObj) => {
-                  setActiveChatId(id);
-                  if (chatObj) setActiveChatKey(getChatUniqueKey(chatObj));
-                }}
-                isSplit={isSplitActive}
-                onToggleSplit={handleToggleSplit}
-                onOpenMicrosoftModal={onOpenMicrosoftModal}
-                onPreviewDoc={(doc) => setPreviewDocModal(doc)}
-                bumpChatToTop={bumpChatToTop}
-                onBack={() => setActiveChatId(null)}
-                paneTitle="Primary Chat"
-                paneIndex={1}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Workspace Layout:
+                </span>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  padding: '2px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  gap: '2px'
+                }}>
+                  <button
+                    onClick={() => setLayout('single')}
+                    className="tab-pill-3d"
+                    style={{
+                      padding: '4px 9px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: layoutMode === 'single' ? 'var(--accent-primary)' : 'transparent',
+                      color: layoutMode === 'single' ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Single Focused View (Alt+S or Click)"
+                  >
+                    <Square size={12} />
+                    <span>Single</span>
+                  </button>
+                  <button
+                    onClick={() => setLayout('dual')}
+                    className="tab-pill-3d"
+                    style={{
+                      padding: '4px 9px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: layoutMode === 'dual' ? 'var(--accent-primary)' : 'transparent',
+                      color: layoutMode === 'dual' ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Dual Split View (Alt+S)"
+                  >
+                    <Columns size={12} />
+                    <span>2 Split</span>
+                  </button>
+                  <button
+                    onClick={() => setLayout('triple')}
+                    className="tab-pill-3d"
+                    style={{
+                      padding: '4px 9px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: layoutMode === 'triple' ? 'var(--accent-primary)' : 'transparent',
+                      color: layoutMode === 'triple' ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Triple Columns View (Alt+T)"
+                  >
+                    <LayoutGrid size={12} />
+                    <span>3 Triple</span>
+                  </button>
+                  <button
+                    onClick={() => setLayout('quad')}
+                    className="tab-pill-3d"
+                    style={{
+                      padding: '4px 9px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: layoutMode === 'quad' ? 'var(--accent-primary)' : 'transparent',
+                      color: layoutMode === 'quad' ? '#ffffff' : 'var(--text-secondary)',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="2x2 Quad Grid Command Center (Alt+G)"
+                  >
+                    <Grid2X2 size={12} />
+                    <span>4 Quad</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Hint */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                  {layoutMode === 'quad' ? '⚡ 4-Chat Command Center' : layoutMode === 'triple' ? '⚡ 3-Column Parallel View' : layoutMode === 'dual' ? '⚡ Dual Split Mode' : '⚡ Single Chat View'}
+                </span>
+              </div>
             </div>
 
-            {/* Secondary Right Conversation Pane Card (Split View) */}
-            {isSplitActive && splitChat && (
+            {/* Dynamic Multi-Pane Grid / Flex Container */}
+            <div style={{
+              flex: 1,
+              overflow: 'hidden',
+              padding: isSplitActive ? '8px' : '0',
+              display: 'grid',
+              gap: isSplitActive ? '8px' : '0',
+              gridTemplateColumns: layoutMode === 'single'
+                ? '1fr'
+                : layoutMode === 'triple'
+                  ? 'repeat(3, minmax(0, 1fr))'
+                  : 'repeat(2, minmax(0, 1fr))',
+              gridTemplateRows: layoutMode === 'quad'
+                ? 'repeat(2, minmax(0, 1fr))'
+                : '1fr',
+              height: 'calc(100% - 41px)'
+            }}>
+              {/* Primary Pane 1 (Indigo) */}
               <div style={{
-                flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
                 minWidth: 0,
+                minHeight: 0,
                 height: '100%',
                 backgroundColor: 'var(--bg-primary)',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                borderTop: '3px solid #0284c7',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                borderRadius: isSplitActive ? '12px' : '0',
+                border: isSplitActive ? '1px solid var(--border-color)' : 'none',
+                borderTop: isSplitActive ? '3px solid #4f46e5' : 'none',
+                boxShadow: isSplitActive ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
                 overflow: 'hidden'
               }}>
                 <ChatConversationPane
-                  chat={splitChat}
+                  chat={activeChat}
                   allChats={chats}
                   onSelectChat={(id, chatObj) => {
-                    setSplitChatId(id);
-                    if (chatObj) setSplitChatKey(getChatUniqueKey(chatObj));
+                    setActiveChatId(id);
+                    if (chatObj) setActiveChatKey(getChatUniqueKey(chatObj));
                   }}
-                  isSplit={true}
-                  isSplitSecondPane={true}
-                  onCloseSplit={() => setIsSplitActive(false)}
+                  isSplit={isSplitActive}
+                  onToggleSplit={handleToggleSplit}
                   onOpenMicrosoftModal={onOpenMicrosoftModal}
                   onPreviewDoc={(doc) => setPreviewDocModal(doc)}
                   bumpChatToTop={bumpChatToTop}
-                  paneTitle="Split Chat"
-                  paneIndex={2}
+                  onBack={() => setActiveChatId(null)}
+                  paneTitle="Primary Chat"
+                  paneIndex={1}
                 />
               </div>
-            )}
+
+              {/* Secondary Pane 2 (Sky Blue) */}
+              {isSplitActive && splitChat && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minWidth: 0,
+                  minHeight: 0,
+                  height: '100%',
+                  backgroundColor: 'var(--bg-primary)',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  borderTop: '3px solid #0284c7',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                  overflow: 'hidden'
+                }}>
+                  <ChatConversationPane
+                    chat={splitChat}
+                    allChats={chats}
+                    onSelectChat={(id, chatObj) => {
+                      setSplitChatId(id);
+                      if (chatObj) setSplitChatKey(getChatUniqueKey(chatObj));
+                    }}
+                    isSplit={true}
+                    isSplitSecondPane={true}
+                    onCloseSplit={() => {
+                      if (layoutMode === 'quad') setLayoutMode('triple');
+                      else if (layoutMode === 'triple') setLayoutMode('dual');
+                      else setLayout('single');
+                    }}
+                    onOpenMicrosoftModal={onOpenMicrosoftModal}
+                    onPreviewDoc={(doc) => setPreviewDocModal(doc)}
+                    bumpChatToTop={bumpChatToTop}
+                    paneTitle="Pane 2"
+                    paneIndex={2}
+                  />
+                </div>
+              )}
+
+              {/* Third Pane 3 (Emerald Green) */}
+              {(layoutMode === 'triple' || layoutMode === 'quad') && pane3Chat && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minWidth: 0,
+                  minHeight: 0,
+                  height: '100%',
+                  backgroundColor: 'var(--bg-primary)',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  borderTop: '3px solid #10b981',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                  overflow: 'hidden'
+                }}>
+                  <ChatConversationPane
+                    chat={pane3Chat}
+                    allChats={chats}
+                    onSelectChat={(id, chatObj) => {
+                      setPane3ChatId(id);
+                      if (chatObj) setPane3ChatKey(getChatUniqueKey(chatObj));
+                    }}
+                    isSplit={true}
+                    isSplitSecondPane={true}
+                    onCloseSplit={() => {
+                      if (layoutMode === 'quad') setLayoutMode('triple');
+                      else setLayoutMode('dual');
+                    }}
+                    onOpenMicrosoftModal={onOpenMicrosoftModal}
+                    onPreviewDoc={(doc) => setPreviewDocModal(doc)}
+                    bumpChatToTop={bumpChatToTop}
+                    paneTitle="Pane 3"
+                    paneIndex={3}
+                  />
+                </div>
+              )}
+
+              {/* Fourth Pane 4 (Violet) */}
+              {layoutMode === 'quad' && pane4Chat && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minWidth: 0,
+                  minHeight: 0,
+                  height: '100%',
+                  backgroundColor: 'var(--bg-primary)',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  borderTop: '3px solid #8b5cf6',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                  overflow: 'hidden'
+                }}>
+                  <ChatConversationPane
+                    chat={pane4Chat}
+                    allChats={chats}
+                    onSelectChat={(id, chatObj) => {
+                      setPane4ChatId(id);
+                      if (chatObj) setPane4ChatKey(getChatUniqueKey(chatObj));
+                    }}
+                    isSplit={true}
+                    isSplitSecondPane={true}
+                    onCloseSplit={() => setLayoutMode('triple')}
+                    onOpenMicrosoftModal={onOpenMicrosoftModal}
+                    onPreviewDoc={(doc) => setPreviewDocModal(doc)}
+                    bumpChatToTop={bumpChatToTop}
+                    paneTitle="Pane 4"
+                    paneIndex={4}
+                  />
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
