@@ -1296,27 +1296,68 @@ export default function ChatConversationPane({
                             return true;
                           });
 
-                          // Format plain text with highlight for @mentions
+                          // Format plain text with highlight for @mentions without splitting full names
                           const formatTextWithMentions = (text) => {
                             if (!text) return null;
-                            let processedText = text;
 
-                            // Process <at> tags if plain text still has them
-                            processedText = processedText.replace(/<at[^>]*>@?([^<]+)<\/at>/gi, '@$1');
-
-                            // If msg.mentions exists, ensure @ is prefixed to mentioned names
+                            // Extract all full mention names from msg.mentions or <at> tags
+                            const knownMentions = [];
                             if (msg.mentions && Array.isArray(msg.mentions)) {
                               msg.mentions.forEach((men) => {
-                                const rawName = (men.mentionText || men.mentioned?.user?.displayName || '').replace(/^@/, '').trim();
-                                if (rawName) {
-                                  const reg = new RegExp(`(?<!@)(${rawName})`, 'gi');
-                                  processedText = processedText.replace(reg, '@$1');
+                                const name = (men.mentionText || men.mentioned?.user?.displayName || '').replace(/^@/, '').trim();
+                                if (name && !knownMentions.includes(name)) {
+                                  knownMentions.push(name);
                                 }
                               });
                             }
 
-                            const decoded = decodeHtmlEntities(processedText);
-                            const parts = decoded.split(/(@[a-zA-Z0-9_\-.\s]+?(?=\s|$|[.,!?]))/g);
+                            // Extract from <at> tags
+                            const atTagMatches = text.match(/<at[^>]*>([^<]+)<\/at>/gi);
+                            if (atTagMatches) {
+                              atTagMatches.forEach((m) => {
+                                const clean = m.replace(/<[^>]*>/g, '').replace(/^@/, '').trim();
+                                if (clean && !knownMentions.includes(clean)) {
+                                  knownMentions.push(clean);
+                                }
+                              });
+                            }
+
+                            let cleanText = text.replace(/<at[^>]*>([^<]+)<\/at>/gi, '$1');
+                            const decoded = decodeHtmlEntities(cleanText);
+
+                            // If we have known full-name mentions (e.g. "Aryan Kumrecha"), match the whole full name
+                            if (knownMentions.length > 0) {
+                              const sorted = [...knownMentions].sort((a, b) => b.length - a.length);
+                              const escaped = sorted.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+                              const regex = new RegExp(`(@?(?:${escaped}))`, 'gi');
+                              const parts = decoded.split(regex);
+
+                              return parts.map((part, i) => {
+                                const cleanPart = part.replace(/^@/, '').trim();
+                                if (sorted.some((s) => s.toLowerCase() === cleanPart.toLowerCase())) {
+                                  return (
+                                    <span
+                                      key={i}
+                                      className="teams-mention-tag"
+                                      style={{
+                                        color: '#38bdf8',
+                                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                                        padding: '1px 6px',
+                                        borderRadius: '5px',
+                                        fontWeight: '700',
+                                        display: 'inline-block'
+                                      }}
+                                    >
+                                      {part}
+                                    </span>
+                                  );
+                                }
+                                return <React.Fragment key={i}>{part}</React.Fragment>;
+                              });
+                            }
+
+                            // Fallback: match any @word pattern
+                            const parts = decoded.split(/(@[a-zA-Z0-9_\-.]+)/g);
                             return parts.map((part, i) => {
                               if (part.startsWith('@') && part.trim().length > 1) {
                                 return (
@@ -1417,23 +1458,9 @@ export default function ChatConversationPane({
 
                                       // 3. Process <at> mention tags from Microsoft Graph (e.g. <at id="0">Aryan Kumrecha</at>)
                                       processed = processed.replace(
-                                        /<at[^>]*>@?([^<]+)<\/at>/gi,
-                                        '<span class="teams-mention-tag" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 1px 6px; border-radius: 5px; font-weight: 700; display: inline-block;">@$1</span>'
+                                        /<at[^>]*>([^<]+)<\/at>/gi,
+                                        '<span class="teams-mention-tag" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 1px 6px; border-radius: 5px; font-weight: 700; display: inline-block;">$1</span>'
                                       );
-
-                                      // 4. Also check msg.mentions array
-                                      if (msg.mentions && Array.isArray(msg.mentions)) {
-                                        msg.mentions.forEach((men) => {
-                                          const raw = (men.mentionText || men.mentioned?.user?.displayName || '').replace(/^@/, '').trim();
-                                          if (raw && !processed.includes(`@${raw}`)) {
-                                            const r = new RegExp(`(?<!@|>)(${raw})(?!<)`, 'gi');
-                                            processed = processed.replace(
-                                              r,
-                                              '<span class="teams-mention-tag" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 1px 6px; border-radius: 5px; font-weight: 700; display: inline-block;">@$1</span>'
-                                            );
-                                          }
-                                        });
-                                      }
 
                                       return processed;
                                     })()
