@@ -30,12 +30,13 @@ const formatMessageDate = (dateStr) => {
 };
 
 // Rich Image Attachment Card for Teams Chat
-function ChatImageAttachment({ attachment, chatOwner, onImageClick }) {
+function ChatImageAttachment({ attachment, chatOwner }) {
   const targetUrl = attachment.thumbnailUrl || attachment.contentUrl || attachment.previewUrl || attachment.dataUrl;
   const fileName = attachment.name || 'Image';
   const [blobUrl, setBlobUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -76,23 +77,23 @@ function ChatImageAttachment({ attachment, chatOwner, onImageClick }) {
     <div
       onClick={(e) => {
         e.stopPropagation();
-        onImageClick(blobUrl || targetUrl);
+        setIsExpanded(!isExpanded);
       }}
       style={{
-        maxWidth: '300px',
-        maxHeight: '190px',
+        maxWidth: isExpanded ? '100%' : '280px',
+        maxHeight: isExpanded ? '380px' : '180px',
         borderRadius: '10px',
         overflow: 'hidden',
         cursor: 'pointer',
         border: '1px solid rgba(255, 255, 255, 0.15)',
         marginTop: '6px',
         display: 'inline-block',
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: 'rgba(0,0,0,0.35)',
         position: 'relative',
         boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
-        transition: 'transform 0.2s ease'
+        transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
       }}
-      title={`Click to expand ${fileName}`}
+      title={isExpanded ? 'Click to minimize' : `Click to expand ${fileName}`}
     >
       {loading ? (
         <div style={{ width: '180px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
@@ -103,13 +104,14 @@ function ChatImageAttachment({ attachment, chatOwner, onImageClick }) {
           src={blobUrl || targetUrl}
           alt={fileName}
           style={{
-            maxWidth: '300px',
-            maxHeight: '190px',
+            maxWidth: isExpanded ? '100%' : '280px',
+            maxHeight: isExpanded ? '380px' : '180px',
             width: '100%',
             height: 'auto',
-            objectFit: 'cover',
+            objectFit: isExpanded ? 'contain' : 'cover',
             display: 'block',
-            borderRadius: '9px'
+            borderRadius: '9px',
+            transition: 'all 0.25s ease'
           }}
           onError={() => setError(true)}
         />
@@ -214,7 +216,6 @@ export default function ChatConversationPane({
   const [selectedAttachments, setSelectedAttachments] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState(null);
   const [replyingToMessage, setReplyingToMessage] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [pinnedMessages, setPinnedMessages] = useState([]);
@@ -295,7 +296,6 @@ export default function ChatConversationPane({
           setEditingMessage(null);
           setDraftMessage('');
         }
-        setLightboxImage(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1486,8 +1486,13 @@ export default function ChatConversationPane({
                                   }}
                                   style={{ margin: 0 }}
                                   onClick={(e) => {
-                                    if (e.target.tagName === 'IMG' && e.target.src) {
-                                      setLightboxImage(e.target.src);
+                                    if (e.target.tagName === 'IMG') {
+                                      e.stopPropagation();
+                                      if (e.target.classList.contains('inline-img-expanded')) {
+                                        e.target.classList.remove('inline-img-expanded');
+                                      } else {
+                                        e.target.classList.add('inline-img-expanded');
+                                      }
                                     }
                                   }}
                                 />
@@ -1512,7 +1517,6 @@ export default function ChatConversationPane({
                                           key={att.id || att.name}
                                           attachment={att}
                                           chatOwner={chatOwner}
-                                          onImageClick={(src) => setLightboxImage(src)}
                                         />
                                       );
                                     }
@@ -2017,115 +2021,6 @@ export default function ChatConversationPane({
               </button>
             </>
           )}
-        </div>
-      )}
-
-      {/* Interactive Image Lightbox Modal */}
-      {lightboxImage && (
-        <div
-          onClick={() => setLightboxImage(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            backgroundColor: 'rgba(5, 8, 16, 0.92)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            animation: 'fadeIn 0.2s ease'
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'relative',
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              backgroundColor: 'rgba(16, 22, 38, 0.85)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: '16px',
-              padding: '12px',
-              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 242, 254, 0.2)'
-            }}
-          >
-            {/* Top Lightbox Header */}
-            <div style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '10px',
-              padding: '0 4px'
-            }}>
-              <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#00f2fe' }}>
-                Image Preview
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <a
-                  href={lightboxImage}
-                  target="_blank"
-                  rel="noreferrer"
-                  download="image-attachment.png"
-                  className="tab-pill-3d"
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(0, 242, 254, 0.15)',
-                    border: '1px solid rgba(0, 242, 254, 0.4)',
-                    color: '#00f2fe',
-                    fontSize: '0.78rem',
-                    fontWeight: '700',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Download size={13} />
-                  <span>Download</span>
-                </a>
-                <button
-                  onClick={() => setLightboxImage(null)}
-                  className="tab-pill-3d"
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  title="Close (Esc)"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Full Image Preview */}
-            <img
-              src={lightboxImage}
-              alt="Preview"
-              style={{
-                maxWidth: '85vw',
-                maxHeight: '80vh',
-                objectFit: 'contain',
-                borderRadius: '10px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-              }}
-            />
-          </div>
         </div>
       )}
     </div>

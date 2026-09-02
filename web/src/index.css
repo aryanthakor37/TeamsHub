@@ -1117,7 +1117,14 @@ button:focus, button:focus-visible, button:active {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
   display: block !important;
   cursor: pointer !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.message-html-content img.inline-img-expanded {
+  max-width: 100% !important;
+  max-height: 420px !important;
+  object-fit: contain !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
 }
 
 .message-html-content img:hover {
