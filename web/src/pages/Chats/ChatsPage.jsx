@@ -652,27 +652,32 @@ export default function ChatsPage({
                 let activeBg = 'transparent';
                 let activeBorderLeft = '3.5px solid transparent';
                 let paneBadge = null;
+                let paneColor = '#00f2fe';
 
                 if (isPane1Selected) {
-                  activeBorder = '2px solid #6366f1';
-                  activeBg = 'rgba(99, 102, 241, 0.18)';
-                  activeBorderLeft = '3.5px solid #6366f1';
-                  paneBadge = 'P1';
-                } else if (isPane2Selected) {
                   activeBorder = '2px solid #00f2fe';
-                  activeBg = 'rgba(0, 242, 254, 0.18)';
+                  activeBg = 'rgba(0, 242, 254, 0.16)';
                   activeBorderLeft = '3.5px solid #00f2fe';
+                  paneBadge = 'P1';
+                  paneColor = '#00f2fe';
+                } else if (isPane2Selected) {
+                  activeBorder = '2px solid #818cf8';
+                  activeBg = 'rgba(99, 102, 241, 0.16)';
+                  activeBorderLeft = '3.5px solid #818cf8';
                   paneBadge = 'P2';
+                  paneColor = '#818cf8';
                 } else if (isPane3Selected) {
                   activeBorder = '2px solid #ec4899';
-                  activeBg = 'rgba(236, 72, 153, 0.18)';
+                  activeBg = 'rgba(236, 72, 153, 0.16)';
                   activeBorderLeft = '3.5px solid #ec4899';
                   paneBadge = 'P3';
+                  paneColor = '#ec4899';
                 } else if (isPane4Selected) {
                   activeBorder = '2px solid #f59e0b';
-                  activeBg = 'rgba(245, 158, 11, 0.18)';
+                  activeBg = 'rgba(245, 158, 11, 0.16)';
                   activeBorderLeft = '3.5px solid #f59e0b';
                   paneBadge = 'P4';
+                  paneColor = '#f59e0b';
                 }
 
                 const isAnyPaneSelected = isPane1Selected || isPane2Selected || isPane3Selected || isPane4Selected;
@@ -697,7 +702,7 @@ export default function ChatsPage({
                         justifyContent: 'center',
                         backgroundColor: activeBg,
                         border: activeBorder,
-                        boxShadow: isAnyPaneSelected ? `0 0 14px ${isPane1Selected ? 'rgba(99,102,241,0.3)' : isPane2Selected ? 'rgba(0,242,254,0.3)' : isPane3Selected ? 'rgba(236,72,153,0.3)' : 'rgba(245,158,11,0.3)'}` : 'none',
+                        boxShadow: isAnyPaneSelected ? `0 0 16px ${paneColor}55` : 'none',
                         cursor: 'pointer',
                         position: 'relative',
                         transition: 'all 0.2s ease'
@@ -717,7 +722,24 @@ export default function ChatsPage({
                       }}>
                         {getInitials(c.participant)}
                       </div>
-                      {c.unreadCount > 0 && (
+                      {paneBadge && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '-2px',
+                          right: '-2px',
+                          padding: '1px 4px',
+                          borderRadius: '5px',
+                          backgroundColor: paneColor,
+                          color: '#031124',
+                          fontSize: '0.58rem',
+                          fontWeight: '900',
+                          lineHeight: 1,
+                          boxShadow: `0 0 8px ${paneColor}`
+                        }}>
+                          {paneBadge}
+                        </div>
+                      )}
+                      {c.unreadCount > 0 && !paneBadge && (
                         <div style={{
                           position: 'absolute',
                           top: '-2px',

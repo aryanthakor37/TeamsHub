@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useChats } from '../hooks/useChats';
 import AccountSwitcher from './AccountSwitcher';
 import { getInitials, getAvatarColor } from '../utils/avatarUtils';
+import { sanitizeDisplayName } from '../utils/textUtils';
 
 export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, isSidebarCollapsed, onToggleSidebar, layoutMode = 'triple', onSetLayoutMode }) {
   const [healthStatus, setHealthStatus] = useState({ loading: false, online: true });
@@ -52,7 +53,7 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
     }
   };
 
-  const displayName = activeAccount?.displayName || user?.name || 'Aryan Kumrecha';
+  const displayName = sanitizeDisplayName(activeAccount?.displayName || user?.name || 'Aryan Kumrecha');
 
   return (
     <header style={{

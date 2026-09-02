@@ -1119,9 +1119,22 @@ export default function ChatConversationPane({
             return (
               <React.Fragment key={msgId}>
                 {showDateDivider && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '14px 0 8px 0', position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', backgroundColor: 'var(--border-color)' }} />
-                    <span style={{ position: 'relative', backgroundColor: 'var(--bg-secondary)', padding: '2px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '600', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '18px 0 12px 0', position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+                    <span style={{
+                      position: 'relative',
+                      backgroundColor: 'rgba(18, 26, 46, 0.85)',
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
+                      padding: '3px 14px',
+                      borderRadius: '20px',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      color: 'rgba(255, 255, 255, 0.65)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)',
+                      letterSpacing: '0.02em'
+                    }}>
                       {formatMessageDate(msg.createdDateTime)}
                     </span>
                   </div>

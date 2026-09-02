@@ -2,6 +2,7 @@ import React from 'react';
 import { Home, MessageSquare, Folder, Search, Users, Settings, Layers } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getInitials, getAvatarColor } from '../utils/avatarUtils';
+import { sanitizeDisplayName } from '../utils/textUtils';
 
 export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0, isCollapsed = false, onToggleCollapse }) {
   const { connectedAccounts, activeAccount } = useAuth();
@@ -27,7 +28,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0, 
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
-  const userName = activeAccount?.displayName || activeAccount?.name || 'Teams User';
+  const userName = sanitizeDisplayName(activeAccount?.displayName || activeAccount?.name || 'Teams User');
   const userInitials = getInitials(userName);
   const avatarBg = getAvatarColor(userName);
   const accountCount = connectedAccounts.length;

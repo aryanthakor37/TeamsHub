@@ -987,47 +987,70 @@ button:focus, button:focus-visible, button:active {
 /* Floating Neon Top Badge Pills */
 .neon-floating-badge {
   position: absolute;
-  top: -13px;
+  top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 4px 16px;
+  padding: 3px 14px;
   border-radius: 20px;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #ffffff;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   z-index: 25;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   white-space: nowrap;
   pointer-events: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.3s ease;
   animation: badgeLevitate 3s ease-in-out infinite;
 }
 
 .neon-floating-badge.badge-pane-1 {
-  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-  animation: badgeLevitate 3s ease-in-out infinite, neonPulseCyan 3s infinite ease-in-out;
-  color: #032030;
+  background: rgba(0, 242, 254, 0.18);
+  border: 1px solid rgba(0, 242, 254, 0.6);
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #00f2fe;
 }
 
 .neon-floating-badge.badge-pane-2 {
-  background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%);
-  animation: badgeLevitate 3s ease-in-out infinite 0.5s, neonPulseMint 3s infinite ease-in-out 0.5s;
-  color: #02231c;
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 18px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #a5b4fc;
 }
 
 .neon-floating-badge.badge-pane-3 {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  animation: badgeLevitate 3s ease-in-out infinite 1s, neonPulsePink 3s infinite ease-in-out 1s;
-  color: #2b0416;
+  background: rgba(236, 72, 153, 0.18);
+  border: 1px solid rgba(236, 72, 153, 0.6);
+  box-shadow: 0 0 18px rgba(236, 72, 153, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #f472b6;
 }
 
 .neon-floating-badge.badge-pane-4 {
-  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-  box-shadow: 0 4px 18px rgba(255, 154, 158, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.3);
-  color: #3b050d;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: #fbbf24;
+}
+
+/* Enhanced HTML Images in Message Stream */
+.message-html-content img {
+  max-width: 100% !important;
+  border-radius: 12px !important;
+  margin: 6px 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+  display: block !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.message-html-content img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 242, 254, 0.3) !important;
 }
 
 /* Modern Message Bubble Enhancements */
