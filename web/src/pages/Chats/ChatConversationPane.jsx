@@ -319,32 +319,67 @@ export default function ChatConversationPane({
     }
   }, [showSwitchDropdown]);
 
+  // Helper to resolve Account info for any chat item
+  const getChatAccountInfo = (c) => {
+    if (!c) return { name: 'Microsoft Teams', email: '', color: '#6366f1' };
+    const matched = (connectedAccounts || []).find((a) =>
+      (c.connectedAccountId && (a._id === c.connectedAccountId || a.id === c.connectedAccountId || a.accountId === c.connectedAccountId)) ||
+      (c.accountEmail && a.email && a.email.toLowerCase() === c.accountEmail.toLowerCase()) ||
+      (c.accountBadge && a.displayName && a.displayName.toLowerCase() === c.accountBadge.toLowerCase())
+    );
+    if (matched) {
+      const name = sanitizeDisplayName(matched.displayName || matched.name || matched.email?.split('@')[0] || 'Account');
+      return {
+        name,
+        email: matched.email || '',
+        company: matched.company || c.company || 'Teams',
+        color: getAvatarColor(name)
+      };
+    }
+    const rawBadge = (c.accountBadge || c.company || c.accountEmail || 'Microsoft Teams').trim();
+    const name = sanitizeDisplayName(rawBadge.includes('@') ? rawBadge.split('@')[0] : rawBadge);
+    return {
+      name,
+      email: c.accountEmail || '',
+      company: c.company || 'Teams',
+      color: getAvatarColor(name)
+    };
+  };
+
   // Group chats by account / company for Switch Dropdown
   const groupedSwitchChats = useMemo(() => {
     const q = switchSearchQuery.toLowerCase().trim();
-    const filtered = allChats.filter(c => {
+    const filtered = allChats.filter((c) => {
       if (!q) return true;
+      const acc = getChatAccountInfo(c);
       return (
         c.participant?.toLowerCase().includes(q) ||
         c.company?.toLowerCase().includes(q) ||
         c.accountBadge?.toLowerCase().includes(q) ||
         c.accountEmail?.toLowerCase().includes(q) ||
+        acc.name?.toLowerCase().includes(q) ||
+        acc.email?.toLowerCase().includes(q) ||
         c.lastMessagePreview?.toLowerCase().includes(q)
       );
     });
 
     const groups = {};
-    filtered.forEach(c => {
-      const rawBadge = (c.accountBadge || c.company || c.accountEmail || 'Other Account').trim();
-      const groupName = rawBadge.includes('@') ? rawBadge.split('@')[0] : rawBadge;
-      if (!groups[groupName]) {
-        groups[groupName] = [];
+    filtered.forEach((c) => {
+      const acc = getChatAccountInfo(c);
+      const groupKey = acc.name;
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          accountName: acc.name,
+          accountEmail: acc.email,
+          color: acc.color,
+          chats: []
+        };
       }
-      groups[groupName].push(c);
+      groups[groupKey].chats.push(c);
     });
 
     return groups;
-  }, [allChats, switchSearchQuery]);
+  }, [allChats, switchSearchQuery, connectedAccounts]);
 
   const chatId = chat?._id || chat?.microsoftChatId || chat?.id;
   const chatOwner = chat?.accountEmail || chat?.connectedAccountId;
@@ -763,15 +798,17 @@ export default function ChatConversationPane({
                   className="no-scrollbar"
                   style={{
                     position: 'absolute',
-                    top: '36px',
+                    top: '38px',
                     right: 0,
-                    width: '300px',
-                    maxHeight: '360px',
+                    width: '320px',
+                    maxHeight: '400px',
                     overflowY: 'auto',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '12px',
-                    boxShadow: '0 14px 36px -4px rgba(0,0,0,0.25), 0 0 0 1px var(--border-color)',
+                    backgroundColor: 'rgba(14, 19, 34, 0.98)',
+                    backdropFilter: 'blur(30px)',
+                    WebkitBackdropFilter: 'blur(30px)',
+                    border: '1px solid rgba(255, 255, 255, 0.16)',
+                    borderRadius: '14px',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.8), 0 0 0 1px rgba(255, 255, 255, 0.08)',
                     zIndex: 100,
                     display: 'flex',
                     flexDirection: 'column',
@@ -780,29 +817,29 @@ export default function ChatConversationPane({
                 >
                   {/* Search Header */}
                   <div style={{
-                    padding: '8px 10px',
-                    borderBottom: '1px solid var(--border-color)',
+                    padding: '9px 12px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                     position: 'sticky',
                     top: 0,
-                    backgroundColor: 'var(--bg-secondary)',
+                    backgroundColor: 'rgba(14, 19, 34, 0.99)',
                     zIndex: 10
                   }}>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <Search size={13} style={{ position: 'absolute', left: '8px', color: 'var(--text-muted)' }} />
+                      <Search size={13} style={{ position: 'absolute', left: '9px', color: 'var(--text-muted)' }} />
                       <input
                         ref={switchSearchInputRef}
                         type="text"
-                        placeholder="Search conversations..."
+                        placeholder="Search chats by name or account..."
                         value={switchSearchQuery}
                         onChange={(e) => setSwitchSearchQuery(e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '5px 8px 5px 26px',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-tertiary)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.75rem',
+                          padding: '6px 8px 6px 28px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                          color: '#ffffff',
+                          fontSize: '0.78rem',
                           outline: 'none'
                         }}
                       />
@@ -818,37 +855,49 @@ export default function ChatConversationPane({
                   </div>
 
                   {/* Grouped Chats List */}
-                  <div style={{ padding: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {Object.keys(groupedSwitchChats).length === 0 ? (
-                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
+                      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
                         No conversations found
                       </div>
                     ) : (
-                      Object.entries(groupedSwitchChats).map(([groupName, groupChats]) => (
-                        <div key={groupName} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          {/* Group Section Header */}
+                      Object.entries(groupedSwitchChats).map(([groupKey, groupData]) => (
+                        <div key={groupKey} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          {/* Clear Account Section Header */}
                           <div style={{
-                            padding: '4px 8px',
-                            fontSize: '0.66rem',
+                            padding: '6px 10px',
+                            fontSize: '0.7rem',
                             fontWeight: '800',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                            color: 'var(--accent-primary)',
+                            letterSpacing: '0.03em',
+                            color: '#ffffff',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            backgroundColor: 'var(--bg-tertiary)',
-                            borderRadius: '4px'
+                            backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            marginBottom: '2px'
                           }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
-                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: getAvatarColor(groupName), flexShrink: 0 }} />
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{groupName}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: groupData.color, flexShrink: 0, boxShadow: `0 0 6px ${groupData.color}` }} />
+                              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: '800' }}>
+                                  👤 {groupData.accountName}
+                                </span>
+                                {groupData.accountEmail && (
+                                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: '500' }}>
+                                    {groupData.accountEmail}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <span style={{ opacity: 0.75 }}>{groupChats.length}</span>
+                            <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '10px', fontWeight: '700' }}>
+                              {groupData.chats.length}
+                            </span>
                           </div>
 
-                          {/* Chat Items */}
-                          {groupChats.map((c) => {
+                          {/* Chat Items in this Account */}
+                          {groupData.chats.map((c) => {
                             const id = c._id || c.microsoftChatId || c.id;
                             const isSelected = id === chatId;
                             return (
@@ -859,37 +908,38 @@ export default function ChatConversationPane({
                                   if (onSelectChat) onSelectChat(id, c);
                                 }}
                                 style={{
-                                  padding: '6px 8px',
-                                  borderRadius: '6px',
-                                  backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
+                                  padding: '7px 9px',
+                                  borderRadius: '8px',
+                                  backgroundColor: isSelected ? 'rgba(0, 242, 254, 0.16)' : 'rgba(255, 255, 255, 0.02)',
+                                  border: isSelected ? '1px solid #00f2fe' : '1px solid transparent',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '8px',
-                                  transition: 'background-color 0.15s ease'
+                                  gap: '9px',
+                                  transition: 'all 0.15s ease'
                                 }}
                               >
                                 <div style={{
-                                  width: '26px',
-                                  height: '26px',
+                                  width: '30px',
+                                  height: '30px',
                                   borderRadius: '50%',
                                   backgroundColor: getAvatarColor(c.participant),
                                   color: '#fff',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  fontSize: '0.72rem',
+                                  fontSize: '0.74rem',
                                   fontWeight: '700',
                                   flexShrink: 0
                                 }}>
                                   {getInitials(c.participant)}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                                     <span style={{
-                                      fontSize: '0.78rem',
+                                      fontSize: '0.8rem',
                                       fontWeight: isSelected ? '800' : '600',
-                                      color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                                      color: isSelected ? '#00f2fe' : '#ffffff',
                                       overflow: 'hidden',
                                       textOverflow: 'ellipsis',
                                       whiteSpace: 'nowrap'
@@ -900,7 +950,7 @@ export default function ChatConversationPane({
                                       <span style={{
                                         backgroundColor: '#ef4444',
                                         color: '#fff',
-                                        fontSize: '0.6rem',
+                                        fontSize: '0.62rem',
                                         fontWeight: '800',
                                         padding: '1px 5px',
                                         borderRadius: '8px'
@@ -909,14 +959,27 @@ export default function ChatConversationPane({
                                       </span>
                                     )}
                                   </div>
-                                  <div style={{
-                                    fontSize: '0.68rem',
-                                    color: 'var(--text-muted)',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {cleanHtmlText(c.lastMessagePreview) || 'No preview'}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
+                                    <span style={{
+                                      fontSize: '0.62rem',
+                                      padding: '1px 5px',
+                                      borderRadius: '4px',
+                                      backgroundColor: 'rgba(99, 102, 241, 0.18)',
+                                      color: '#a5b4fc',
+                                      fontWeight: '700',
+                                      flexShrink: 0
+                                    }}>
+                                      {groupData.accountName}
+                                    </span>
+                                    <span style={{
+                                      fontSize: '0.7rem',
+                                      color: 'var(--text-muted)',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {cleanHtmlText(c.lastMessagePreview) || 'No preview'}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
