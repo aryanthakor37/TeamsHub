@@ -366,15 +366,17 @@ export default function ChatsPage({
   }, [layoutMode, splitChatId, chats, selectedChatId, activeChat, splitChat, pane3Chat]);
 
   return (
-    <div style={{ display: 'flex', width: '100%', height: 'calc(100vh - 66px)', overflow: 'hidden', backgroundColor: 'var(--bg-primary)' }}>
+    <div style={{ display: 'flex', width: '100%', height: 'calc(100vh - 66px)', overflow: 'hidden', backgroundColor: 'transparent' }}>
       {/* Left Chat List Column (Supports Full & Collapsed Compact Mode) */}
       <div
         className={`chats-sidebar-list ${activeChatId ? 'mobile-hidden' : ''}`}
         style={{
           width: isSidebarCollapsed ? '68px' : '310px',
           transition: 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
-          borderRight: '1px solid var(--border-color)',
-          backgroundColor: 'var(--bg-secondary)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+          backgroundColor: 'rgba(10, 14, 26, 0.78)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
@@ -996,8 +998,10 @@ export default function ChatsPage({
                   minWidth: 0,
                   minHeight: 0,
                   height: '100%',
-                  backgroundColor: 'var(--bg-primary)',
-                  borderRadius: isSplitActive ? '18px' : '0',
+                  backgroundColor: isSplitActive ? 'rgba(12, 17, 30, 0.68)' : 'rgba(12, 17, 30, 0.75)',
+                  backdropFilter: 'blur(30px)',
+                  WebkitBackdropFilter: 'blur(30px)',
+                  borderRadius: isSplitActive ? '20px' : '0',
                   border: isSplitActive ? '1px solid rgba(255, 255, 255, 0.09)' : 'none',
                   position: 'relative',
                   overflow: 'visible'
@@ -1008,7 +1012,7 @@ export default function ChatsPage({
                     ⚡ PANE 1 • {sanitizeDisplayName(activeChat?.participant?.split(' ')[0] || 'PRIMARY')}
                   </div>
                 )}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: isSplitActive ? '18px' : '0', overflow: 'hidden' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: isSplitActive ? '20px' : '0', overflow: 'hidden' }}>
                   <ChatConversationPane
                     chat={activeChat}
                     allChats={chats}
@@ -1038,8 +1042,10 @@ export default function ChatsPage({
                     minWidth: 0,
                     minHeight: 0,
                     height: '100%',
-                    backgroundColor: 'var(--bg-primary)',
-                    borderRadius: '18px',
+                    backgroundColor: 'rgba(12, 17, 30, 0.68)',
+                    backdropFilter: 'blur(30px)',
+                    WebkitBackdropFilter: 'blur(30px)',
+                    borderRadius: '20px',
                     border: '1px solid rgba(255, 255, 255, 0.09)',
                     position: 'relative',
                     overflow: 'visible'
@@ -1048,7 +1054,7 @@ export default function ChatsPage({
                   <div className="neon-floating-badge badge-pane-2">
                     ⚡ PANE 2 • {sanitizeDisplayName(splitChat?.participant?.split(' ')[0] || 'CLIENT B')}
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '18px', overflow: 'hidden' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '20px', overflow: 'hidden' }}>
                     <ChatConversationPane
                       chat={splitChat}
                       allChats={chats}
@@ -1083,8 +1089,10 @@ export default function ChatsPage({
                     minWidth: 0,
                     minHeight: 0,
                     height: '100%',
-                    backgroundColor: 'var(--bg-primary)',
-                    borderRadius: '18px',
+                    backgroundColor: 'rgba(12, 17, 30, 0.68)',
+                    backdropFilter: 'blur(30px)',
+                    WebkitBackdropFilter: 'blur(30px)',
+                    borderRadius: '20px',
                     border: '1px solid rgba(255, 255, 255, 0.09)',
                     position: 'relative',
                     overflow: 'visible'
@@ -1093,7 +1101,7 @@ export default function ChatsPage({
                   <div className="neon-floating-badge badge-pane-3">
                     ⚡ PANE 3 • {sanitizeDisplayName(pane3Chat?.participant?.split(' ')[0] || 'INTERNAL DEV')}
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '18px', overflow: 'hidden' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '20px', overflow: 'hidden' }}>
                     <ChatConversationPane
                       chat={pane3Chat}
                       allChats={chats}
@@ -1127,8 +1135,10 @@ export default function ChatsPage({
                     minWidth: 0,
                     minHeight: 0,
                     height: '100%',
-                    backgroundColor: 'var(--bg-primary)',
-                    borderRadius: '18px',
+                    backgroundColor: 'rgba(12, 17, 30, 0.68)',
+                    backdropFilter: 'blur(30px)',
+                    WebkitBackdropFilter: 'blur(30px)',
+                    borderRadius: '20px',
                     border: '1px solid rgba(255, 255, 255, 0.09)',
                     position: 'relative',
                     overflow: 'visible'
@@ -1137,7 +1147,7 @@ export default function ChatsPage({
                   <div className="neon-floating-badge badge-pane-4">
                     ⚡ PANE 4 • {sanitizeDisplayName(pane4Chat?.participant?.split(' ')[0] || 'MANAGEMENT')}
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '18px', overflow: 'hidden' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, borderRadius: '20px', overflow: 'hidden' }}>
                     <ChatConversationPane
                       chat={pane4Chat}
                       allChats={chats}

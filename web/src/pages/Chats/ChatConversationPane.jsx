@@ -618,7 +618,7 @@ export default function ChatConversationPane({
 
   if (!chat) {
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-muted)' }}>
         <MessageSquare size={36} style={{ opacity: 0.3, marginBottom: '8px' }} />
         <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>Select a conversation</div>
       </div>
@@ -630,8 +630,10 @@ export default function ChatConversationPane({
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      backgroundColor: 'var(--bg-primary)',
-      borderRight: isSplit && !isSplitSecondPane ? '2px solid var(--border-color)' : 'none',
+      backgroundColor: isSplit ? 'transparent' : 'rgba(12, 17, 30, 0.72)',
+      backdropFilter: isSplit ? 'none' : 'blur(28px)',
+      WebkitBackdropFilter: isSplit ? 'none' : 'blur(28px)',
+      borderRight: isSplit && !isSplitSecondPane ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
       minWidth: 0,
       height: '100%',
       position: 'relative'
@@ -640,8 +642,8 @@ export default function ChatConversationPane({
       <div style={{
         height: '64px',
         padding: '0 18px',
-        borderBottom: '1px solid var(--border-color)',
-        backgroundColor: 'var(--bg-glass)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        backgroundColor: 'rgba(11, 15, 26, 0.75)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         display: 'flex',
