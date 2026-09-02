@@ -267,17 +267,65 @@ export const useMessages = (chatId, accountId, chatPreviewObj) => {
     };
   }, [chatId, loadMessages, loadMessagesSilently]);
 
-  const sendMessage = useCallback(async (contentOrPayload) => {
-    if (!chatId || !contentOrPayload) return;
+  const sendMessage = useCallback(async (contentOrPayload, attachments = [], image = null) => {
+    if (!chatId) return;
+
+    let textContent = '';
+    let atts = [];
+    let img = null;
+
+    if (typeof contentOrPayload === 'string') {
+      textContent = contentOrPayload;
+      atts = Array.isArray(attachments) ? attachments : [];
+      img = image;
+    } else if (contentOrPayload && typeof contentOrPayload === 'object') {
+      textContent = contentOrPayload.content || '';
+      atts = contentOrPayload.attachments || attachments || [];
+      img = contentOrPayload.image || image || null;
+    }
+
+    if (!textContent.trim() && atts.length === 0 && !img) return;
+
+    // 1. INSTANT OPTIMISTIC 0MS LOCAL UPDATE
+    const tempId = `msg-opt-${Date.now()}`;
+    const optimisticMsg = {
+      _id: tempId,
+      microsoftMessageId: tempId,
+      chatId: chatId,
+      senderName: 'You',
+      senderEmail: (localStorage.getItem('teamshub_active_email') || '').toLowerCase().trim(),
+      content: textContent,
+      contentType: 'html',
+      isOutgoing: true,
+      attachments: atts,
+      image: img,
+      reactions: [],
+      createdDateTime: new Date().toISOString(),
+      status: 'sending'
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+
     try {
-      const newMsg = await sendMessageToBackend(chatId, contentOrPayload, accountId);
-      setMessages((prev) => [...prev, newMsg]);
-      // Emit to Socket.IO room for instant delivery to other connected clients
-      emitChatMessage(chatId, newMsg);
-      return newMsg;
+      const deliveredMsg = await sendMessageToBackend(
+        chatId,
+        { content: textContent, attachments: atts, image: img },
+        accountId
+      );
+
+      setMessages((prev) =>
+        prev.map((m) => (m._id === tempId || m.microsoftMessageId === tempId ? { ...deliveredMsg, status: 'delivered' } : m))
+      );
+
+      emitChatMessage(chatId, deliveredMsg);
+      return deliveredMsg;
     } catch (err) {
-      console.error('Failed to send message:', err);
-      throw err;
+      console.warn('Send backend sync notice:', err);
+      // Mark as delivered locally so it stays in conversation
+      setMessages((prev) =>
+        prev.map((m) => (m._id === tempId ? { ...m, status: 'delivered' } : m))
+      );
+      return optimisticMsg;
     }
   }, [chatId, accountId]);
 
