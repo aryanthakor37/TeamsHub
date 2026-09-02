@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Sun, Moon, Search, Bell, CheckCircle2, AlertCircle, Plus, LogOut, User as UserIcon } from 'lucide-react';
+import { Search, Bell, CheckCircle2, AlertCircle, Plus, LogOut, User as UserIcon } from 'lucide-react';
 import { checkHealth } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useChats } from '../hooks/useChats';
@@ -136,28 +136,6 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
         >
           <Plus size={16} />
           <span>Connect Account</span>
-        </button>
-
-        {/* Dark / Light Theme Toggle */}
-        <button
-          onClick={toggleTheme}
-          className="tab-pill-3d"
-          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-secondary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: 'var(--text-secondary)',
-            boxShadow: 'var(--shadow-sm)'
-          }}
-        >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         {/* User Profile Avatar Dropdown */}
