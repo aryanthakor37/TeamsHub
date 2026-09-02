@@ -253,11 +253,11 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
       {/* Header Banner & Zero-Storage Compliance Badge */}
       <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <h2 style={{ fontSize: '1.85rem', fontWeight: '800', marginBottom: '6px', letterSpacing: '-0.02em' }}>
-            {isConnected ? `Good morning, ${user?.name || activeAccount?.displayName || 'User'} 👋` : 'Welcome to TeamsHub 👋'}
+          <h2 style={{ fontSize: '1.85rem', fontWeight: '800', marginBottom: '6px', letterSpacing: '-0.02em', color: '#ffffff' }}>
+            {isConnected ? `Good morning, ${sanitizeDisplayName(user?.name || activeAccount?.displayName || 'User')} 👋` : 'Welcome to TeamsHub 👋'}
           </h2>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <span>Active Workspace: <strong style={{ color: isConnected ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: '700' }}>{activeAccName}</strong></span>
+            <span>Active Workspace: <strong style={{ color: isConnected ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: '700' }}>{sanitizeDisplayName(activeAccName)}</strong></span>
             <span style={{ opacity: 0.4 }}>•</span>
             <span className={isConnected ? "badge badge-company-a" : "badge"} style={{ backgroundColor: isConnected ? undefined : 'var(--bg-tertiary)', color: isConnected ? undefined : 'var(--text-muted)' }}>
               {connectedCount} connected account{connectedCount !== 1 ? 's' : ''}
@@ -292,7 +292,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
         marginBottom: '36px'
       }}>
         {/* Card 1: Unread Messages */}
-        <div className="glass-card glass-card-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
           <div style={{
             width: '52px',
             height: '52px',
@@ -308,12 +308,12 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
           <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Unread Messages</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2 }}>{isConnected ? realUnreadCount : 0}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>{isConnected ? realUnreadCount : 0}</div>
           </div>
         </div>
 
         {/* Card 2: Shared Files */}
-        <div className="glass-card glass-card-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
           <div style={{
             width: '52px',
             height: '52px',
@@ -329,12 +329,12 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
           <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Shared Files</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2 }}>{isConnected ? visibleFiles.length : 0}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>{isConnected ? visibleFiles.length : 0}</div>
           </div>
         </div>
 
         {/* Card 3: Connected Accounts */}
-        <div className="glass-card glass-card-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
           <div style={{
             width: '52px',
             height: '52px',
@@ -350,16 +350,16 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           </div>
           <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Connected Accounts</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2 }}>{connectedCount}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>{connectedCount}</div>
           </div>
         </div>
 
-        {/* Card 4: FEATURE 3 - Today's Meetings (Replaced Follow-ups 0) */}
+        {/* Card 4: FEATURE 3 - Today's Meetings */}
         <div 
           onClick={() => {
             if (todayMeetings && todayMeetings.length > 0) setShowMeetingsModal(true);
           }}
-          className="glass-card glass-card-interactive" 
+          className="card-3d-interactive" 
           style={{ 
             padding: '22px', 
             display: 'flex', 
@@ -382,11 +382,9 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
           }}>
             <Calendar size={24} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Today's Meetings</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2 }}>
-              {loadingMeetings ? '...' : isConnected ? todayMeetings.length : 0}
-            </div>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>{isConnected ? todayMeetings.length : 0}</div>
             {nextMeeting && (
               <div style={{ 
                 fontSize: '0.72rem', 
@@ -412,9 +410,9 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
         marginBottom: '36px'
       }}>
         {/* Recent Conversations with FEATURE 2: Quick Reply */}
-        <div className="glass-card" style={{ padding: '28px', position: 'relative' }}>
+        <div className="card-3d-interactive" style={{ padding: '28px', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Recent Conversations</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#ffffff' }}>Recent Conversations</h3>
             <button
               onClick={() => setActiveTab('chats')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -443,8 +441,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                       display: 'flex',
                       flexDirection: 'column',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'var(--bg-secondary)',
-                      border: isQuickReplying ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                      border: isQuickReplying ? '1px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.08)',
                       boxShadow: 'var(--shadow-sm)',
                       transition: 'all var(--transition-fast)',
                       overflow: 'hidden'
@@ -460,10 +458,10 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                         }
                       }}
                       style={{
+                        padding: '14px 16px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '14px',
-                        padding: '14px 16px',
                         cursor: 'pointer'
                       }}
                     >
@@ -472,28 +470,16 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                         height: '42px',
                         borderRadius: '50%',
                         backgroundColor: getAvatarColor(chat.participant),
-                        color: '#ffffff',
+                        color: '#fff',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontWeight: '700',
-                        fontSize: '0.92rem',
-                        position: 'relative',
+                        fontSize: '0.95rem',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
                         flexShrink: 0
                       }}>
                         {getInitials(chat.participant)}
-                        {/* Live In-Memory Online Presence Dot */}
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '-1px',
-                          right: '-1px',
-                          width: '10px',
-                          height: '10px',
-                          borderRadius: '50%',
-                          backgroundColor: chat.onlineStatus === 'busy' ? '#ef4444' : '#10b981',
-                          border: '2px solid var(--bg-secondary)',
-                          boxShadow: '0 0 6px rgba(16, 185, 129, 0.4)'
-                        }} />
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -524,9 +510,9 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                         style={{
                           padding: '6px 10px',
                           borderRadius: 'var(--radius-sm)',
-                          backgroundColor: isQuickReplying ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                          backgroundColor: isQuickReplying ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.06)',
                           color: isQuickReplying ? '#fff' : 'var(--text-secondary)',
-                          border: '1px solid var(--border-color)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
                           fontSize: '0.75rem',
                           fontWeight: '600',
                           cursor: 'pointer',
@@ -542,7 +528,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                       </button>
 
                       <span className={`badge ${chat.accountBadge || 'badge-company-a'}`} style={{ flexShrink: 0 }}>
-                        {chat.company}
+                        {sanitizeDisplayName(chat.company)}
                       </span>
                     </div>
 
@@ -550,8 +536,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                     {isQuickReplying && (
                       <div style={{
                         padding: '10px 16px 14px 16px',
-                        borderTop: '1px solid var(--border-color)',
-                        backgroundColor: 'var(--bg-tertiary)',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '8px'
@@ -561,15 +547,15 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                             type="text"
                             value={quickReplyText}
                             onChange={(e) => setQuickReplyText(e.target.value)}
-                            placeholder={`Reply directly to ${chat.participant}... (No DB store)`}
+                            placeholder={`Reply directly to ${sanitizeDisplayName(chat.participant)}... (No DB store)`}
                             autoFocus
                             disabled={quickReplySending}
                             style={{
                               flex: 1,
                               padding: '8px 12px',
                               borderRadius: 'var(--radius-sm)',
-                              backgroundColor: 'var(--bg-primary)',
-                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
                               color: 'var(--text-primary)',
                               fontSize: '0.85rem',
                               outline: 'none'
@@ -581,7 +567,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                             className="btn btn-primary"
                             style={{
                               padding: '8px 14px',
-                              fontSize: '0.82rem',
+                              fontSize: '0.8rem',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '6px'
@@ -594,9 +580,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
 
                         {/* Direct Stream Status Notice */}
                         {quickReplyStatus === 'success' && (
-                          <div style={{ fontSize: '0.75rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}>
-                            <Check size={13} />
-                            <span>Message dispatched directly via Microsoft Graph!</span>
+                          <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={13} /> Sent directly via Microsoft Graph!
                           </div>
                         )}
                         {quickReplyStatus === 'error' && (
@@ -620,9 +605,9 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
         </div>
 
         {/* Recent Shared Files with FEATURE 1: Direct Memory-to-Memory Preview */}
-        <div className="glass-card" style={{ padding: '28px' }}>
+        <div className="card-3d-interactive" style={{ padding: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Recent Shared Files</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#ffffff' }}>Recent Shared Files</h3>
             <button
               onClick={() => setActiveTab('files')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -650,8 +635,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                       gap: '14px',
                       padding: '12px 16px',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
                       boxShadow: 'var(--shadow-sm)',
                       cursor: 'pointer',
                       transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)'
@@ -685,7 +670,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                         {file.name}
                       </div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        {meta.label} • {file.size || 'Shared File'} • {file.sender || file.account}
+                        {meta.label} • {file.size || 'Shared File'} • {sanitizeDisplayName(file.sender || file.account)}
                       </div>
                     </div>
 
@@ -693,7 +678,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                     <div style={{
                       padding: '6px',
                       borderRadius: 'var(--radius-sm)',
-                      backgroundColor: 'var(--bg-tertiary)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
                       color: 'var(--accent-primary)',
                       display: 'flex',
                       alignItems: 'center',
@@ -703,7 +688,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                     </div>
 
                     <span className="badge" style={{
-                      backgroundColor: 'var(--bg-tertiary)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
                       color: 'var(--text-secondary)',
                       fontSize: '0.72rem',
                       display: 'inline-flex',
@@ -725,7 +710,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                       }}>
                         {(file.account?.[0] || 'A').toUpperCase()}
                       </span>
-                      <span>{file.account}</span>
+                      <span>{sanitizeDisplayName(file.account)}</span>
                     </span>
                   </div>
                 );
@@ -733,7 +718,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
             ) : isConnected && loadingFiles ? (
               <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
                 <Folder size={32} style={{ marginBottom: '10px', opacity: 0.4 }} className="spin" />
-                <div>Streaming shared files directly from Microsoft Graph...</div>
+                <div>Loading shared files...</div>
               </div>
             ) : isConnected ? (
               <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
@@ -752,7 +737,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
       </div>
 
       {/* Activity Feed */}
-      <div className="glass-card" style={{ padding: '28px' }}>
+      <div className="card-3d-interactive" style={{ padding: '28px' }}>
         <h3 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '20px' }}>Workspace Activity Stream</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {isConnected ? (

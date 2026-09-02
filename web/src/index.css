@@ -7,33 +7,35 @@
   --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-family-heading: 'Outfit', 'Inter', system-ui, sans-serif;
 
-  /* Color Palette - Default Light Theme */
-  --bg-primary: #f6f8fc;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #edf2f7;
-  --bg-glass: rgba(255, 255, 255, 0.85);
-  --bg-glass-card: rgba(255, 255, 255, 0.92);
+  /* Color Palette - Unified Dark Cyber Theme */
+  --bg-primary: #070a14;
+  --bg-secondary: rgba(12, 17, 30, 0.78);
+  --bg-tertiary: rgba(17, 23, 40, 0.75);
+  --bg-glass: rgba(11, 15, 26, 0.75);
+  --bg-glass-card: rgba(14, 20, 36, 0.78);
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
 
-  --border-color: #e2e8f0;
-  --border-subtle: #f1f5f9;
-  --border-3d-highlight: rgba(255, 255, 255, 0.75);
-  --border-glow: rgba(79, 70, 229, 0.25);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-3d-highlight: rgba(255, 255, 255, 0.12);
+  --border-glow: rgba(0, 242, 254, 0.45);
 
   /* Accent & Enterprise Gradients */
-  --accent-primary: #4f46e5;       /* Indigo */
-  --accent-primary-hover: #4338ca;
-  --accent-secondary: #0284c7;     /* Sky */
-  --accent-light: #eef2ff;
-  --accent-text: #4338ca;
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #4f46e5;
+  --accent-secondary: #00f2fe;
+  --accent-light: rgba(99, 102, 241, 0.22);
+  --accent-text: #a5b4fc;
   
-  --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
-  --accent-gradient-hover: linear-gradient(135deg, #4338ca 0%, #0891b2 100%);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
-  --ambient-mesh-glow: radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.12) 0%, transparent 45%), radial-gradient(circle at 85% 90%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #4f46e5 0%, #0891b2 100%);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(6, 182, 212, 0.12) 100%);
+  --ambient-mesh-glow: 
+    linear-gradient(180deg, rgba(7, 10, 20, 0.68) 0%, rgba(10, 14, 28, 0.72) 50%, rgba(6, 8, 16, 0.8) 100%),
+    url('/assets/cyber_bg.jpg');
 
   /* Company Identity Badges */
   --badge-company-a: #6366f1;
@@ -46,13 +48,13 @@
   --status-offline: #94a3b8;
 
   /* 3D Shadows & Specular Depth */
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 14px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 14px 28px -4px rgba(15, 23, 42, 0.12), 0 6px 12px -2px rgba(15, 23, 42, 0.06);
-  --shadow-3d-card: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
-  --shadow-3d-hover: 0 20px 40px -8px rgba(79, 70, 229, 0.2), 0 8px 18px -2px rgba(15, 23, 42, 0.08), inset 0 1px 0 0 #ffffff;
-  --shadow-glow: 0 0 24px -2px rgba(79, 70, 229, 0.4);
-  --shadow-3d-pill: 0 3px 8px -1px rgba(79, 70, 229, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 6px 16px -2px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 32px -4px rgba(0, 0, 0, 0.7), 0 6px 12px -2px rgba(0, 0, 0, 0.5);
+  --shadow-3d-card: 0 10px 30px -5px rgba(0, 0, 0, 0.65), 0 2px 6px -1px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  --shadow-3d-hover: 0 20px 44px -8px rgba(99, 102, 241, 0.35), 0 8px 20px -2px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  --shadow-glow: 0 0 28px 0 rgba(99, 102, 241, 0.5);
+  --shadow-3d-pill: 0 3px 10px -1px rgba(99, 102, 241, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
 
   /* Radius Tokens */
   --radius-sm: 8px;
