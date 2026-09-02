@@ -131,76 +131,54 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
 
       {/* Right Controls: Layout Switcher, Bell, Live Pill, User Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-        {/* Segmented Layout Switcher (1, 2, 3, Quad) */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '10px',
-          padding: '2px',
-          gap: '2px'
-        }}>
-          {[
-            { id: 'single', label: '1', title: 'Single Pane' },
-            { id: 'dual', label: '2', title: '2-Split Parallel' },
-            { id: 'triple', label: '3', title: '3-Split Triple' },
-            { id: 'quad', label: '⊞', title: '4-Quad Grid' }
-          ].map((mode) => {
-            const isActive = layoutMode === mode.id;
-            return (
-              <button
-                key={mode.id}
-                onClick={() => {
-                  if (activeTab !== 'chats') setActiveTab('chats');
-                  handleLayoutSelect(mode.id);
-                }}
-                title={mode.title}
-                style={{
-                  width: '28px',
-                  height: '26px',
-                  borderRadius: '7px',
-                  border: isActive ? '1px solid #00f2fe' : '1px solid transparent',
-                  backgroundColor: isActive ? 'rgba(0, 242, 254, 0.18)' : 'transparent',
-                  color: isActive ? '#00f2fe' : 'var(--text-muted)',
-                  fontSize: mode.label === '⊞' ? '0.95rem' : '0.8rem',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: isActive ? '0 0 12px rgba(0, 242, 254, 0.35)' : 'none',
-                  transition: 'all 0.18s ease'
-                }}
-              >
-                {mode.label}
-              </button>
-            );
-          })}
-        </div>
-
-
-
-        {/* Live Status Pill */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          padding: '4px 8px',
-          borderRadius: '20px',
-          backgroundColor: 'rgba(16, 185, 129, 0.12)',
-          border: '1px solid rgba(16, 185, 129, 0.3)'
-        }}
-        title="Live Pass-Through Stream Connected"
-        >
-          <span style={{
-            width: '6px',
-            height: '6px',
-            borderRadius: '50%',
-            backgroundColor: '#10b981',
-            boxShadow: '0 0 8px #10b981'
-          }} className="pulse-online" />
-        </div>
+        {/* Segmented Layout Switcher (1, 2, 3, Quad) - Visible ONLY on Chats page */}
+        {activeTab === 'chats' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '10px',
+            padding: '2px',
+            gap: '2px'
+          }}>
+            {[
+              { id: 'single', label: '1', title: 'Single Pane' },
+              { id: 'dual', label: '2', title: '2-Split Parallel' },
+              { id: 'triple', label: '3', title: '3-Split Triple' },
+              { id: 'quad', label: '⊞', title: '4-Quad Grid' }
+            ].map((mode) => {
+              const isActive = layoutMode === mode.id;
+              return (
+                <button
+                  key={mode.id}
+                  onClick={() => {
+                    handleLayoutSelect(mode.id);
+                  }}
+                  title={mode.title}
+                  style={{
+                    width: '28px',
+                    height: '26px',
+                    borderRadius: '7px',
+                    border: isActive ? '1px solid #00f2fe' : '1px solid transparent',
+                    backgroundColor: isActive ? 'rgba(0, 242, 254, 0.18)' : 'transparent',
+                    color: isActive ? '#00f2fe' : 'var(--text-muted)',
+                    fontSize: mode.label === '⊞' ? '0.95rem' : '0.8rem',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: isActive ? '0 0 12px rgba(0, 242, 254, 0.35)' : 'none',
+                    transition: 'all 0.18s ease'
+                  }}
+                >
+                  {mode.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* User Profile Pill Capsule */}
         <div style={{ position: 'relative' }}>
