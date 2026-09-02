@@ -1557,12 +1557,14 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', height: '100%', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', height: '100%', overflow: 'hidden', backgroundColor: 'transparent' }}>
       {/* Category Sidebar */}
       <div style={{
         width: '240px',
-        backgroundColor: 'var(--bg-secondary)',
-        borderRight: '1px solid var(--border-color)',
+        backgroundColor: 'rgba(12, 16, 28, 0.48)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
         padding: '20px 16px',
         display: 'flex',
         flexDirection: 'column',
@@ -1752,9 +1754,10 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             alignItems: 'center',
             gap: '10px',
             padding: '10px 14px',
-            backgroundColor: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm)'
+            backgroundColor: 'rgba(16, 22, 38, 0.45)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '12px'
           }}>
             <Search size={18} color="var(--text-muted)" />
             <input
@@ -1771,11 +1774,11 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             <button
               onClick={() => setViewMode('grid')}
               style={{
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-color)',
-                backgroundColor: viewMode === 'grid' ? 'var(--accent-light)' : 'var(--bg-secondary)',
-                color: viewMode === 'grid' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: viewMode === 'grid' ? 'var(--accent-primary)' : 'rgba(16, 22, 38, 0.42)',
+                color: viewMode === 'grid' ? '#ffffff' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1790,11 +1793,11 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             <button
               onClick={() => setViewMode('list')}
               style={{
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-color)',
-                backgroundColor: viewMode === 'list' ? 'var(--accent-light)' : 'var(--bg-secondary)',
-                color: viewMode === 'list' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: viewMode === 'list' ? 'var(--accent-primary)' : 'rgba(16, 22, 38, 0.42)',
+                color: viewMode === 'list' ? '#ffffff' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1851,16 +1854,15 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
                   <div
                     key={file.id}
                     id={`file-card-${file.id || file.name}`}
-                    className="glass-card"
+                    className="card-3d-interactive"
                     style={{
-                      borderRadius: 'var(--radius-md)',
+                      borderRadius: '18px',
                       overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
                       cursor: 'pointer',
-                      transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
-                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.08)',
                       boxShadow: isSelected ? '0 0 16px rgba(99, 102, 241, 0.25)' : 'none',
                       position: 'relative'
                     }}

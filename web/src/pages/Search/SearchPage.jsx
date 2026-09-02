@@ -160,16 +160,18 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
           alignItems: 'center',
           gap: '14px',
           padding: '16px 20px',
-          backgroundColor: 'var(--bg-secondary)',
-          border: '2px solid var(--accent-primary)',
-          borderRadius: 'var(--radius-md)',
-          boxShadow: 'var(--shadow-md)',
+          backgroundColor: 'rgba(16, 22, 38, 0.45)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(0, 242, 254, 0.35)',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
           marginBottom: '24px'
         }}>
           {loading ? (
             <Loader2 size={24} className="spin" color="var(--accent-primary)" />
           ) : (
-            <Search size={24} color="var(--accent-primary)" />
+            <Search size={24} color="#00f2fe" />
           )}
           <input
             type="text"
@@ -198,11 +200,11 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
               style={{
                 padding: '8px 18px',
                 borderRadius: 'var(--radius-full)',
-                border: 'none',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 fontSize: '0.85rem',
                 fontWeight: '600',
                 cursor: 'pointer',
-                backgroundColor: activeFilter === f ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                backgroundColor: activeFilter === f ? 'var(--accent-primary)' : 'rgba(16, 22, 38, 0.42)',
                 color: activeFilter === f ? '#ffffff' : 'var(--text-secondary)',
                 boxShadow: 'var(--shadow-sm)'
               }}
@@ -242,9 +244,9 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
                 {chats.map((chat) => (
                   <div
                     key={chat._id || chat.id}
-                    className="glass-card"
+                    className="card-3d-interactive"
                     onClick={() => handleJumpToChat(chat._id || chat.id || chat.microsoftChatId, chat.participant, null, query)}
-                    style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+                    style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRadius: '16px', cursor: 'pointer' }}
                   >
                     <div style={{
                       width: '42px', height: '42px', borderRadius: '50%',
@@ -279,9 +281,9 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
                 {messages.map((msg) => (
                   <div
                     key={msg._id || msg.id}
-                    className="glass-card"
+                    className="card-3d-interactive"
                     onClick={() => handleJumpToChat(msg.chatId || msg.threadId || msg._id || msg.id, msg.senderName, msg._id || msg.id || msg.microsoftMessageId, query)}
-                    style={{ padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '14px', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+                    style={{ padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '14px', borderRadius: '16px', cursor: 'pointer' }}
                   >
                     <MessageSquare size={20} color="var(--accent-primary)" style={{ marginTop: '2px' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -312,7 +314,7 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
                 {files.map((file, idx) => (
                   <div
                     key={file.id || idx}
-                    className="glass-card"
+                    className="card-3d-interactive"
                     onClick={() => {
                       if (onSelectFile) {
                         onSelectFile(file);
@@ -320,12 +322,12 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
                         setPreviewDocModal(file);
                       }
                     }}
-                    style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+                    style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRadius: '16px', cursor: 'pointer' }}
                   >
                     <div style={{
                       width: '40px',
                       height: '40px',
-                      borderRadius: 'var(--radius-sm)',
+                      borderRadius: '10px',
                       backgroundColor: 'rgba(99, 102, 241, 0.12)',
                       color: 'var(--accent-primary)',
                       display: 'flex',
@@ -355,7 +357,7 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {(query.trim() ? accounts : (connectedAccounts || [])).map((acc) => (
-                  <div key={acc._id || acc.id || acc.email} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRadius: 'var(--radius-md)' }}>
+                  <div key={acc._id || acc.id || acc.email} className="card-3d-interactive" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRadius: '16px' }}>
                     <ShieldCheck size={24} color="var(--accent-primary)" />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)' }}>{acc.displayName || acc.name || 'Microsoft Account'}</div>

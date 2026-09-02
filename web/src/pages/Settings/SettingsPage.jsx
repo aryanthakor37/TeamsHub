@@ -62,10 +62,10 @@ export default function SettingsPage({ theme, toggleTheme }) {
           {sections.map((section) => {
             const SectionIcon = section.icon;
             return (
-              <div key={section.title} className="glass-card" style={{ padding: '20px' }}>
+              <div key={section.title} className="card-3d-interactive" style={{ padding: '22px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                  <SectionIcon size={20} color="var(--accent-primary)" />
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700' }}>{section.title}</h3>
+                  <SectionIcon size={20} color="#00f2fe" />
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#ffffff' }}>{section.title}</h3>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -76,9 +76,10 @@ export default function SettingsPage({ theme, toggleTheme }) {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '12px',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: 'var(--bg-tertiary)'
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.04)'
                       }}
                     >
                       <div>
