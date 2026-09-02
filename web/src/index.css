@@ -7,12 +7,12 @@
   --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-family-heading: 'Outfit', 'Inter', system-ui, sans-serif;
 
-  /* Color Palette - Unified Dark Cyber Theme */
+  /* Color Palette - Unified Dark Cyber Theme with Frosted Glass */
   --bg-primary: #070a14;
-  --bg-secondary: rgba(12, 17, 30, 0.78);
-  --bg-tertiary: rgba(17, 23, 40, 0.75);
-  --bg-glass: rgba(11, 15, 26, 0.75);
-  --bg-glass-card: rgba(14, 20, 36, 0.78);
+  --bg-secondary: rgba(16, 22, 38, 0.45);
+  --bg-tertiary: rgba(20, 28, 48, 0.4);
+  --bg-glass: rgba(14, 18, 32, 0.45);
+  --bg-glass-card: rgba(16, 22, 38, 0.42);
 
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
@@ -34,7 +34,9 @@
   --accent-gradient-hover: linear-gradient(135deg, #4f46e5 0%, #0891b2 100%);
   --accent-gradient-subtle: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(6, 182, 212, 0.12) 100%);
   --ambient-mesh-glow: 
-    linear-gradient(180deg, rgba(7, 10, 20, 0.68) 0%, rgba(10, 14, 28, 0.72) 50%, rgba(6, 8, 16, 0.8) 100%),
+    radial-gradient(ellipse 65% 50% at 15% 15%, rgba(0, 242, 254, 0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 65% 50% at 85% 15%, rgba(240, 147, 251, 0.22) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(7, 10, 20, 0.3) 0%, rgba(10, 14, 28, 0.4) 50%, rgba(6, 8, 16, 0.5) 100%),
     url('/assets/cyber_bg.jpg');
 
   /* Company Identity Badges */
@@ -976,12 +978,12 @@ button:focus, button:focus-visible, button:active {
 
 /* 3D Dynamic Card Tilt & Hover Elevation */
 .card-3d-interactive {
-  background: rgba(13, 19, 34, 0.72) !important;
-  backdrop-filter: blur(28px) !important;
-  -webkit-backdrop-filter: blur(28px) !important;
+  background: rgba(16, 22, 38, 0.42) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
   border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 14px 36px -6px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
   transform-style: preserve-3d;
 }
@@ -1006,12 +1008,12 @@ button:focus, button:focus-visible, button:active {
 }
 
 .modern-floating-pane {
-  background: rgba(12, 17, 30, 0.68) !important;
-  backdrop-filter: blur(30px) !important;
-  -webkit-backdrop-filter: blur(30px) !important;
-  border-radius: 20px !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  background: rgba(16, 22, 38, 0.45) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border-radius: 22px !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
   position: relative;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
   display: flex;
@@ -1023,8 +1025,8 @@ button:focus, button:focus-visible, button:active {
 }
 
 .modern-floating-pane:hover {
-  border-color: rgba(255, 255, 255, 0.16) !important;
-  box-shadow: 0 26px 56px -8px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 242, 254, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 26px 56px -8px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 242, 254, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Floating Neon Top Badge Pills */

@@ -374,7 +374,7 @@ export default function ChatsPage({
           width: isSidebarCollapsed ? '68px' : '310px',
           transition: 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
           borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-          backgroundColor: 'rgba(10, 14, 26, 0.78)',
+          backgroundColor: 'rgba(12, 16, 28, 0.48)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           display: 'flex',
@@ -853,7 +853,7 @@ export default function ChatsPage({
             <div style={{
               padding: '8px 18px',
               borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-              backgroundColor: 'rgba(12, 17, 30, 0.65)',
+              backgroundColor: 'rgba(12, 16, 28, 0.4)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               display: 'flex',

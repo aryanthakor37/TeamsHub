@@ -35,7 +35,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
   return (
     <aside className="sidebar-container" style={{
       width: '240px',
-      backgroundColor: 'rgba(10, 14, 26, 0.82)',
+      backgroundColor: 'rgba(10, 14, 24, 0.55)',
       backdropFilter: 'blur(24px)',
       WebkitBackdropFilter: 'blur(24px)',
       borderRight: '1px solid rgba(255, 255, 255, 0.08)',
