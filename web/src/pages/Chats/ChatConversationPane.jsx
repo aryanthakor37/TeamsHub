@@ -1299,19 +1299,36 @@ export default function ChatConversationPane({
                           // Format plain text with highlight for @mentions
                           const formatTextWithMentions = (text) => {
                             if (!text) return null;
-                            const decoded = decodeHtmlEntities(text);
+                            let processedText = text;
+
+                            // Process <at> tags if plain text still has them
+                            processedText = processedText.replace(/<at[^>]*>@?([^<]+)<\/at>/gi, '@$1');
+
+                            // If msg.mentions exists, ensure @ is prefixed to mentioned names
+                            if (msg.mentions && Array.isArray(msg.mentions)) {
+                              msg.mentions.forEach((men) => {
+                                const rawName = (men.mentionText || men.mentioned?.user?.displayName || '').replace(/^@/, '').trim();
+                                if (rawName) {
+                                  const reg = new RegExp(`(?<!@)(${rawName})`, 'gi');
+                                  processedText = processedText.replace(reg, '@$1');
+                                }
+                              });
+                            }
+
+                            const decoded = decodeHtmlEntities(processedText);
                             const parts = decoded.split(/(@[a-zA-Z0-9_\-.\s]+?(?=\s|$|[.,!?]))/g);
                             return parts.map((part, i) => {
                               if (part.startsWith('@') && part.trim().length > 1) {
                                 return (
                                   <span
                                     key={i}
+                                    className="teams-mention-tag"
                                     style={{
                                       color: '#38bdf8',
                                       backgroundColor: 'rgba(56, 189, 248, 0.15)',
                                       padding: '1px 6px',
                                       borderRadius: '5px',
-                                      fontWeight: '600',
+                                      fontWeight: '700',
                                       display: 'inline-block'
                                     }}
                                   >
@@ -1366,7 +1383,7 @@ export default function ChatConversationPane({
                                 <div style={{ margin: 0, fontWeight: '500' }}>
                                   {translatedMessages[msgId]}
                                 </div>
-                              ) : (msg.contentType === 'html' || (msg.content && (msg.content.includes('<img') || msg.content.includes('<p>') || msg.content.includes('<div') || msg.content.includes('hostedContents')))) ? (
+                              ) : (msg.contentType === 'html' || (msg.content && (msg.content.includes('<img') || msg.content.includes('<p>') || msg.content.includes('<div') || msg.content.includes('<at') || msg.content.includes('hostedContents')))) ? (
                                 <div
                                   className="message-html-content"
                                   dangerouslySetInnerHTML={{
@@ -1397,6 +1414,26 @@ export default function ChatConversationPane({
                                           return `src="${apiBase}/api/chats/${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}&email=${encodeURIComponent(cleanAcc)}"`;
                                         }
                                       );
+
+                                      // 3. Process <at> mention tags from Microsoft Graph (e.g. <at id="0">Aryan Kumrecha</at>)
+                                      processed = processed.replace(
+                                        /<at[^>]*>@?([^<]+)<\/at>/gi,
+                                        '<span class="teams-mention-tag" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 1px 6px; border-radius: 5px; font-weight: 700; display: inline-block;">@$1</span>'
+                                      );
+
+                                      // 4. Also check msg.mentions array
+                                      if (msg.mentions && Array.isArray(msg.mentions)) {
+                                        msg.mentions.forEach((men) => {
+                                          const raw = (men.mentionText || men.mentioned?.user?.displayName || '').replace(/^@/, '').trim();
+                                          if (raw && !processed.includes(`@${raw}`)) {
+                                            const r = new RegExp(`(?<!@|>)(${raw})(?!<)`, 'gi');
+                                            processed = processed.replace(
+                                              r,
+                                              '<span class="teams-mention-tag" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 1px 6px; border-radius: 5px; font-weight: 700; display: inline-block;">@$1</span>'
+                                            );
+                                          }
+                                        });
+                                      }
 
                                       return processed;
                                     })()
@@ -1481,6 +1518,27 @@ export default function ChatConversationPane({
                           >
                             See original
                           </span>
+                        </div>
+                      )}
+
+                      {/* Real Teams @ mention indicator badge (Matches Screenshot 5) */}
+                      {!msg.isOutgoing && ((msg.mentions && msg.mentions.length > 0) || (msg.content && (msg.content.includes('<at') || msg.content.includes('@')))) && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            right: '-22px',
+                            transform: 'translateY(-50%)',
+                            color: '#ea580c',
+                            fontSize: '0.85rem',
+                            fontWeight: '800',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          title="You were mentioned in this message"
+                        >
+                          @
                         </div>
                       )}
 
