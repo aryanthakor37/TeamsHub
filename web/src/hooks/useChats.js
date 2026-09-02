@@ -42,13 +42,27 @@ const hasConnectedAccounts = () => {
   }
 };
 
+const getDisconnectedEmails = () => {
+  try {
+    const raw = localStorage.getItem('teamshub_disconnected_emails');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
 const getStoredLocalChats = () => {
   try {
     if (!hasConnectedAccounts()) return [];
     const raw = localStorage.getItem('teamshub_cached_chats');
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
-    return parsed;
+    const disconnected = getDisconnectedEmails().map(e => e.toLowerCase().trim());
+    if (disconnected.length === 0) return parsed;
+    return parsed.filter(c => {
+      const email = (c.accountEmail || c.connectedAccountId || '').toLowerCase().trim();
+      return !disconnected.some(d => email.includes(d) || d.includes(email));
+    });
   } catch (e) {
     return [];
   }
@@ -60,7 +74,12 @@ const saveStoredLocalChats = (items) => {
       localStorage.removeItem('teamshub_cached_chats');
       return;
     }
-    const filtered = (items || []).filter(Boolean);
+    const disconnected = getDisconnectedEmails().map(e => e.toLowerCase().trim());
+    const filtered = (items || []).filter(c => {
+      if (!c) return false;
+      const email = (c.accountEmail || c.connectedAccountId || '').toLowerCase().trim();
+      return !disconnected.some(d => email.includes(d) || d.includes(email));
+    });
     localStorage.setItem('teamshub_cached_chats', JSON.stringify(filtered));
   } catch (e) {}
 };
@@ -73,20 +92,25 @@ const getChatUniqueKey = (c) => {
   return acc ? `${acc}_${id}` : id;
 };
 
-// Helper: merge fresh incoming chats with existing cached multi-account chats
+// Helper: merge fresh incoming chats with existing cached multi-account chats (excluding disconnected)
 const mergeMultiAccountChats = (freshItems = [], existingItems = []) => {
   const map = new Map();
+  const disconnected = getDisconnectedEmails().map(e => e.toLowerCase().trim());
 
-  // 1. Seed with existing cached chats
+  // 1. Seed with existing cached chats (excluding disconnected)
   existingItems.forEach((c) => {
     if (!c) return;
+    const email = (c.accountEmail || c.connectedAccountId || '').toLowerCase().trim();
+    if (disconnected.some(d => email.includes(d) || d.includes(email))) return;
     const key = getChatUniqueKey(c);
     if (key) map.set(key, c);
   });
 
-  // 2. Fresh items take priority and update existing items
+  // 2. Fresh items take priority and update existing items (excluding disconnected)
   freshItems.forEach((c) => {
     if (!c) return;
+    const email = (c.accountEmail || c.connectedAccountId || '').toLowerCase().trim();
+    if (disconnected.some(d => email.includes(d) || d.includes(email))) return;
     const key = getChatUniqueKey(c);
     if (key) map.set(key, c);
   });

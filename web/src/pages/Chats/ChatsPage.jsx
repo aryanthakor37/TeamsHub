@@ -186,8 +186,23 @@ export default function ChatsPage({
     return Array.from(orgs);
   }, [chats, uniqueConnectedAccounts, isAccountConnected]);
 
-  // Enhanced Filter Logic
+  // Enhanced Filter Logic: STRICTLY exclude any chats from disconnected accounts
   const filteredChats = chats.filter((chat) => {
+    // 1. If we have connected accounts, ensure chat owner belongs to a connected account
+    if (uniqueConnectedAccounts && uniqueConnectedAccounts.length > 0) {
+      const connectedEmails = uniqueConnectedAccounts.map(a => (a.email || a.username || '').toLowerCase().trim());
+      const chatOwnerEmail = (getChatOwnerEmail(chat) || chat.accountEmail || chat.connectedAccountId || '').toLowerCase().trim();
+      if (chatOwnerEmail) {
+        const isOwnerActive = connectedEmails.some(ce =>
+          ce === chatOwnerEmail ||
+          ce.includes(chatOwnerEmail) ||
+          chatOwnerEmail.includes(ce) ||
+          (ce.split('@')[0] && chatOwnerEmail.includes(ce.split('@')[0]))
+        );
+        if (!isOwnerActive) return false;
+      }
+    }
+
     const pName = (chat.participant || '').toLowerCase();
     const lMsg = (chat.lastMessagePreview || '').toLowerCase();
     const query = searchQuery.toLowerCase();
@@ -518,7 +533,12 @@ export default function ChatsPage({
               <Sparkles size={12} />
               <span>All Accounts</span>
               <span style={{ opacity: 0.85, fontSize: '0.68rem', backgroundColor: selectedFilterAccount === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: '10px' }}>
-                {chats.length}
+                {selectedFilterAccount === 'all' ? filteredChats.length : chats.filter(c => {
+                  if (uniqueConnectedAccounts.length === 0) return true;
+                  const connectedEmails = uniqueConnectedAccounts.map(a => (a.email || a.username || '').toLowerCase().trim());
+                  const owner = (getChatOwnerEmail(c) || c.accountEmail || c.connectedAccountId || '').toLowerCase().trim();
+                  return !owner || connectedEmails.some(ce => ce === owner || ce.includes(owner) || owner.includes(ce) || (ce.split('@')[0] && owner.includes(ce.split('@')[0])));
+                }).length}
               </span>
             </button>
 

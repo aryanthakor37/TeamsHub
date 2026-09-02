@@ -6,22 +6,36 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_
   ? `${import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')}/api`
   : (typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api');
 
+const getDisconnectedEmails = () => {
+  try {
+    const raw = localStorage.getItem('teamshub_disconnected_emails');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
 /**
- * Build auth headers — instant zero-latency token resolution with background refresh
+ * Helper: Build Authorization Headers for API calls
  */
 const getAuthHeaders = async (accountId) => {
   const headers = { 'Content-Type': 'application/json' };
   
+  const disconnectedList = getDisconnectedEmails().map(e => e.toLowerCase().trim());
   let allAccounts = [];
   try {
-    allAccounts = msalInstance.getAllAccounts() || [];
+    const rawMsal = msalInstance.getAllAccounts() || [];
+    allAccounts = rawMsal.filter(a => {
+      const email = (a.username || '').toLowerCase().trim();
+      return !disconnectedList.includes(email);
+    });
   } catch (e) {}
 
   // Fast token map from localStorage (0ms!) and silent acquisition
   const tokenMap = {};
   await Promise.all(allAccounts.map(async (a) => {
     const email = (a.username || '').toLowerCase().trim();
-    if (email) {
+    if (email && !disconnectedList.includes(email)) {
       let t = localStorage.getItem(`teamshub_token_${email}`);
       if (!t || isTokenExpired(t)) {
         t = await acquireGraphToken(a.homeAccountId || a.username);
@@ -415,8 +429,14 @@ export const fetchChatsFromBackend = async (accountId = 'all', page = 1, limit =
 
     // Direct Microsoft Graph fallback if backend returned empty array
     let directChats = [];
-    const allAccounts = msalInstance.getAllAccounts() || [];
-    for (const acc of allAccounts) {
+    const disconnectedList = getDisconnectedEmails().map(e => e.toLowerCase().trim());
+    const rawMsal = msalInstance.getAllAccounts() || [];
+    const activeAccounts = rawMsal.filter(a => {
+      const email = (a.username || '').toLowerCase().trim();
+      return !disconnectedList.includes(email);
+    });
+
+    for (const acc of activeAccounts) {
       const email = (acc.username || '').toLowerCase().trim();
       let token = localStorage.getItem(`teamshub_token_${email}`);
       if (!token) token = await acquireGraphToken(acc.homeAccountId || acc.username);
@@ -440,8 +460,14 @@ export const fetchChatsFromBackend = async (accountId = 'all', page = 1, limit =
   } catch (error) {
     console.warn('[TeamsHub Chat API] Trying direct fallback:', error.message);
     let directChats = [];
-    const allAccounts = msalInstance.getAllAccounts() || [];
-    for (const acc of allAccounts) {
+    const disconnectedList = getDisconnectedEmails().map(e => e.toLowerCase().trim());
+    const rawMsal = msalInstance.getAllAccounts() || [];
+    const activeAccounts = rawMsal.filter(a => {
+      const email = (a.username || '').toLowerCase().trim();
+      return !disconnectedList.includes(email);
+    });
+
+    for (const acc of activeAccounts) {
       const email = (acc.username || '').toLowerCase().trim();
       let token = localStorage.getItem(`teamshub_token_${email}`);
       if (!token) token = await acquireGraphToken(acc.homeAccountId || acc.username);
