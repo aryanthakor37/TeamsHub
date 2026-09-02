@@ -3,7 +3,7 @@ import { Home, MessageSquare, Folder, Search, Users, Settings, Layers } from 'lu
 import { useAuth } from '../hooks/useAuth';
 import { getInitials, getAvatarColor } from '../utils/avatarUtils';
 
-export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }) {
+export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0, isCollapsed = false, onToggleCollapse }) {
   const { connectedAccounts, activeAccount } = useAuth();
 
   const navItems = [
@@ -34,7 +34,8 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
 
   return (
     <aside className="sidebar-container" style={{
-      width: '240px',
+      width: isCollapsed ? '64px' : '240px',
+      transition: 'width 0.24s cubic-bezier(0.16, 1, 0.3, 1)',
       backgroundColor: 'rgba(10, 14, 24, 0.55)',
       backdropFilter: 'blur(24px)',
       WebkitBackdropFilter: 'blur(24px)',
@@ -42,16 +43,23 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      userSelect: 'none'
+      userSelect: 'none',
+      flexShrink: 0,
+      zIndex: 20
     }}>
       {/* Brand Header */}
       <div className="sidebar-brand-container" style={{
-        padding: '20px 22px',
+        padding: isCollapsed ? '16px 0' : '20px 22px',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: isCollapsed ? 'center' : 'flex-start',
         gap: '12px',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-      }}>
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        cursor: 'pointer'
+      }}
+      onClick={onToggleCollapse}
+      title={isCollapsed ? 'Expand Navigation Sidebar' : 'Collapse Sidebar'}
+      >
         <div style={{
           width: '38px',
           height: '38px',
@@ -69,16 +77,18 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
         }}>
           TH
         </div>
-        <div className="sidebar-brand-text">
-          <h2 style={{ fontSize: '1.15rem', fontWeight: '800', lineHeight: 1.2, letterSpacing: '-0.01em', color: '#ffffff' }}>TeamsHub</h2>
-          <span style={{ fontSize: '0.68rem', color: '#00f2fe', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: '700' }}>
-            Enterprise Workspace
-          </span>
-        </div>
+        {!isCollapsed && (
+          <div className="sidebar-brand-text">
+            <h2 style={{ fontSize: '1.15rem', fontWeight: '800', lineHeight: 1.2, letterSpacing: '-0.01em', color: '#ffffff' }}>TeamsHub</h2>
+            <span style={{ fontSize: '0.68rem', color: '#00f2fe', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: '700' }}>
+              Enterprise Workspace
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Navigation List */}
-      <nav className="sidebar-nav-list" style={{ padding: '16px 12px', flex: 1 }}>
+      <nav className="sidebar-nav-list" style={{ padding: isCollapsed ? '16px 8px' : '16px 12px', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -87,32 +97,34 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`tab-pill-3d sidebar-item-btn ${isActive ? 'sidebar-active-glow' : ''}`}
+              title={isCollapsed ? item.label : undefined}
               style={{
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '11px 16px',
+                justifyContent: isCollapsed ? 'center' : 'space-between',
+                padding: isCollapsed ? '10px 0' : '11px 16px',
                 marginBottom: '6px',
                 borderRadius: '12px',
                 border: isActive ? '1px solid rgba(0, 242, 254, 0.45)' : '1px solid transparent',
                 outline: 'none',
                 background: isActive 
-                  ? 'linear-gradient(135deg, rgba(0, 242, 254, 0.14) 0%, rgba(99, 102, 241, 0.1) 100%)' 
+                  ? 'linear-gradient(135deg, rgba(0, 242, 254, 0.16) 0%, rgba(99, 102, 241, 0.12) 100%)' 
                   : 'transparent',
                 color: isActive ? '#00f2fe' : 'var(--text-secondary)',
                 fontWeight: isActive ? '700' : '500',
                 cursor: 'pointer',
-                boxShadow: isActive ? '0 0 20px rgba(0, 242, 254, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25)' : 'none',
-                transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+                boxShadow: isActive ? '0 0 20px rgba(0, 242, 254, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25)' : 'none',
+                transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+                position: 'relative'
               }}
             >
-              <div className="sidebar-item-inner" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Icon size={19} color={isActive ? '#00f2fe' : 'var(--text-secondary)'} />
-                <span className="sidebar-item-label" style={{ fontSize: '0.9rem' }}>{item.label}</span>
+              <div className="sidebar-item-inner" style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center' }}>
+                <Icon size={isCollapsed ? 21 : 19} color={isActive ? '#00f2fe' : 'var(--text-secondary)'} />
+                {!isCollapsed && <span className="sidebar-item-label" style={{ fontSize: '0.9rem' }}>{item.label}</span>}
               </div>
 
-              {item.badge && (
+              {item.badge && !isCollapsed && (
                 <span className="badge sidebar-item-badge" style={{
                   backgroundColor: item.isAlertBadge ? '#ef4444' : '#6366f1',
                   color: '#ffffff',
@@ -127,6 +139,19 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
                   {item.badge}
                 </span>
               )}
+
+              {item.badge && isCollapsed && (
+                <span style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: '6px',
+                  width: '9px',
+                  height: '9px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ef4444',
+                  boxShadow: '0 0 8px #ef4444'
+                }} />
+              )}
             </button>
           );
         })}
@@ -134,16 +159,17 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
 
       {/* Footer Profile Info */}
       <div className="sidebar-profile-footer" style={{
-        padding: '16px 20px',
-        borderTop: '1px solid var(--border-color)',
+        padding: isCollapsed ? '14px 0' : '16px 20px',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: isCollapsed ? 'center' : 'flex-start',
         gap: '12px',
-        backgroundColor: 'var(--bg-tertiary)'
+        backgroundColor: 'rgba(255, 255, 255, 0.02)'
       }}>
         <div className="avatar-3d" style={{
-          width: '38px',
-          height: '38px',
+          width: '36px',
+          height: '36px',
           borderRadius: '50%',
           backgroundColor: avatarBg,
           color: '#fff',
@@ -156,14 +182,16 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0 }
         }}>
           {userInitials}
         </div>
-        <div className="sidebar-profile-info" style={{ flex: 1, overflow: 'hidden' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            {userName}
+        {!isCollapsed && (
+          <div className="sidebar-profile-info" style={{ flex: 1, overflow: 'hidden' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+              {userName}
+            </div>
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+              {accountCount} Account{accountCount === 1 ? '' : 's'} Active
+            </div>
           </div>
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '500' }}>
-            {accountCount} Account{accountCount === 1 ? '' : 's'} Active
-          </div>
-        </div>
+        )}
       </div>
     </aside>
   );

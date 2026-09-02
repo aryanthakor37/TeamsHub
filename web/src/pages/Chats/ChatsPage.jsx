@@ -19,7 +19,9 @@ export default function ChatsPage({
   initialChatId,
   initialParticipant,
   initialMessageId,
-  initialKeyword
+  initialKeyword,
+  layoutMode: externalLayoutMode = 'triple',
+  onSetLayoutMode
 }) {
   const { connectedAccounts } = useAuth();
   const [selectedFilterAccount, setSelectedFilterAccount] = useState('all');
@@ -28,7 +30,7 @@ export default function ChatsPage({
   const [activeChatKey, setActiveChatKey] = useState(null);
 
   // Multi-Pane Workspace States: 'single' | 'dual' | 'triple' | 'quad'
-  const [layoutMode, setLayoutMode] = useState('single');
+  const [layoutMode, setLayoutMode] = useState(externalLayoutMode || 'triple');
   const [splitChatId, setSplitChatId] = useState(null);
   const [splitChatKey, setSplitChatKey] = useState(null);
   const [pane3ChatId, setPane3ChatId] = useState(null);
@@ -40,7 +42,24 @@ export default function ChatsPage({
   const [searchQuery, setSearchQuery] = useState('');
   const [previewDocModal, setPreviewDocModal] = useState(null);
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+
+  // Sync external layout mode if changed
+  useEffect(() => {
+    if (externalLayoutMode && externalLayoutMode !== layoutMode) {
+      setLayout(externalLayoutMode);
+    }
+  }, [externalLayoutMode]);
+
+  useEffect(() => {
+    const handleLayoutEvent = (e) => {
+      if (e.detail?.mode) {
+        setLayout(e.detail.mode);
+      }
+    };
+    window.addEventListener('teamshub:set-layout-mode', handleLayoutEvent);
+    return () => window.removeEventListener('teamshub:set-layout-mode', handleLayoutEvent);
+  }, [chats, activeChatId]);
 
   // Helper for 100% unique identification across multiple accounts
   const getChatUniqueKey = (c) => {
@@ -849,134 +868,11 @@ export default function ChatsPage({
       >
         {isAccountConnected && activeChat ? (
           <>
-            {/* Top Workspace Bar: Sleek Translucent Glass Toolbar */}
-            <div style={{
-              padding: '8px 18px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-              backgroundColor: 'rgba(12, 16, 28, 0.4)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              zIndex: 10,
-              flexShrink: 0
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Workspace Layout:
-                </span>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  padding: '3px',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  gap: '3px'
-                }}>
-                  <button
-                    onClick={() => setLayout('single')}
-                    className="tab-pill-3d"
-                    style={{
-                      padding: '4px 9px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      backgroundColor: layoutMode === 'single' ? 'var(--accent-primary)' : 'transparent',
-                      color: layoutMode === 'single' ? '#ffffff' : 'var(--text-secondary)',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title="Single Focused View (Alt+S or Click)"
-                  >
-                    <Square size={12} />
-                    <span>Single</span>
-                  </button>
-                  <button
-                    onClick={() => setLayout('dual')}
-                    className="tab-pill-3d"
-                    style={{
-                      padding: '4px 9px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      backgroundColor: layoutMode === 'dual' ? 'var(--accent-primary)' : 'transparent',
-                      color: layoutMode === 'dual' ? '#ffffff' : 'var(--text-secondary)',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title="Dual Split View (Alt+S)"
-                  >
-                    <Columns size={12} />
-                    <span>2 Split</span>
-                  </button>
-                  <button
-                    onClick={() => setLayout('triple')}
-                    className="tab-pill-3d"
-                    style={{
-                      padding: '4px 9px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      backgroundColor: layoutMode === 'triple' ? 'var(--accent-primary)' : 'transparent',
-                      color: layoutMode === 'triple' ? '#ffffff' : 'var(--text-secondary)',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title="Triple Columns View (Alt+T)"
-                  >
-                    <LayoutGrid size={12} />
-                    <span>3 Triple</span>
-                  </button>
-                  <button
-                    onClick={() => setLayout('quad')}
-                    className="tab-pill-3d"
-                    style={{
-                      padding: '4px 9px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      backgroundColor: layoutMode === 'quad' ? 'var(--accent-primary)' : 'transparent',
-                      color: layoutMode === 'quad' ? '#ffffff' : 'var(--text-secondary)',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title="2x2 Quad Grid Command Center (Alt+G)"
-                  >
-                    <Grid2X2 size={12} />
-                    <span>4 Quad</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Status Hint */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  {layoutMode === 'quad' ? '⚡ 4-Chat Command Center' : layoutMode === 'triple' ? '⚡ 3-Column Parallel View' : layoutMode === 'dual' ? '⚡ Dual Split Mode' : '⚡ Single Chat View'}
-                </span>
-              </div>
-            </div>
-
-            {/* Dynamic Multi-Pane Grid / Flex Container with Glassmorphism & Neon Glow Pills */}
+            {/* Dynamic Multi-Pane Grid / Flex Container with Glassmorphism & Neon Glow Pills (Full Height) */}
             <div style={{
               flex: 1,
               overflow: 'hidden',
-              padding: '16px 14px 14px 14px',
+              padding: '18px 16px 16px 16px',
               display: 'grid',
               gap: '16px',
               gridTemplateColumns: layoutMode === 'single'
@@ -987,7 +883,7 @@ export default function ChatsPage({
               gridTemplateRows: layoutMode === 'quad'
                 ? 'repeat(2, minmax(0, 1fr))'
                 : '1fr',
-              height: 'calc(100% - 41px)'
+              height: '100%'
             }}>
               {/* Primary Pane 1 (Cyan / Aqua Neon Pill) */}
               <div

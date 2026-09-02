@@ -1441,15 +1441,11 @@ export default function ChatConversationPane({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Chat Composer */}
+      {/* Floating Capsule Composer Bar (Matching Reference Mockup 1:1) */}
       <div style={{
-        padding: '12px 18px',
-        backgroundColor: 'var(--bg-glass)',
-        backdropFilter: 'blur(20px)',
-        borderTop: '1px solid var(--border-color)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px'
+        padding: '6px 14px 12px 14px',
+        backgroundColor: 'transparent',
+        flexShrink: 0
       }}>
         {/* Hidden inputs */}
         <input
@@ -1470,18 +1466,18 @@ export default function ChatConversationPane({
 
         {/* Selected Image / Attachment previews */}
         {(selectedImage || selectedAttachments.length > 0) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
             {selectedImage && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '4px 8px', position: 'relative' }}>
-                <img src={selectedImage.dataUrl} alt="Preview" style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }} />
-                <span style={{ fontSize: '0.72rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedImage.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', padding: '4px 8px', position: 'relative' }}>
+                <img src={selectedImage.dataUrl} alt="Preview" style={{ width: '30px', height: '30px', borderRadius: '4px', objectFit: 'cover' }} />
+                <span style={{ fontSize: '0.72rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#ffffff' }}>{selectedImage.name}</span>
                 <button onClick={() => setSelectedImage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={12} /></button>
               </div>
             )}
             {selectedAttachments.map((att, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '4px 8px' }}>
-                <FileText size={14} color="var(--accent-primary)" />
-                <span style={{ fontSize: '0.72rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', padding: '4px 8px' }}>
+                <FileText size={14} color="#00f2fe" />
+                <span style={{ fontSize: '0.72rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#ffffff' }}>{att.name}</span>
                 <button onClick={() => setSelectedAttachments(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={12} /></button>
               </div>
             ))}
@@ -1490,7 +1486,7 @@ export default function ChatConversationPane({
 
         {/* Reply Quote Preview */}
         {replyingToMessage && (
-          <div className="reply-quote-preview">
+          <div className="reply-quote-preview" style={{ marginBottom: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
               <MessageSquareQuote size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
               <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1532,10 +1528,25 @@ export default function ChatConversationPane({
           </div>
         )}
 
-        {/* Input Bar */}
-        <form onSubmit={handleSendMessage} style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+        {/* Floating Pill Input Bar */}
+        <form 
+          onSubmit={handleSendMessage} 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            position: 'relative',
+            backgroundColor: 'rgba(255, 255, 255, 0.055)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '24px',
+            padding: '5px 8px 5px 12px',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 4px 18px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+          }}
+        >
           {showComposerEmojiPicker && (
-            <div style={{ position: 'absolute', bottom: '50px', left: 0, zIndex: 100 }}>
+            <div style={{ position: 'absolute', bottom: '54px', left: 0, zIndex: 100 }}>
               <EmojiPicker onSelect={(emoji) => {
                 setDraftMessage(prev => prev + emoji);
                 setShowComposerEmojiPicker(false);
@@ -1544,57 +1555,93 @@ export default function ChatConversationPane({
             </div>
           )}
 
+          {/* Left Action Icons inside Capsule */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-            <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', borderRadius: '6px' }} title="Attach Document">
-              <Paperclip size={18} />
+            <button 
+              type="button" 
+              onClick={() => fileInputRef.current?.click()} 
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '5px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+              title="Attach Document"
+            >
+              <Paperclip size={17} />
             </button>
-            <button type="button" onClick={() => imageInputRef.current?.click()} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', borderRadius: '6px' }} title="Attach Photo">
-              <ImageIcon size={18} />
+            <button 
+              type="button" 
+              onClick={() => setShowComposerEmojiPicker(!showComposerEmojiPicker)} 
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '5px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+              title="Insert Emoji"
+            >
+              <Smile size={17} />
             </button>
-            <button type="button" onClick={() => setShowComposerEmojiPicker(!showComposerEmojiPicker)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', borderRadius: '6px' }} title="Insert Emoji">
-              <Smile size={18} />
+            <button 
+              type="button" 
+              onClick={() => imageInputRef.current?.click()} 
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '5px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+              title="Attach Photo"
+            >
+              <ImageIcon size={17} />
             </button>
           </div>
 
           <input
             ref={chatInputRef}
             type="text"
-            placeholder={`Type a message to ${sanitizeDisplayName(chat.participant)}... (Alt+${paneIndex})`}
+            placeholder="Message message..."
             value={draftMessage}
             onChange={(e) => setDraftMessage(e.target.value)}
             style={{
               flex: 1,
-              padding: '9px 14px',
-              borderRadius: '24px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-tertiary)',
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem',
+              padding: '6px 8px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+              fontSize: '0.84rem',
               outline: 'none'
             }}
           />
 
-          <button
-            type="submit"
-            disabled={isSending || (!draftMessage.trim() && !selectedImage && selectedAttachments.length === 0)}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              border: 'none',
-              background: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? paneTheme.sendBtnBg : 'var(--border-color)',
-              color: '#ffffff',
-              cursor: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? 'pointer' : 'default',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-              flexShrink: 0,
-              boxShadow: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? paneTheme.bubbleShadow : 'none'
-            }}
-          >
-            <Send size={15} />
-          </button>
+          {/* Right Actions: Text Send + @ Mention Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              type="submit"
+              disabled={isSending || (!draftMessage.trim() && !selectedImage && selectedAttachments.length === 0)}
+              style={{
+                padding: '5px 14px',
+                borderRadius: '16px',
+                border: 'none',
+                background: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? paneTheme.sendBtnBg : 'rgba(255, 255, 255, 0.08)',
+                color: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? '#ffffff' : 'var(--text-muted)',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? 'pointer' : 'default',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.2s ease',
+                boxShadow: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? paneTheme.bubbleShadow : 'none'
+              }}
+            >
+              <span>Send</span>
+              <Send size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDraftMessage(prev => prev + '@')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                fontSize: '0.88rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                padding: '4px 6px',
+                borderRadius: '50%'
+              }}
+              title="Mention teammate"
+            >
+              @
+            </button>
+          </div>
         </form>
       </div>
 

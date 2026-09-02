@@ -29,6 +29,8 @@ function MainLayout() {
     return localStorage.getItem('teamshub_theme') || 'dark';
   });
   const [activeToast, setActiveToast] = useState(null);
+  const [layoutMode, setLayoutMode] = useState('triple');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Global chats hook for real-time unread count and notifications
   const { unreadCount } = useChats('all');
@@ -134,6 +136,8 @@ function MainLayout() {
             initialParticipant={selectedSearchParticipant}
             initialMessageId={selectedSearchMessageId}
             initialKeyword={selectedSearchKeyword}
+            layoutMode={layoutMode}
+            onSetLayoutMode={setLayoutMode}
           />
         );
       case 'files':
@@ -172,7 +176,13 @@ function MainLayout() {
   return (
     <div className="app-container" style={{ position: 'relative' }}>
       {/* Vertical Workspace Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} unreadChatCount={unreadCount} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        unreadChatCount={unreadCount} 
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -182,6 +192,10 @@ function MainLayout() {
           onOpenMicrosoftModal={() => setIsMicrosoftModalOpen(true)}
           theme={theme}
           toggleTheme={toggleTheme}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          layoutMode={layoutMode}
+          onSetLayoutMode={setLayoutMode}
         />
 
         <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -264,8 +278,10 @@ function MainLayout() {
         </div>
       )}
 
-      {/* Global Floating Quick-Reply Chat Head Widget */}
-      <FloatingChatWidget onOpenFullChat={(chatId) => setActiveTab('chats')} />
+      {/* Global Floating Quick-Reply Chat Head Widget (Only when not on full chats page) */}
+      {activeTab !== 'chats' && (
+        <FloatingChatWidget onOpenFullChat={(chatId) => setActiveTab('chats')} />
+      )}
 
       {/* Microsoft Integration Dialog & Login Trigger */}
       <MicrosoftModal
