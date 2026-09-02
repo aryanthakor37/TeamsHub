@@ -283,6 +283,7 @@ export const useChats = () => {
   }, []);
 
   const loadChatsSilently = useCallback(async () => {
+    if (!hasConnectedAccounts()) return;
     try {
       const data = await fetchChatsFromBackend('all');
       const rawItems = Array.isArray(data)
@@ -387,12 +388,16 @@ export const useChats = () => {
   }, []);
 
   useEffect(() => {
-    loadChats();
+    if (hasConnectedAccounts()) {
+      loadChats();
+    }
     
-    // Background polling every 1.5 seconds for instant live Teams incoming messages & notifications
+    // Background polling every 3.5 seconds only when accounts are connected
     const interval = setInterval(() => {
-      loadChatsSilently();
-    }, 1500);
+      if (hasConnectedAccounts()) {
+        loadChatsSilently();
+      }
+    }, 3500);
 
     return () => clearInterval(interval);
   }, []);

@@ -360,6 +360,11 @@ export const fetchMessagesDirectFromGraph = async (token, chatId, userEmail) => 
  * Fetch Microsoft Graph Chats from Backend API with Instant Direct Graph Fallback
  */
 export const fetchChatsFromBackend = async (accountId = 'all', page = 1, limit = 20) => {
+  const allAccounts = msalInstance.getAllAccounts() || [];
+  const storedAccs = localStorage.getItem('teamshub_connected_accounts');
+  if ((!allAccounts || allAccounts.length === 0) && (!storedAccs || storedAccs === '[]')) {
+    return { items: [] };
+  }
   try {
     const headers = await getAuthHeaders(accountId === 'all' ? null : accountId);
     const response = await fetch(
