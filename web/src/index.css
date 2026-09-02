@@ -1106,11 +1106,15 @@ button:focus, button:focus-visible, button:active {
 }
 
 .message-html-content img {
-  max-width: 100% !important;
-  border-radius: 12px !important;
-  margin: 8px 0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+  max-width: 320px !important;
+  max-height: 220px !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: cover !important;
+  border-radius: 10px !important;
+  margin: 6px 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
   display: block !important;
   cursor: pointer !important;
   transition: transform 0.2s ease, box-shadow 0.2s ease !important;
@@ -1118,7 +1122,21 @@ button:focus, button:focus-visible, button:active {
 
 .message-html-content img:hover {
   transform: scale(1.02);
-  box-shadow: 0 8px 24px rgba(0, 242, 254, 0.3) !important;
+  box-shadow: 0 6px 20px rgba(0, 242, 254, 0.3) !important;
+}
+
+.message-html-content table {
+  max-width: 100% !important;
+  display: block !important;
+  overflow-x: auto !important;
+  border-collapse: collapse !important;
+  margin: 6px 0 !important;
+}
+
+.incoming-bubble, .outgoing-bubble {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
 /* Modern Message Bubble Enhancements */

@@ -79,34 +79,37 @@ function ChatImageAttachment({ attachment, chatOwner, onImageClick }) {
         onImageClick(blobUrl || targetUrl);
       }}
       style={{
-        maxWidth: '380px',
-        maxHeight: '280px',
-        borderRadius: '8px',
+        maxWidth: '300px',
+        maxHeight: '190px',
+        borderRadius: '10px',
         overflow: 'hidden',
         cursor: 'pointer',
         border: '1px solid rgba(255, 255, 255, 0.15)',
         marginTop: '6px',
         display: 'inline-block',
-        backgroundColor: 'rgba(0,0,0,0.25)',
+        backgroundColor: 'rgba(0,0,0,0.3)',
         position: 'relative',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.2)'
+        boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+        transition: 'transform 0.2s ease'
       }}
       title={`Click to expand ${fileName}`}
     >
       {loading ? (
-        <div style={{ width: '220px', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-          <Loader2 size={22} className="spinner" />
+        <div style={{ width: '180px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+          <Loader2 size={20} className="spinner" />
         </div>
       ) : (
         <img
           src={blobUrl || targetUrl}
           alt={fileName}
           style={{
-            maxWidth: '100%',
-            maxHeight: '280px',
-            objectFit: 'contain',
+            maxWidth: '300px',
+            maxHeight: '190px',
+            width: '100%',
+            height: 'auto',
+            objectFit: 'cover',
             display: 'block',
-            borderRadius: '7px'
+            borderRadius: '9px'
           }}
           onError={() => setError(true)}
         />
