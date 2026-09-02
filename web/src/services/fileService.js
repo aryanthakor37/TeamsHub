@@ -16,33 +16,33 @@ const getAuthHeaders = async (accountId) => {
     allAccounts = msalInstance.getAllAccounts() || [];
   } catch (e) {}
 
-  // Fast token map from localStorage & silent acquisition
+  // Fast token map from localStorage (instant 0ms lookup)
   const tokenMap = {};
-  await Promise.all(allAccounts.map(async (a) => {
+  const missingAccounts = [];
+
+  for (const a of allAccounts) {
     const email = (a.username || '').toLowerCase().trim();
     if (email) {
-      let t = localStorage.getItem(`teamshub_token_${email}`);
-      if (!t) {
-        t = await acquireGraphToken(a.homeAccountId || a.username);
-        if (t) localStorage.setItem(`teamshub_token_${email}`, t);
+      const t = localStorage.getItem(`teamshub_token_${email}`);
+      if (t) {
+        tokenMap[email] = t;
+      } else {
+        missingAccounts.push(a);
       }
-      if (t) tokenMap[email] = t;
     }
-  }));
+  }
 
-  // Ensure tokens are acquired for all accounts if not in localStorage
-  if (!accountId || accountId === 'all') {
-    await Promise.all(allAccounts.map(async (a) => {
+  // Acquire missing tokens in parallel without blocking if not needed
+  if (missingAccounts.length > 0) {
+    await Promise.all(missingAccounts.map(async (a) => {
       const email = (a.username || '').toLowerCase().trim();
-      if (email && !tokenMap[email]) {
-        try {
-          const t = await acquireGraphToken(a.homeAccountId || a.username);
-          if (t) {
-            tokenMap[email] = t;
-            localStorage.setItem(`teamshub_token_${email}`, t);
-          }
-        } catch (e) {}
-      }
+      try {
+        const t = await acquireGraphToken(a.homeAccountId || a.username);
+        if (t) {
+          tokenMap[email] = t;
+          localStorage.setItem(`teamshub_token_${email}`, t);
+        }
+      } catch (e) {}
     }));
   }
 
@@ -59,11 +59,10 @@ const getAuthHeaders = async (accountId) => {
     }
     headers['x-user-email'] = cleanAcc;
   } else {
-    // Send all tokens for multi-account simultaneous fetch
     if (Object.keys(tokenMap).length > 0) {
       headers['x-account-tokens'] = JSON.stringify(tokenMap);
     }
-    const token = await acquireGraphToken();
+    const token = Object.values(tokenMap)[0] || localStorage.getItem('teamshub_last_access_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -73,6 +72,70 @@ const getAuthHeaders = async (accountId) => {
   }
 
   return headers;
+};
+
+/**
+ * Direct Client-Side Microsoft Graph Files Fetcher
+ */
+export const fetchFilesDirectFromGraph = async (token, userEmail, userName) => {
+  if (!token) return [];
+  const cleanEmail = (userEmail || '').toLowerCase().trim();
+  const cleanName = userName || cleanEmail.split('@')[0];
+
+  try {
+    const res = await fetch('https://graph.microsoft.com/v1.0/me/drive/recent?$top=50', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const rawList = data.value || [];
+      return rawList.map(item => {
+        const actualItem = item.remoteItem || item;
+        const name = actualItem.name || 'Untitled File';
+        const cleanNameLower = name.toLowerCase().trim();
+        const ext = cleanNameLower.includes('.') ? cleanNameLower.split('.').pop() : '';
+        const mime = (actualItem.file?.mimeType || actualItem.contentType || '').toLowerCase();
+
+        let category = 'Documents';
+        if (ext === 'pdf' || cleanNameLower.endsWith('.pdf') || mime === 'application/pdf') {
+          category = 'PDF';
+        } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico'].includes(ext) || mime.startsWith('image/')) {
+          category = 'Images';
+        } else if (['xls', 'xlsx', 'csv', 'tsv', 'ods'].includes(ext) || mime.includes('spreadsheet') || mime.includes('excel')) {
+          category = 'Excel';
+        } else if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext) || mime.startsWith('video/')) {
+          category = 'Videos';
+        } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || mime.includes('zip') || mime.includes('compressed')) {
+          category = 'ZIP';
+        }
+
+        const sizeBytes = actualItem.size || 0;
+        let sizeStr = sizeBytes > 0 ? `${sizeBytes} B` : '';
+        if (sizeBytes > 1024 * 1024) sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+        else if (sizeBytes > 1024) sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
+
+        const date = new Date(actualItem.lastModifiedDateTime || actualItem.createdDateTime || Date.now());
+        const dateStr = isNaN(date.getTime()) ? 'Recent' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        return {
+          id: actualItem.id || `file-${Math.random().toString(36).substring(2, 9)}`,
+          name: name,
+          category: category,
+          size: sizeStr || (category === 'Images' ? 'Image' : 'File'),
+          account: cleanName,
+          accountEmail: cleanEmail,
+          accountBadge: cleanName,
+          connectedAccountId: cleanEmail,
+          sender: actualItem.lastModifiedBy?.user?.displayName || cleanName,
+          date: dateStr,
+          webUrl: actualItem.webUrl || '#',
+          downloadUrl: actualItem['@microsoft.graph.downloadUrl'] || actualItem.webUrl || '#',
+          thumbnailUrl: category === 'Images' ? (actualItem['@microsoft.graph.downloadUrl'] || actualItem.webUrl) : null
+        };
+      });
+    }
+  } catch (e) {}
+  return [];
 };
 
 /**
@@ -90,14 +153,38 @@ const parseApiError = (responseData) => {
 };
 
 /**
- * Fetch Microsoft Graph Files from Backend API
+ * Fetch Microsoft Graph Files from Backend API with Fast Direct Fallback
  */
 export const fetchFilesFromBackend = async (accountOrId = 'all') => {
-  try {
-    const accountId = typeof accountOrId === 'object' && accountOrId !== null
-      ? (accountOrId._id || accountOrId.accountId || accountOrId.id)
-      : (accountOrId || 'all');
+  const accountId = typeof accountOrId === 'object' && accountOrId !== null
+    ? (accountOrId._id || accountOrId.accountId || accountOrId.id)
+    : (accountOrId || 'all');
 
+  // Fast direct graph check first
+  try {
+    const allAccounts = msalInstance.getAllAccounts() || [];
+    let directFiles = [];
+    for (const a of allAccounts) {
+      const email = (a.username || '').toLowerCase().trim();
+      const token = localStorage.getItem(`teamshub_token_${email}`);
+      if (token) {
+        const dFiles = await fetchFilesDirectFromGraph(token, email, a.name);
+        directFiles.push(...dFiles);
+      }
+    }
+    if (directFiles.length > 0) {
+      // Async trigger background backend sync without blocking UI
+      (async () => {
+        try {
+          const headers = await getAuthHeaders(accountId === 'all' ? null : accountId);
+          await fetch(`${API_BASE_URL}/files?connectedAccountId=${encodeURIComponent(accountId)}`, { headers });
+        } catch (e) {}
+      })();
+      return directFiles;
+    }
+  } catch (e) {}
+
+  try {
     const headers = await getAuthHeaders(accountId === 'all' ? null : accountId);
     const response = await fetch(
       `${API_BASE_URL}/files?connectedAccountId=${encodeURIComponent(accountId)}`,

@@ -1207,10 +1207,11 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
   const loadFiles = useCallback(async (isManual = false) => {
     if (!isAccountConnected) {
       setFiles([]);
+      setLoading(false);
       return;
     }
 
-    if (isManual || files.length === 0) {
+    if (files.length === 0) {
       setLoading(true);
     }
     if (isManual) setRefreshing(true);
@@ -1227,7 +1228,9 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       }
     } catch (err) {
       console.warn('[FilesPage] Fetch error:', err.message);
-      setError(err.message || 'Failed to load files from Microsoft Graph.');
+      if (files.length === 0) {
+        setError(err.message || 'Failed to load files from Microsoft Graph.');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

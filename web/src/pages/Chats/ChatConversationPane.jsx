@@ -1283,8 +1283,25 @@ export default function ChatConversationPane({
                               if (qAtt && qAtt.content) {
                                 try {
                                   const p = typeof qAtt.content === 'string' ? JSON.parse(qAtt.content) : qAtt.content;
+                                  const rawSender = p.messageFrom?.user?.displayName ||
+                                                    p.messageFrom?.displayName ||
+                                                    p.messageFrom?.emailAddress?.name ||
+                                                    p.from?.user?.displayName ||
+                                                    p.from?.displayName ||
+                                                    p.from?.emailAddress?.name ||
+                                                    p.from?.name ||
+                                                    p.sender?.displayName ||
+                                                    p.sender?.name ||
+                                                    p.senderName ||
+                                                    (typeof p.sender === 'string' ? p.sender : null) ||
+                                                    p.author;
+
+                                  const defaultQuoteSender = msg.isOutgoing
+                                    ? sanitizeDisplayName(chat?.participant)
+                                    : (chatAccount?.displayName || chatAccount?.name || user?.name || sanitizeDisplayName(chatOwner) || 'You');
+
                                   return {
-                                    sender: p.messageFrom?.user?.displayName || p.from?.user?.displayName || p.sender?.displayName || p.sender || 'Aryan Kumrecha',
+                                    sender: rawSender ? sanitizeDisplayName(rawSender) : defaultQuoteSender,
                                     text: (p.messageBody?.content || p.body?.content || p.content || p.text || '').replace(/<[^>]*>/g, '').trim(),
                                     date: p.messageDateTime || p.createdDateTime || p.date || ''
                                   };
