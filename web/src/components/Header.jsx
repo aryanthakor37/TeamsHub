@@ -53,7 +53,9 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
     }
   };
 
-  const displayName = sanitizeDisplayName(activeAccount?.displayName || user?.name || 'Aryan Kumrecha');
+  const hasAccount = !!(activeAccount?.displayName || user?.name || (connectedAccounts && connectedAccounts.length > 0));
+  const rawDisplayName = activeAccount?.displayName || user?.name || connectedAccounts?.[0]?.displayName || '';
+  const displayName = rawDisplayName ? sanitizeDisplayName(rawDisplayName) : '';
 
   return (
     <header style={{
@@ -181,118 +183,144 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
           </div>
         )}
 
-        {/* User Profile Pill Capsule */}
-        <div style={{ position: 'relative' }}>
-          <div 
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
+        {/* User Profile Pill Capsule or Connect Account Button */}
+        {hasAccount && displayName ? (
+          <div style={{ position: 'relative' }}>
+            <div 
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '3px 10px 3px 4px',
+                borderRadius: '20px',
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                backgroundColor: getAvatarColor(displayName),
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: '0.74rem'
+              }}>
+                {getInitials(displayName)}
+              </div>
+              <span style={{ fontSize: '0.82rem', fontWeight: '600', color: '#ffffff' }}>
+                {displayName}
+              </span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+
+            {showProfileMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '44px',
+                right: 0,
+                width: '230px',
+                backgroundColor: 'rgba(16, 22, 38, 0.95)',
+                backdropFilter: 'blur(24px)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '14px',
+                boxShadow: '0 16px 36px rgba(0,0,0,0.5)',
+                padding: '14px',
+                zIndex: 100,
+                animation: 'slideUp3D 0.2s ease'
+              }}>
+                <div style={{ paddingBottom: '10px', marginBottom: '10px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.92rem', color: '#ffffff' }}>{displayName}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {activeAccount?.email || user?.email || 'Active Workspace'}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    setActiveTab('accounts');
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 10px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontWeight: '500',
+                    marginBottom: '4px'
+                  }}
+                >
+                  <UserIcon size={16} color="#00f2fe" />
+                  <span>Connected Accounts</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    logout();
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 10px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#ef4444',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontWeight: '600'
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Sign out</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              if (onOpenMicrosoftModal) onOpenMicrosoftModal();
+              else setActiveTab('accounts');
+            }}
+            className="tab-pill-3d"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              padding: '3px 10px 3px 4px',
+              gap: '6px',
+              padding: '6px 14px',
               borderRadius: '20px',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              backgroundColor: 'rgba(0, 242, 254, 0.12)',
+              border: '1px solid rgba(0, 242, 254, 0.35)',
+              color: '#00f2fe',
+              fontWeight: '700',
+              fontSize: '0.80rem',
               cursor: 'pointer'
             }}
           >
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              backgroundColor: getAvatarColor(displayName),
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: '700',
-              fontSize: '0.74rem'
-            }}>
-              {getInitials(displayName)}
-            </div>
-            <span style={{ fontSize: '0.82rem', fontWeight: '600', color: '#ffffff' }}>
-              {displayName}
-            </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </div>
-
-          {showProfileMenu && (
-            <div style={{
-              position: 'absolute',
-              top: '44px',
-              right: 0,
-              width: '230px',
-              backgroundColor: 'rgba(16, 22, 38, 0.95)',
-              backdropFilter: 'blur(24px)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '14px',
-              boxShadow: '0 16px 36px rgba(0,0,0,0.5)',
-              padding: '14px',
-              zIndex: 100,
-              animation: 'slideUp3D 0.2s ease'
-            }}>
-              <div style={{ paddingBottom: '10px', marginBottom: '10px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ fontWeight: '700', fontSize: '0.92rem', color: '#ffffff' }}>{displayName}</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {activeAccount?.email || user?.email || 'Active Workspace'}
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  setActiveTab('accounts');
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '8px 10px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontWeight: '500',
-                  marginBottom: '4px'
-                }}
-              >
-                <UserIcon size={16} color="#00f2fe" />
-                <span>Connected Accounts</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  logout();
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '8px 10px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#ef4444',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontWeight: '600'
-                }}
-              >
-                <LogOut size={16} />
-                <span>Sign out</span>
-              </button>
-            </div>
-          )}
-        </div>
+            <Plus size={14} />
+            <span>Connect Account</span>
+          </button>
+        )}
       </div>
     </header>
   );
