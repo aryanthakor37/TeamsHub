@@ -1,70 +1,142 @@
 /* ==========================================================================
-   TeamsHub Enterprise Global Design System & 3D Interactive Animations
+   Microsoft Teams Fluent 2 Global Design System (Dark & Light Modes)
    ========================================================================== */
 
-:root {
-  /* Typography */
-  --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-heading: 'Outfit', 'Inter', system-ui, sans-serif;
+:root, [data-theme="dark"] {
+  /* Typography - Authentic Microsoft Segoe UI */
+  --font-family-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Inter', sans-serif;
+  --font-family-heading: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
 
-  /* Color Palette - Lighter Frosted Glass Theme matching Screenshot */
-  --bg-primary: transparent;
-  --bg-secondary: rgba(22, 30, 52, 0.55);
-  --bg-tertiary: rgba(255, 255, 255, 0.05);
-  --bg-glass: rgba(16, 22, 38, 0.5);
-  --bg-glass-card: rgba(22, 30, 52, 0.58);
+  /* Teams Dark Theme Palette (Charcoal Canvas) */
+  --bg-app: #1f1f1f;
+  --bg-primary: #1f1f1f;
+  --bg-secondary: #242424;
+  --bg-tertiary: #292929;
+  --bg-rail: #141414;
+  --bg-glass: #242424;
+  --bg-glass-card: #292929;
+  --bg-elevated: #2e2e2e;
+  --bg-input: #292929;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(91, 95, 199, 0.16);
 
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* Typography Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #c5c5c5;
+  --text-muted: #949494;
+  --text-on-accent: #ffffff;
 
-  --border-color: rgba(255, 255, 255, 0.09);
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-3d-highlight: rgba(255, 255, 255, 0.15);
-  --border-glow: rgba(0, 242, 254, 0.45);
+  /* Borders & Dividers */
+  --border-color: #383838;
+  --border-subtle: #2e2e2e;
+  --border-strong: #484848;
+  --border-3d-highlight: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(91, 95, 199, 0.35);
 
-  /* Accent & Enterprise Gradients */
-  --accent-primary: #6366f1;
-  --accent-primary-hover: #4f46e5;
-  --accent-secondary: #00f2fe;
-  --accent-light: rgba(99, 102, 241, 0.22);
-  --accent-text: #a5b4fc;
+  /* Teams Brand Purple / Fluent Iris */
+  --accent-primary: #5b5fc7;
+  --accent-primary-hover: #4f52b2;
+  --accent-primary-active: #444791;
+  --accent-secondary: #7b83eb;
+  --accent-light: rgba(91, 95, 199, 0.18);
+  --accent-text: #a6adff;
   
-  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-  --accent-gradient-hover: linear-gradient(135deg, #4f46e5 0%, #0891b2 100%);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(6, 182, 212, 0.12) 100%);
-  --ambient-mesh-glow: url('/assets/cyber_bg.jpg');
+  --accent-gradient: linear-gradient(135deg, #5b5fc7 0%, #444791 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #4f52b2 0%, #383a7a 100%);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(91, 95, 199, 0.18) 0%, rgba(79, 82, 178, 0.1) 100%);
+  --ambient-mesh-glow: radial-gradient(circle at 90% 10%, rgba(91, 95, 199, 0.07) 0%, transparent 45%), radial-gradient(circle at 10% 90%, rgba(91, 95, 199, 0.04) 0%, transparent 45%);
 
-  /* Company Identity Badges */
-  --badge-company-a: #6366f1;
-  --badge-company-b: #0ea5e9;
-  --badge-company-c: #10b981;
+  /* Chat Bubbles (Teams Dark) */
+  --bubble-incoming-bg: #292929;
+  --bubble-incoming-text: #ffffff;
+  --bubble-incoming-border: #383838;
+  --bubble-outgoing-bg: #5b5fc7;
+  --bubble-outgoing-text: #ffffff;
 
   /* Live Presence Status */
-  --status-online: #10b981;
+  --status-online: #92c353;
+  --status-busy: #c4314b;
   --status-away: #f59e0b;
-  --status-offline: #94a3b8;
+  --status-offline: #8a8886;
 
-  /* 3D Shadows & Specular Depth */
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6px 16px -2px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 16px 32px -4px rgba(0, 0, 0, 0.6), 0 6px 12px -2px rgba(0, 0, 0, 0.4);
-  --shadow-3d-card: 0 10px 30px -5px rgba(0, 0, 0, 0.55), 0 2px 6px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-  --shadow-3d-hover: 0 20px 44px -8px rgba(99, 102, 241, 0.3), 0 8px 20px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
-  --shadow-glow: 0 0 28px 0 rgba(99, 102, 241, 0.45);
-  --shadow-3d-pill: 0 3px 10px -1px rgba(99, 102, 241, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  /* Fluent Depth Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 24px 0 rgba(0, 0, 0, 0.45);
+  --shadow-3d-card: 0 2px 6px 0 rgba(0, 0, 0, 0.25);
+  --shadow-3d-hover: 0 6px 18px 0 rgba(0, 0, 0, 0.4), 0 0 1px 1px rgba(91, 95, 199, 0.3);
+  --shadow-glow: 0 0 20px 0 rgba(91, 95, 199, 0.3);
+  --shadow-3d-pill: 0 2px 6px rgba(0, 0, 0, 0.2);
 
   /* Radius Tokens */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
   /* Transitions */
-  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.26s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-spring: 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-fast: 0.12s ease-out;
+  --transition-normal: 0.2s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* ==========================================================================
+   Microsoft Teams Light Theme Palette
+   ========================================================================== */
+[data-theme="light"] {
+  --bg-app: #f5f5f5;
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f0f0;
+  --bg-rail: #ebebeb;
+  --bg-glass: #ffffff;
+  --bg-glass-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-input: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(91, 95, 199, 0.1);
+
+  /* Typography Colors */
+  --text-primary: #242424;
+  --text-secondary: #616161;
+  --text-muted: #757575;
+  --text-on-accent: #ffffff;
+
+  /* Borders & Dividers */
+  --border-color: #e1dfdd;
+  --border-subtle: #edebe9;
+  --border-strong: #c8c6c4;
+  --border-3d-highlight: rgba(0, 0, 0, 0.04);
+  --border-glow: rgba(91, 95, 199, 0.25);
+
+  /* Teams Brand Purple */
+  --accent-primary: #5b5fc7;
+  --accent-primary-hover: #4f52b2;
+  --accent-primary-active: #444791;
+  --accent-secondary: #7b83eb;
+  --accent-light: rgba(91, 95, 199, 0.12);
+  --accent-text: #4f52b2;
+
+  --accent-gradient: linear-gradient(135deg, #5b5fc7 0%, #444791 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #4f52b2 0%, #383a7a 100%);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(91, 95, 199, 0.1) 0%, rgba(79, 82, 178, 0.05) 100%);
+  --ambient-mesh-glow: none;
+
+  /* Chat Bubbles (Teams Light) */
+  --bubble-incoming-bg: #ffffff;
+  --bubble-incoming-text: #242424;
+  --bubble-incoming-border: #e1dfdd;
+  --bubble-outgoing-bg: #e8ebfa;
+  --bubble-outgoing-text: #242424;
+
+  /* Fluent Depth Shadows (Light Mode) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px 0 rgba(0, 0, 0, 0.12);
+  --shadow-3d-card: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.08), 0 0.3px 0.9px 0 rgba(0, 0, 0, 0.04);
+  --shadow-3d-hover: 0 4px 14px 0 rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 16px 0 rgba(91, 95, 199, 0.2);
+  --shadow-3d-pill: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* ==========================================================================
@@ -79,7 +151,7 @@
 
 body {
   font-family: var(--font-family-sans);
-  background-color: #070a14;
+  background-color: var(--bg-app);
   background-image: var(--ambient-mesh-glow);
   background-attachment: fixed;
   background-position: center;
@@ -91,6 +163,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
   height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Hide scrollbar utility */

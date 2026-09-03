@@ -292,65 +292,62 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
         marginBottom: '36px'
       }}>
         {/* Card 1: Unread Messages */}
-        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
           <div style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
-            color: '#6366f1',
+            width: '48px',
+            height: '48px',
+            borderRadius: '10px',
+            background: 'var(--accent-light)',
+            color: 'var(--accent-primary)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+            justifyContent: 'center'
           }}>
-            <MessageSquare size={24} />
+            <MessageSquare size={22} />
           </div>
           <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Unread Messages</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>{isConnected ? realUnreadCount : 0}</div>
+            <div style={{ fontSize: '1.65rem', fontWeight: '700', lineHeight: 1.2, color: 'var(--text-primary)' }}>{isConnected ? realUnreadCount : 0}</div>
           </div>
         </div>
 
         {/* Card 2: Shared Files */}
-        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
           <div style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(2, 132, 199, 0.1) 100%)',
+            width: '48px',
+            height: '48px',
+            borderRadius: '10px',
+            background: 'rgba(14, 165, 233, 0.12)',
             color: '#0ea5e9',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(14, 165, 233, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+            justifyContent: 'center'
           }}>
-            <Folder size={24} />
+            <Folder size={22} />
           </div>
           <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Shared Files</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>{isConnected ? visibleFiles.length : 0}</div>
+            <div style={{ fontSize: '1.65rem', fontWeight: '700', lineHeight: 1.2, color: 'var(--text-primary)' }}>{isConnected ? visibleFiles.length : 0}</div>
           </div>
         </div>
 
         {/* Card 3: Connected Accounts */}
-        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <div className="card-3d-interactive" style={{ padding: '22px', display: 'flex', alignItems: 'center', gap: '18px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
           <div style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
+            width: '48px',
+            height: '48px',
+            borderRadius: '10px',
+            background: 'rgba(16, 185, 129, 0.12)',
             color: '#10b981',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+            justifyContent: 'center'
           }}>
-            <Users size={24} />
+            <Users size={22} />
           </div>
           <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Connected Accounts</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>{connectedCount}</div>
+            <div style={{ fontSize: '1.65rem', fontWeight: '700', lineHeight: 1.2, color: 'var(--text-primary)' }}>{connectedCount}</div>
           </div>
         </div>
 
@@ -365,26 +362,28 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
             display: 'flex', 
             alignItems: 'center', 
             gap: '18px',
-            cursor: todayMeetings.length > 0 ? 'pointer' : 'default'
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-lg)',
+            cursor: (todayMeetings && todayMeetings.length > 0) ? 'pointer' : 'default'
           }}
-          title={todayMeetings.length > 0 ? "Click to view today's meetings agenda" : "No meetings scheduled today"}
+          title={todayMeetings && todayMeetings.length > 0 ? "Click to view full meeting agenda" : "No meetings scheduled today"}
         >
           <div style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%)',
+            width: '48px',
+            height: '48px',
+            borderRadius: '10px',
+            background: 'rgba(245, 158, 11, 0.12)',
             color: '#f59e0b',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+            justifyContent: 'center'
           }}>
-            <Calendar size={24} />
+            <Calendar size={22} />
           </div>
           <div>
             <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Today's Meetings</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>{isConnected ? todayMeetings.length : 0}</div>
+            <div style={{ fontSize: '1.65rem', fontWeight: '700', lineHeight: 1.2, color: 'var(--text-primary)' }}>{isConnected ? todayMeetings.length : 0}</div>
             {nextMeeting && (
               <div style={{ 
                 fontSize: '0.72rem', 

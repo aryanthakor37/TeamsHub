@@ -1254,21 +1254,23 @@ export default function ChatConversationPane({
                           });
                         }}
                         style={{
+                          maxWidth: '75%',
+                          borderRadius: msg.isOutgoing ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                           padding: '10px 14px',
-                          borderRadius: '14px',
-                          background: msg.isOutgoing 
-                            ? 'rgba(18, 48, 86, 0.72)' 
-                            : 'rgba(22, 30, 52, 0.65)',
-                          color: '#ffffff',
-                          fontSize: '0.84rem',
-                          lineHeight: '1.48',
+                          backgroundColor: msg.isOutgoing 
+                            ? 'var(--bubble-outgoing-bg)' 
+                            : 'var(--bubble-incoming-bg)',
+                          color: msg.isOutgoing 
+                            ? 'var(--bubble-outgoing-text)' 
+                            : 'var(--bubble-incoming-text)',
+                          fontSize: '0.88rem',
+                          lineHeight: '1.45',
                           wordBreak: 'break-word',
-                          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+                          boxShadow: 'var(--shadow-sm)',
                           border: msg.isOutgoing 
-                            ? '1px solid rgba(0, 242, 254, 0.28)' 
-                            : '1px solid rgba(255, 255, 255, 0.08)',
-                          backdropFilter: 'blur(16px)',
-                          WebkitBackdropFilter: 'blur(16px)'
+                            ? 'none' 
+                            : '1px solid var(--bubble-incoming-border)',
+                          transition: 'all 0.15s ease'
                         }}
                       >
                         {(() => {

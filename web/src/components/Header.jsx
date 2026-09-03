@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Bell, CheckCircle2, AlertCircle, Plus, LogOut, User as UserIcon } from 'lucide-react';
+import { Search, Bell, CheckCircle2, AlertCircle, Plus, LogOut, User as UserIcon, Sun, Moon } from 'lucide-react';
 import { checkHealth } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useChats } from '../hooks/useChats';
@@ -7,7 +7,7 @@ import AccountSwitcher from './AccountSwitcher';
 import { getInitials, getAvatarColor } from '../utils/avatarUtils';
 import { sanitizeDisplayName } from '../utils/textUtils';
 
-export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, isSidebarCollapsed, onToggleSidebar, layoutMode = 'single', onSetLayoutMode }) {
+export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, isSidebarCollapsed, onToggleSidebar, layoutMode = 'single', onSetLayoutMode, theme = 'dark', toggleTheme }) {
   const [healthStatus, setHealthStatus] = useState({ loading: false, online: true });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
@@ -59,18 +59,17 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
 
   return (
     <header style={{
-      height: '64px',
-      backgroundColor: 'rgba(10, 14, 24, 0.65)',
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+      height: '54px',
+      backgroundColor: 'var(--bg-secondary)',
+      borderBottom: '1px solid var(--border-color)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 20px',
+      padding: '0 18px',
       zIndex: 30,
       position: 'relative',
-      gap: '16px'
+      gap: '16px',
+      transition: 'background-color 0.2s ease, border-color 0.2s ease'
     }}>
       {/* Left: Hamburger & Brand Name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
@@ -183,6 +182,27 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
           </div>
         )}
 
+        {/* 1-Click Dark/Light Mode Theme Switcher */}
+        <button
+          onClick={toggleTheme}
+          title={theme === 'light' ? 'Switch to Teams Dark Mode' : 'Switch to Teams Light Mode'}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-tertiary)',
+            color: 'var(--text-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          {theme === 'light' ? <Moon size={16} color="var(--accent-primary)" /> : <Sun size={16} color="#f59e0b" />}
+        </button>
+
         {/* User Profile Pill Capsule or Connect Account Button */}
         {hasAccount && displayName ? (
           <div style={{ position: 'relative' }}>
@@ -194,14 +214,14 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
                 gap: '8px',
                 padding: '3px 10px 3px 4px',
                 borderRadius: '20px',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
                 cursor: 'pointer'
               }}
             >
               <div style={{
-                width: '28px',
-                height: '28px',
+                width: '26px',
+                height: '26px',
                 borderRadius: '50%',
                 backgroundColor: getAvatarColor(displayName),
                 color: '#ffffff',
@@ -213,7 +233,7 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
               }}>
                 {getInitials(displayName)}
               </div>
-              <span style={{ fontSize: '0.82rem', fontWeight: '600', color: '#ffffff' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                 {displayName}
               </span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
@@ -224,21 +244,19 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
             {showProfileMenu && (
               <div style={{
                 position: 'absolute',
-                top: '44px',
+                top: '40px',
                 right: 0,
                 width: '230px',
-                backgroundColor: 'rgba(16, 22, 38, 0.95)',
-                backdropFilter: 'blur(24px)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '14px',
-                boxShadow: '0 16px 36px rgba(0,0,0,0.5)',
-                padding: '14px',
-                zIndex: 100,
-                animation: 'slideUp3D 0.2s ease'
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                boxShadow: 'var(--shadow-lg)',
+                padding: '12px',
+                zIndex: 100
               }}>
-                <div style={{ paddingBottom: '10px', marginBottom: '10px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <div style={{ fontWeight: '700', fontSize: '0.92rem', color: '#ffffff' }}>{displayName}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ paddingBottom: '8px', marginBottom: '8px', borderBottom: '1px solid var(--border-color)' }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--text-primary)' }}>{displayName}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {activeAccount?.email || user?.email || 'Active Workspace'}
                   </div>
                 </div>

@@ -35,12 +35,10 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0, 
 
   return (
     <aside className="sidebar-container" style={{
-      width: isCollapsed ? '64px' : '240px',
-      transition: 'width 0.24s cubic-bezier(0.16, 1, 0.3, 1)',
-      backgroundColor: 'rgba(10, 14, 24, 0.55)',
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+      width: isCollapsed ? '64px' : '220px',
+      transition: 'width 0.2s ease',
+      backgroundColor: 'var(--bg-rail)',
+      borderRight: '1px solid var(--border-color)',
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
@@ -50,38 +48,37 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0, 
     }}>
       {/* Brand Header */}
       <div className="sidebar-brand-container" style={{
-        padding: isCollapsed ? '16px 0' : '20px 22px',
+        padding: isCollapsed ? '14px 0' : '16px 18px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: isCollapsed ? 'center' : 'flex-start',
         gap: '12px',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid var(--border-color)',
         cursor: 'pointer'
       }}
       onClick={onToggleCollapse}
       title={isCollapsed ? 'Expand Navigation Sidebar' : 'Collapse Sidebar'}
       >
         <div style={{
-          width: '38px',
-          height: '38px',
-          borderRadius: '12px',
-          background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)',
+          width: '34px',
+          height: '34px',
+          borderRadius: '8px',
+          background: 'var(--accent-gradient)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#032030',
+          color: '#ffffff',
           fontWeight: '800',
-          fontSize: '1.2rem',
-          boxShadow: '0 4px 18px rgba(0, 242, 254, 0.45)',
-          border: '1px solid rgba(255, 255, 255, 0.4)',
+          fontSize: '1rem',
+          boxShadow: '0 2px 8px rgba(91, 95, 199, 0.35)',
           flexShrink: 0
         }}>
           TH
         </div>
         {!isCollapsed && (
           <div className="sidebar-brand-text">
-            <h2 style={{ fontSize: '1.15rem', fontWeight: '800', lineHeight: 1.2, letterSpacing: '-0.01em', color: '#ffffff' }}>TeamsHub</h2>
-            <span style={{ fontSize: '0.68rem', color: '#00f2fe', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: '700' }}>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: '700', lineHeight: 1.2, color: 'var(--text-primary)' }}>TeamsHub</h2>
+            <span style={{ fontSize: '0.65rem', color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '700' }}>
               Enterprise Workspace
             </span>
           </div>
@@ -89,7 +86,7 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0, 
       </div>
 
       {/* Navigation List */}
-      <nav className="sidebar-nav-list" style={{ padding: isCollapsed ? '16px 8px' : '16px 12px', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <nav className="sidebar-nav-list" style={{ padding: isCollapsed ? '12px 6px' : '12px 8px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -97,100 +94,110 @@ export default function Sidebar({ activeTab, setActiveTab, unreadChatCount = 0, 
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`tab-pill-3d sidebar-item-btn ${isActive ? 'sidebar-active-glow' : ''}`}
+              className="sidebar-item-btn"
               title={isCollapsed ? item.label : undefined}
               style={{
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: isCollapsed ? 'center' : 'space-between',
-                padding: isCollapsed ? '10px 0' : '11px 16px',
-                marginBottom: '6px',
-                borderRadius: '12px',
-                border: isActive ? '1px solid rgba(0, 242, 254, 0.45)' : '1px solid transparent',
+                padding: isCollapsed ? '10px 0' : '9px 12px',
+                marginBottom: '4px',
+                borderRadius: '6px',
+                border: 'none',
                 outline: 'none',
-                background: isActive 
-                  ? 'linear-gradient(135deg, rgba(0, 242, 254, 0.16) 0%, rgba(99, 102, 241, 0.12) 100%)' 
-                  : 'transparent',
-                color: isActive ? '#00f2fe' : 'var(--text-secondary)',
-                fontWeight: isActive ? '700' : '500',
+                background: isActive ? 'var(--bg-active)' : 'transparent',
+                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                fontWeight: isActive ? '600' : '500',
+                fontSize: '0.88rem',
                 cursor: 'pointer',
-                boxShadow: isActive ? '0 0 20px rgba(0, 242, 254, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25)' : 'none',
-                transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+                transition: 'all 0.15s ease',
                 position: 'relative'
               }}
             >
-              <div className="sidebar-item-inner" style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center' }}>
-                <Icon size={isCollapsed ? 21 : 19} color={isActive ? '#00f2fe' : 'var(--text-secondary)'} />
-                {!isCollapsed && <span className="sidebar-item-label" style={{ fontSize: '0.9rem' }}>{item.label}</span>}
+              {/* Teams Active Left Indicator Pill */}
+              {isActive && (
+                <span style={{
+                  position: 'absolute',
+                  left: isCollapsed ? '2px' : '0px',
+                  top: '6px',
+                  bottom: '6px',
+                  width: '3.5px',
+                  borderRadius: '3px',
+                  backgroundColor: 'var(--accent-primary)'
+                }} />
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: (!isCollapsed && isActive) ? '4px' : '0px' }}>
+                <Icon size={19} style={{ color: isActive ? 'var(--accent-primary)' : 'currentColor' }} />
+                {!isCollapsed && <span>{item.label}</span>}
               </div>
 
-              {item.badge && !isCollapsed && (
-                <span className="badge sidebar-item-badge" style={{
-                  backgroundColor: item.isAlertBadge ? '#ef4444' : '#6366f1',
+              {!isCollapsed && item.badge && (
+                <span style={{
+                  backgroundColor: item.isAlertBadge ? 'var(--status-busy)' : 'var(--accent-primary)',
                   color: '#ffffff',
-                  fontSize: '0.75rem',
+                  fontSize: '0.7rem',
                   fontWeight: '700',
-                  padding: '2px 9px',
-                  borderRadius: 'var(--radius-full)',
-                  boxShadow: item.isAlertBadge ? '0 2px 6px rgba(239, 68, 68, 0.4)' : '0 2px 6px rgba(99, 102, 241, 0.3)',
-                  minWidth: '20px',
+                  padding: '1px 7px',
+                  borderRadius: '10px',
+                  minWidth: '18px',
                   textAlign: 'center'
                 }}>
                   {item.badge}
                 </span>
-              )}
-
-              {item.badge && isCollapsed && (
-                <span style={{
-                  position: 'absolute',
-                  top: '4px',
-                  right: '6px',
-                  width: '9px',
-                  height: '9px',
-                  borderRadius: '50%',
-                  backgroundColor: '#ef4444',
-                  boxShadow: '0 0 8px #ef4444'
-                }} />
               )}
             </button>
           );
         })}
       </nav>
 
-      {/* Footer Profile Info */}
-      <div className="sidebar-profile-footer" style={{
-        padding: isCollapsed ? '14px 0' : '16px 20px',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+      {/* User Status Bar */}
+      <div className="sidebar-user-footer" style={{
+        padding: isCollapsed ? '14px 0' : '14px 16px',
+        borderTop: '1px solid var(--border-color)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: isCollapsed ? 'center' : 'flex-start',
         gap: '12px',
-        backgroundColor: 'rgba(255, 255, 255, 0.02)'
+        backgroundColor: 'transparent'
       }}>
-        <div className="avatar-3d" style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '50%',
-          backgroundColor: avatarBg,
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: '700',
-          fontSize: '0.85rem',
-          flexShrink: 0
-        }}>
-          {userInitials}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{
+            width: '34px',
+            height: '34px',
+            borderRadius: '50%',
+            backgroundColor: avatarBg,
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: '700',
+            fontSize: '0.85rem'
+          }}>
+            {userInitials}
+          </div>
+          {/* Microsoft Teams Live Presence Dot */}
+          <span style={{
+            position: 'absolute',
+            bottom: '-1px',
+            right: '-1px',
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--status-online)',
+            border: '2px solid var(--bg-rail)'
+          }} />
         </div>
+
         {!isCollapsed && (
-          <div className="sidebar-profile-info" style={{ flex: 1, overflow: 'hidden' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          <div style={{ overflow: 'hidden' }}>
+            <p style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {userName}
-            </div>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: '500' }}>
-              {accountCount} Account{accountCount === 1 ? '' : 's'} Active
-            </div>
+            </p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              {accountCount > 0 ? `${accountCount} Account${accountCount > 1 ? 's' : ''} Active` : 'Online'}
+            </p>
           </div>
         )}
       </div>
