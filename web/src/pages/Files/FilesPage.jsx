@@ -1246,10 +1246,12 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       const { email } = e.detail || {};
       if (email) {
         const cleanEmail = email.toLowerCase().trim();
+        const userClean = cleanEmail.split('@')[0];
         setFiles(prev => prev.filter(f => {
-          const owner = getFileOwnerEmail(f).toLowerCase().trim();
-          const userClean = cleanEmail.split('@')[0];
-          if (owner === cleanEmail || owner.includes(cleanEmail) || (userClean && owner.includes(userClean))) return false;
+          const fileEmail = (f.accountEmail || f.connectedAccountId || '').toLowerCase().trim();
+          const fileAcc = (f.account || f.accountBadge || '').toLowerCase().trim();
+          if (fileEmail === cleanEmail || fileEmail.includes(cleanEmail)) return false;
+          if (userClean && (fileEmail.includes(userClean) || fileAcc.includes(userClean))) return false;
           return true;
         }));
       }
@@ -1418,66 +1420,52 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     return 'Documents';
   };
 
-  const getFileOwnerEmail = (f) => {
-    if (!f) return '';
-    const email = (f.accountEmail || '').toLowerCase().trim();
-    if (email && email.includes('@')) return email;
+  const isMatchingAccount = (file, filterKey, accounts) => {
+    if (!filterKey || filterKey === 'all') return true;
 
-    const accId = (f.connectedAccountId || '').toLowerCase().trim();
-    const foundByAccId = (connectedAccounts || []).find(a => {
-      const id = (a._id || a.accountId || a.id || '').toString().toLowerCase().trim();
-      return id && (id === accId || accId.includes(id));
+    // 1. Identify which connectedAccount is selected
+    const selectedAcc = (accounts || []).find(acc => {
+      const email = (acc.email || acc.username || '').toLowerCase().trim();
+      const id = (acc._id || acc.accountId || acc.id || '').toString().toLowerCase().trim();
+      const name = (acc.displayName || acc.name || '').toLowerCase().trim();
+      return (email && email === filterKey) ||
+             (id && id === filterKey) ||
+             (name && name === filterKey);
     });
-    if (foundByAccId && foundByAccId.email) return foundByAccId.email.toLowerCase().trim();
 
-    const badge = (f.account || f.accountBadge || '').toLowerCase().trim();
-    const foundByBadge = (connectedAccounts || []).find(a => {
-      const aName = (a.displayName || a.name || '').toLowerCase().trim();
-      const aEmail = (a.email || '').toLowerCase().trim();
-      const aUser = aEmail.split('@')[0];
-      return (aName && (badge.includes(aName) || aName.includes(badge))) ||
-             (aUser && (badge.includes(aUser) || aUser.includes(badge)));
-    });
-    if (foundByBadge && foundByBadge.email) return foundByBadge.email.toLowerCase().trim();
+    // 2. Extract all identifiers of the target account
+    const targetEmail = (selectedAcc?.email || selectedAcc?.username || filterKey).toLowerCase().trim();
+    const targetId = (selectedAcc?._id || selectedAcc?.accountId || selectedAcc?.id || '').toString().toLowerCase().trim();
+    const targetName = (selectedAcc?.displayName || selectedAcc?.name || '').toLowerCase().trim();
+    const targetPrefix = targetEmail.includes('@') ? targetEmail.split('@')[0] : '';
 
-    return email;
+    // 3. Extract all identifiers of the file
+    const fileEmail = (file.accountEmail || '').toLowerCase().trim();
+    const fileAccId = (file.connectedAccountId || '').toLowerCase().trim();
+    const fileAccName = (file.account || file.accountBadge || '').toLowerCase().trim();
+
+    // 4. Strict matching
+    if (targetEmail && fileEmail && (fileEmail === targetEmail || fileEmail.includes(targetEmail) || targetEmail.includes(fileEmail))) return true;
+    if (targetId && fileAccId && (fileAccId === targetId || fileAccId.includes(targetId))) return true;
+    if (targetName && fileAccName && (fileAccName === targetName || fileAccName.includes(targetName) || targetName.includes(fileAccName))) return true;
+    if (targetPrefix && targetPrefix.length >= 3) {
+      if (fileEmail && fileEmail.includes(targetPrefix)) return true;
+      if (fileAccName && fileAccName.includes(targetPrefix)) return true;
+    }
+
+    return false;
   };
 
-  // Files filtered by connected accounts and selected account
+  // Files strictly filtered by connected accounts and selected account
   const uniqueAccountScopedFiles = React.useMemo(() => {
     const accountScoped = files.filter((file) => {
-      const fileOwnerEmail = getFileOwnerEmail(file).toLowerCase().trim();
-
-      // 1. Strictly ensure the file belongs to currently CONNECTED accounts
-      if (fileOwnerEmail && connectedAccounts && connectedAccounts.length > 0) {
-        const isOwnerConnected = connectedAccounts.some(acc => {
-          const accEmail = (acc.email || acc.username || '').toLowerCase().trim();
-          const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
-          if (accEmail && fileOwnerEmail === accEmail) return true;
-          if (accName && file.account && file.account.toLowerCase().includes(accName)) return true;
-          if (accEmail && fileOwnerEmail && accEmail.split('@')[0] === fileOwnerEmail.split('@')[0]) return true;
-          return false;
-        });
-        if (!isOwnerConnected) return false;
-      }
-
-      if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
-
-      const filterKey = selectedFilterAccount.toLowerCase().trim();
-      const fileAccId = (file.connectedAccountId || '').toLowerCase().trim();
-
-      if (fileOwnerEmail === filterKey || fileAccId === filterKey) return true;
-      if (fileOwnerEmail && filterKey && fileOwnerEmail.split('@')[0] === filterKey.split('@')[0]) return true;
-      if (file.account && file.account.toLowerCase() === filterKey) return true;
-      if (file.accountBadge && file.accountBadge.toLowerCase() === filterKey) return true;
-
-      return false;
+      return isMatchingAccount(file, selectedFilterAccount, connectedAccounts);
     });
 
     const seen = new Set();
     return accountScoped.filter(f => {
       const cleanName = (f.name || '').toLowerCase().trim();
-      const uKey = `${f.connectedAccountId || f.accountEmail || ''}_${cleanName}_${f.size || 0}`;
+      const uKey = `${f.connectedAccountId || f.accountEmail || f.account || ''}_${cleanName}_${f.size || 0}`;
       if (seen.has(uKey)) return false;
       seen.add(uKey);
       return true;

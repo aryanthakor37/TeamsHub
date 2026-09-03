@@ -136,34 +136,50 @@ export const fetchFilesDirectFromGraph = async (token, userEmail, userName) => {
   };
 
   try {
+    const fetchWithTimeout = async (url, ms = 3500) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), ms);
+      try {
+        const response = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+      } catch (e) {
+        clearTimeout(id);
+        return null;
+      }
+    };
+
     const endpoints = [
-      'https://graph.microsoft.com/v1.0/me/drive/recent?$top=100',
+      'https://graph.microsoft.com/v1.0/me/drive/recent?$top=50',
       'https://graph.microsoft.com/v1.0/me/drive/root:/Microsoft Teams Chat Files:/children?$top=100',
       'https://graph.microsoft.com/v1.0/me/drive/root/children?$top=100',
-      'https://graph.microsoft.com/v1.0/me/drive/sharedWithMe?$top=100',
+      'https://graph.microsoft.com/v1.0/me/drive/sharedWithMe?$top=50',
       'https://graph.microsoft.com/v1.0/me/drive/root/search(q=\'\')?$top=100'
     ];
 
     await Promise.all(endpoints.map(async (url) => {
       try {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) {
+        const res = await fetchWithTimeout(url, 3500);
+        if (res && res.ok) {
           const data = await res.json();
           (data.value || []).forEach(item => parseAndAdd(item.remoteItem || item));
         }
       } catch (e) {}
     }));
 
-    // Scan chats for shared files and attachments
+    // Bounded fast scan of top 6 chats
     try {
-      const chatsRes = await fetch('https://graph.microsoft.com/v1.0/me/chats?$top=20', { headers: { Authorization: `Bearer ${token}` } });
-      if (chatsRes.ok) {
+      const chatsRes = await fetchWithTimeout('https://graph.microsoft.com/v1.0/me/chats?$top=6', 3000);
+      if (chatsRes && chatsRes.ok) {
         const chatsData = await chatsRes.json();
         const chatList = chatsData.value || [];
         await Promise.all(chatList.map(async (chat) => {
           try {
-            const msgsRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chat.id)}/messages?$top=25`, { headers: { Authorization: `Bearer ${token}` } });
-            if (msgsRes.ok) {
+            const msgsRes = await fetchWithTimeout(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chat.id)}/messages?$top=15`, 2500);
+            if (msgsRes && msgsRes.ok) {
               const msgsData = await msgsRes.json();
               (msgsData.value || []).forEach((msg) => {
                 const sender = msg.from?.user?.displayName || cleanName;
