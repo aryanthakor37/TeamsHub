@@ -159,19 +159,17 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
           display: 'flex',
           alignItems: 'center',
           gap: '14px',
-          padding: '16px 20px',
-          backgroundColor: 'rgba(16, 22, 38, 0.45)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(0, 242, 254, 0.35)',
-          borderRadius: '16px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
-          marginBottom: '24px'
+          padding: '14px 20px',
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-sm)',
+          marginBottom: '20px'
         }}>
           {loading ? (
-            <Loader2 size={24} className="spin" color="var(--accent-primary)" />
+            <Loader2 size={22} className="spin" color="var(--accent-primary)" />
           ) : (
-            <Search size={24} color="#00f2fe" />
+            <Search size={22} color="var(--accent-primary)" />
           )}
           <input
             type="text"
@@ -182,7 +180,7 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
               border: 'none',
               background: 'transparent',
               outline: 'none',
-              fontSize: '1.1rem',
+              fontSize: '1rem',
               fontWeight: '500',
               color: 'var(--text-primary)',
               width: '100%'
@@ -192,21 +190,22 @@ export default function SearchPage({ setActiveTab, onSelectChat, onSelectFile })
         </div>
 
         {/* Filter Chips */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
           {filters.map((f) => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
               style={{
-                padding: '8px 18px',
+                padding: '6px 16px',
                 borderRadius: 'var(--radius-full)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                fontSize: '0.85rem',
+                border: activeFilter === f ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                fontSize: '0.82rem',
                 fontWeight: '600',
                 cursor: 'pointer',
-                backgroundColor: activeFilter === f ? 'var(--accent-primary)' : 'rgba(16, 22, 38, 0.42)',
+                backgroundColor: activeFilter === f ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                 color: activeFilter === f ? '#ffffff' : 'var(--text-secondary)',
-                boxShadow: 'var(--shadow-sm)'
+                boxShadow: 'var(--shadow-sm)',
+                transition: 'all 0.15s ease'
               }}
             >
               {f}

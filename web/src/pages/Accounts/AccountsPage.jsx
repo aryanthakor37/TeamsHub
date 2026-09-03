@@ -33,23 +33,22 @@ export default function AccountsPage({ onOpenMicrosoftModal }) {
 
       {/* Multi-Account Accounts Summary Banner */}
       <div style={{
-        backgroundColor: 'rgba(16, 22, 38, 0.42)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '16px',
+        backgroundColor: 'var(--bg-secondary)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
         padding: '16px 20px',
         marginBottom: '28px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        boxShadow: 'var(--shadow-sm)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
             width: '42px',
             height: '42px',
             borderRadius: '50%',
-            backgroundColor: 'rgba(99, 102, 241, 0.15)',
+            backgroundColor: 'var(--accent-light)',
             color: 'var(--accent-primary)',
             display: 'flex',
             alignItems: 'center',
@@ -58,7 +57,7 @@ export default function AccountsPage({ onOpenMicrosoftModal }) {
             <ShieldCheck size={22} />
           </div>
           <div>
-            <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#ffffff' }}>
+            <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
               {connectedAccounts.length} Connected Microsoft Account{connectedAccounts.length !== 1 ? 's' : ''}
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
@@ -79,7 +78,7 @@ export default function AccountsPage({ onOpenMicrosoftModal }) {
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            backgroundColor: 'rgba(99, 102, 241, 0.12)',
+            backgroundColor: 'var(--accent-light)',
             color: 'var(--accent-primary)',
             display: 'flex',
             alignItems: 'center',
@@ -88,7 +87,7 @@ export default function AccountsPage({ onOpenMicrosoftModal }) {
           }}>
             <ShieldCheck size={32} />
           </div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#ffffff' }}>No Connected Microsoft Accounts</h3>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-primary)' }}>No Connected Microsoft Accounts</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '420px', margin: '0 auto 24px' }}>
             Click below to sign in with your official Microsoft Teams work, school, or personal account.
           </p>
@@ -118,8 +117,8 @@ export default function AccountsPage({ onOpenMicrosoftModal }) {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                border: isActive ? '2px solid #00f2fe' : '1px solid rgba(255, 255, 255, 0.08)',
-                boxShadow: isActive ? '0 0 20px rgba(0, 242, 254, 0.3)' : 'none'
+                border: isActive ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                boxShadow: isActive ? '0 0 16px rgba(91, 95, 199, 0.25)' : 'none'
               }}
             >
               <div>

@@ -1750,19 +1750,19 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            padding: '10px 14px',
-            backgroundColor: 'rgba(16, 22, 38, 0.45)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '12px'
+            padding: '8px 14px',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-sm)'
           }}>
-            <Search size={18} color="var(--text-muted)" />
+            <Search size={16} color="var(--text-muted)" />
             <input
               type="text"
               placeholder="Filter files by name, sender or account..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', width: '100%' }}
+              style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-primary)', fontSize: '0.88rem', width: '100%' }}
             />
           </div>
 
@@ -1771,39 +1771,41 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             <button
               onClick={() => setViewMode('grid')}
               style={{
-                padding: '8px 14px',
-                borderRadius: '10px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                backgroundColor: viewMode === 'grid' ? 'var(--accent-primary)' : 'rgba(16, 22, 38, 0.42)',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: viewMode === 'grid' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                backgroundColor: viewMode === 'grid' ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                 color: viewMode === 'grid' ? '#ffffff' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                fontSize: '0.85rem'
+                fontSize: '0.82rem',
+                boxShadow: 'var(--shadow-sm)'
               }}
             >
-              <Grid size={16} />
+              <Grid size={15} />
               <span>Gallery</span>
             </button>
 
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode('table')}
               style={{
-                padding: '8px 14px',
-                borderRadius: '10px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                backgroundColor: viewMode === 'list' ? 'var(--accent-primary)' : 'rgba(16, 22, 38, 0.42)',
-                color: viewMode === 'list' ? '#ffffff' : 'var(--text-secondary)',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: viewMode === 'table' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                backgroundColor: viewMode === 'table' ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                color: viewMode === 'table' ? '#ffffff' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                fontSize: '0.85rem'
+                fontSize: '0.82rem',
+                boxShadow: 'var(--shadow-sm)'
               }}
             >
-              <List size={16} />
-              <span>List</span>
+              <List size={15} />
+              <span>Table</span>
             </button>
           </div>
         </div>
