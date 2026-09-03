@@ -1108,9 +1108,17 @@ button:focus, button:focus-visible, button:active {
 
 /* Enhanced HTML Content & Code in Message Stream */
 .message-html-content {
-  color: #f8fafc;
-  line-height: 1.55;
-  font-size: 0.85rem;
+  color: inherit !important;
+  line-height: 1.5;
+  font-size: 0.88rem;
+}
+
+.message-html-content p,
+.message-html-content span,
+.message-html-content div,
+.message-html-content td,
+.message-html-content th {
+  color: inherit !important;
 }
 
 .message-html-content p {
@@ -1132,15 +1140,15 @@ button:focus, button:focus-visible, button:active {
 
 .message-html-content strong, .message-html-content b {
   font-weight: 700;
-  color: #ffffff;
+  color: inherit !important;
 }
 
 .message-html-content code {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  background: rgba(56, 189, 248, 0.14) !important;
-  color: #38bdf8 !important;
-  border: 1px solid rgba(56, 189, 248, 0.28) !important;
-  border-radius: 5px !important;
+  font-family: 'Segoe UI Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  background: var(--bg-hover) !important;
+  color: var(--accent-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
   padding: 1.5px 6px !important;
   font-size: 0.82em !important;
   word-break: break-word;
@@ -1150,16 +1158,15 @@ button:focus, button:focus-visible, button:active {
 
 .message-html-content pre {
   display: block;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  background: rgba(10, 15, 28, 0.85) !important;
-  color: #38bdf8 !important;
-  border: 1px solid rgba(56, 189, 248, 0.25) !important;
-  padding: 10px 14px !important;
-  margin: 8px 0 !important;
+  font-family: 'Segoe UI Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  padding: 8px 12px !important;
+  margin: 6px 0 !important;
   overflow-x: auto;
   white-space: pre-wrap;
-  border-radius: 10px !important;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+  border-radius: 6px !important;
 }
 
 .message-html-content pre code {
@@ -1169,8 +1176,8 @@ button:focus, button:focus-visible, button:active {
 }
 
 .message-html-content h1, .message-html-content h2, .message-html-content h3, .message-html-content h4 {
-  color: #ffffff;
-  margin: 8px 0 6px 0;
+  color: inherit !important;
+  margin: 6px 0 4px 0;
   font-weight: 700;
   line-height: 1.3;
 }

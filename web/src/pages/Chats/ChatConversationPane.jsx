@@ -1121,19 +1121,17 @@ export default function ChatConversationPane({
               <React.Fragment key={msgId}>
                 {showDateDivider && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '18px 0 12px 0', position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+                    <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', backgroundColor: 'var(--border-color)' }} />
                     <span style={{
                       position: 'relative',
-                      backgroundColor: 'rgba(18, 26, 46, 0.85)',
-                      backdropFilter: 'blur(16px)',
-                      WebkitBackdropFilter: 'blur(16px)',
+                      backgroundColor: 'var(--bg-tertiary)',
                       padding: '3px 14px',
                       borderRadius: '20px',
                       fontSize: '0.72rem',
                       fontWeight: '700',
-                      color: 'rgba(255, 255, 255, 0.65)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: 'var(--shadow-sm)',
                       letterSpacing: '0.02em'
                     }}>
                       {formatMessageDate(msg.createdDateTime)}
@@ -1181,11 +1179,11 @@ export default function ChatConversationPane({
                         gap: '8px'
                       }}>
                         {!msg.isOutgoing && (
-                          <span style={{ fontWeight: '700', color: '#ffffff', fontSize: '0.84rem' }}>
+                          <span style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '0.84rem' }}>
                             {sanitizeDisplayName(msg.senderName)}
                           </span>
                         )}
-                        <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.45)' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                           {new Date(msg.createdDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
@@ -1488,15 +1486,15 @@ export default function ChatConversationPane({
                                           return `src="${apiBase}/api/chats/${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}&email=${encodeURIComponent(cleanAcc)}"`;
                                         }
                                       );
-
                                       // 3. Process <at> mention tags from Microsoft Graph (e.g. <at id="0">Aryan Kumrecha</at>)
                                       processed = processed.replace(
                                         /<at[^>]*>([^<]+)<\/at>/gi,
                                         '<span class="teams-mention-tag" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 1px 6px; border-radius: 5px; font-weight: 700; display: inline-block;">$1</span>'
                                       );
 
-                                      // 4. Remove intrusive hardcoded dark background styles from Teams desktop dark theme
-                                      processed = processed.replace(/style=["'][^"']*(?:background|background-color):\s*(?:rgb\(0,\s*0,\s*0\)|#000000|#1[0-9a-f]{5}|#2[0-9a-f]{5}|#3[0-9a-f]{5}|black)[^"']*["']/gi, '');
+                                      // 4. Remove intrusive hardcoded colors and background styles from Teams desktop dark/light themes
+                                      processed = processed.replace(/style=["'][^"']*(?:background|background-color):\s*(?:rgb\([^)]*\)|#[0-9a-fA-F]{3,8}|black|white)[^"']*["']/gi, '');
+                                      processed = processed.replace(/style=["'][^"']*(?:color):\s*(?:rgb\([^)]*\)|#[0-9a-fA-F]{3,8}|black|white)[^"']*["']/gi, '');
 
                                       return processed;
                                     })()
