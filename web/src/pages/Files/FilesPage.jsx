@@ -1360,18 +1360,23 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     const cleanName = name.split('?')[0].split('#')[0];
     const ext = cleanName.includes('.') ? cleanName.split('.').pop().toLowerCase() : '';
     const mime = (file.file?.mimeType || file.contentType || file.mimeType || '').toLowerCase().trim();
+    const declaredCat = (file.category || '').toLowerCase().trim();
 
-    // 1. PDF (Strict extension and mime check)
-    if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime === 'application/pdf') {
+    // 1. PDF (Strict extension, mime check, or declared category)
+    if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime === 'application/pdf' || declaredCat === 'pdf') {
       return 'PDF';
     }
 
-    // 2. Images (Strict image extensions and mime)
+    // 2. Images (Strict image extensions, mime, or declared category)
     if (
       ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) ||
       mime.startsWith('image/') ||
       cleanName.startsWith('photo from') ||
-      cleanName === 'image.jpg'
+      cleanName.startsWith('image.') ||
+      cleanName === 'image.jpg' ||
+      declaredCat === 'images' ||
+      declaredCat === 'image' ||
+      declaredCat === 'photo'
     ) {
       return 'Images';
     }
@@ -1380,7 +1385,9 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     if (
       ['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) ||
       mime.includes('spreadsheet') ||
-      mime.includes('excel')
+      mime.includes('excel') ||
+      declaredCat === 'excel' ||
+      declaredCat === 'spreadsheet'
     ) {
       return 'Excel';
     }
@@ -1388,7 +1395,9 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     // 4. Videos
     if (
       ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) ||
-      mime.startsWith('video/')
+      mime.startsWith('video/') ||
+      declaredCat === 'videos' ||
+      declaredCat === 'video'
     ) {
       return 'Videos';
     }
@@ -1398,22 +1407,14 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) ||
       mime.includes('zip') ||
       mime.includes('compressed') ||
-      mime.includes('archive')
+      mime.includes('archive') ||
+      declaredCat === 'zip' ||
+      declaredCat === 'archive'
     ) {
       return 'ZIP';
     }
 
     // 6. Documents (Word, Text, Presentation, Code, Docs)
-    if (
-      ['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'cs', 'sql', 'log', 'env'].includes(ext) ||
-      mime.includes('word') ||
-      mime.includes('document') ||
-      mime.includes('presentation') ||
-      mime.includes('text/')
-    ) {
-      return 'Documents';
-    }
-
     return 'Documents';
   };
 
@@ -1443,58 +1444,62 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
   };
 
   // Files filtered by connected accounts and selected account
-  const accountScopedFiles = files.filter((file) => {
-    const fileOwnerEmail = getFileOwnerEmail(file).toLowerCase().trim();
-
-    // 1. Strictly ensure the file belongs to currently CONNECTED accounts
-    if (fileOwnerEmail && connectedAccounts && connectedAccounts.length > 0) {
-      const isOwnerConnected = connectedAccounts.some(acc => {
-        const accEmail = (acc.email || acc.username || '').toLowerCase().trim();
-        const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
-        if (accEmail && fileOwnerEmail === accEmail) return true;
-        if (accName && file.account && file.account.toLowerCase().includes(accName)) return true;
-        if (accEmail && fileOwnerEmail && accEmail.split('@')[0] === fileOwnerEmail.split('@')[0]) return true;
-        return false;
-      });
-      if (!isOwnerConnected) return false;
-    }
-
-    if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
-
-    const filterKey = selectedFilterAccount.toLowerCase().trim();
-    const fileAccId = (file.connectedAccountId || '').toLowerCase().trim();
-
-    if (fileOwnerEmail === filterKey || fileAccId === filterKey) return true;
-    if (fileOwnerEmail && filterKey && fileOwnerEmail.split('@')[0] === filterKey.split('@')[0]) return true;
-    if (file.account && file.account.toLowerCase() === filterKey) return true;
-    if (file.accountBadge && file.accountBadge.toLowerCase() === filterKey) return true;
-
-    return false;
-  });
-
-  // Strict deduplication so no file is ever rendered twice
   const uniqueAccountScopedFiles = React.useMemo(() => {
+    const accountScoped = files.filter((file) => {
+      const fileOwnerEmail = getFileOwnerEmail(file).toLowerCase().trim();
+
+      // 1. Strictly ensure the file belongs to currently CONNECTED accounts
+      if (fileOwnerEmail && connectedAccounts && connectedAccounts.length > 0) {
+        const isOwnerConnected = connectedAccounts.some(acc => {
+          const accEmail = (acc.email || acc.username || '').toLowerCase().trim();
+          const accName = (acc.displayName || acc.name || '').toLowerCase().trim();
+          if (accEmail && fileOwnerEmail === accEmail) return true;
+          if (accName && file.account && file.account.toLowerCase().includes(accName)) return true;
+          if (accEmail && fileOwnerEmail && accEmail.split('@')[0] === fileOwnerEmail.split('@')[0]) return true;
+          return false;
+        });
+        if (!isOwnerConnected) return false;
+      }
+
+      if (!selectedFilterAccount || selectedFilterAccount === 'all') return true;
+
+      const filterKey = selectedFilterAccount.toLowerCase().trim();
+      const fileAccId = (file.connectedAccountId || '').toLowerCase().trim();
+
+      if (fileOwnerEmail === filterKey || fileAccId === filterKey) return true;
+      if (fileOwnerEmail && filterKey && fileOwnerEmail.split('@')[0] === filterKey.split('@')[0]) return true;
+      if (file.account && file.account.toLowerCase() === filterKey) return true;
+      if (file.accountBadge && file.accountBadge.toLowerCase() === filterKey) return true;
+
+      return false;
+    });
+
     const seen = new Set();
-    return accountScopedFiles.filter(f => {
+    return accountScoped.filter(f => {
       const cleanName = (f.name || '').toLowerCase().trim();
       const uKey = `${f.connectedAccountId || f.accountEmail || ''}_${cleanName}_${f.size || 0}`;
       if (seen.has(uKey)) return false;
       seen.add(uKey);
       return true;
     });
-  }, [accountScopedFiles]);
+  }, [files, selectedFilterAccount, connectedAccounts]);
 
-  const filteredFiles = uniqueAccountScopedFiles.filter((file) => {
-    const actualCategory = getFileCategory(file);
-    const matchesCategory = selectedCategory === 'All' || actualCategory.toLowerCase() === selectedCategory.toLowerCase();
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q || (
-      file.name?.toLowerCase().includes(q) ||
-      file.sender?.toLowerCase().includes(q) ||
-      file.account?.toLowerCase().includes(q)
-    );
-    return matchesCategory && matchesSearch;
-  });
+  const filteredFiles = React.useMemo(() => {
+    return uniqueAccountScopedFiles.filter((file) => {
+      const actualCategory = getFileCategory(file);
+      const matchesCategory = selectedCategory === 'All' || actualCategory.toLowerCase() === selectedCategory.toLowerCase();
+      if (!matchesCategory) return false;
+
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+
+      return (
+        (file.name || '').toLowerCase().includes(q) ||
+        (file.sender || '').toLowerCase().includes(q) ||
+        (file.account || '').toLowerCase().includes(q)
+      );
+    });
+  }, [uniqueAccountScopedFiles, selectedCategory, searchQuery]);
 
   const getCategoryMeta = (category) => {
     switch (category) {
@@ -1536,6 +1541,9 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       setSelectedFileIds(allIds);
     }
   };
+
+  const handleSelectAllVisible = toggleSelectAll;
+  const handleToggleSelectFile = toggleSelectFile;
 
   // Batch download selected files as ZIP
   const handleBatchZipDownload = async () => {
