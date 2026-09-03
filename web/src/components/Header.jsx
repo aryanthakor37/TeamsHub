@@ -81,12 +81,12 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            color: '#ffffff',
+            color: 'var(--text-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             padding: '6px',
-            borderRadius: '8px'
+            borderRadius: '6px'
           }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -97,7 +97,7 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveTab('dashboard')}>
-          <span style={{ fontSize: '1.2rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#ffffff' }}>
+          <span style={{ fontSize: '1.15rem', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
             TeamsHub
           </span>
         </div>
@@ -109,22 +109,21 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
           onClick={() => setActiveTab('search')}
           style={{
             width: '100%',
-            height: '38px',
+            height: '36px',
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
             padding: '0 16px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-color)',
             borderRadius: '20px',
             color: 'var(--text-muted)',
             fontSize: '0.84rem',
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+            transition: 'all 0.15s ease'
           }}
         >
-          <Search size={15} style={{ color: '#00f2fe' }} />
+          <Search size={15} style={{ color: 'var(--text-muted)' }} />
           <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
             Search for chats, files or teammates...
           </span>
@@ -132,15 +131,15 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
       </div>
 
       {/* Right Controls: Layout Switcher, Bell, Live Pill, User Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
         {/* Segmented Layout Switcher (1, 2, 3, Quad) - Visible ONLY on Chats page */}
         {activeTab === 'chats' && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '10px',
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
             padding: '2px',
             gap: '2px'
           }}>
@@ -159,20 +158,20 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
                   }}
                   title={mode.title}
                   style={{
-                    width: '28px',
-                    height: '26px',
-                    borderRadius: '7px',
-                    border: isActive ? '1px solid #00f2fe' : '1px solid transparent',
-                    backgroundColor: isActive ? 'rgba(0, 242, 254, 0.18)' : 'transparent',
-                    color: isActive ? '#00f2fe' : 'var(--text-muted)',
-                    fontSize: mode.label === '⊞' ? '0.95rem' : '0.8rem',
+                    width: '26px',
+                    height: '24px',
+                    borderRadius: '5px',
+                    border: isActive ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                    backgroundColor: isActive ? 'var(--accent-primary)' : 'transparent',
+                    color: isActive ? '#ffffff' : 'var(--text-muted)',
+                    fontSize: mode.label === '⊞' ? '0.9rem' : '0.78rem',
                     fontWeight: '700',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    boxShadow: isActive ? '0 0 12px rgba(0, 242, 254, 0.35)' : 'none',
-                    transition: 'all 0.18s ease'
+                    boxShadow: isActive ? '0 1px 4px rgba(91, 95, 199, 0.4)' : 'none',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   {mode.label}
@@ -283,7 +282,7 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
                     marginBottom: '4px'
                   }}
                 >
-                  <UserIcon size={16} color="#00f2fe" />
+                  <UserIcon size={16} color="var(--accent-primary)" />
                   <span>Connected Accounts</span>
                 </button>
 
@@ -327,9 +326,9 @@ export default function Header({ activeTab, setActiveTab, onOpenMicrosoftModal, 
               gap: '6px',
               padding: '6px 14px',
               borderRadius: '20px',
-              backgroundColor: 'rgba(0, 242, 254, 0.12)',
-              border: '1px solid rgba(0, 242, 254, 0.35)',
-              color: '#00f2fe',
+              backgroundColor: 'var(--accent-light)',
+              border: '1px solid var(--accent-primary)',
+              color: 'var(--accent-primary)',
               fontWeight: '700',
               fontSize: '0.80rem',
               cursor: 'pointer'
