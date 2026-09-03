@@ -81,61 +81,115 @@ export const fetchFilesDirectFromGraph = async (token, userEmail, userName) => {
   if (!token) return [];
   const cleanEmail = (userEmail || '').toLowerCase().trim();
   const cleanName = userName || cleanEmail.split('@')[0];
+  const fileMap = new Map();
 
-  try {
-    const res = await fetch('https://graph.microsoft.com/v1.0/me/drive/recent?$top=50', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const rawList = data.value || [];
-      return rawList.map(item => {
-        const actualItem = item.remoteItem || item;
-        const name = actualItem.name || 'Untitled File';
-        const cleanNameLower = name.toLowerCase().trim();
-        const ext = cleanNameLower.includes('.') ? cleanNameLower.split('.').pop() : '';
-        const mime = (actualItem.file?.mimeType || actualItem.contentType || '').toLowerCase();
+  const parseAndAdd = (actualItem, sourceName = 'OneDrive') => {
+    if (!actualItem || actualItem.folder || actualItem.deleted || actualItem.root) return;
+    const name = actualItem.name || actualItem.displayName || 'Untitled File';
+    if (!name || name.startsWith('.')) return;
 
-        let category = 'Documents';
-        if (ext === 'pdf' || cleanNameLower.endsWith('.pdf') || mime === 'application/pdf') {
-          category = 'PDF';
-        } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico'].includes(ext) || mime.startsWith('image/')) {
-          category = 'Images';
-        } else if (['xls', 'xlsx', 'csv', 'tsv', 'ods'].includes(ext) || mime.includes('spreadsheet') || mime.includes('excel')) {
-          category = 'Excel';
-        } else if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext) || mime.startsWith('video/')) {
-          category = 'Videos';
-        } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || mime.includes('zip') || mime.includes('compressed')) {
-          category = 'ZIP';
-        }
+    const cleanNameLower = name.toLowerCase().trim();
+    const ext = cleanNameLower.includes('.') ? cleanNameLower.split('.').pop() : '';
+    const mime = (actualItem.file?.mimeType || actualItem.contentType || actualItem.mimeType || '').toLowerCase();
 
-        const sizeBytes = actualItem.size || 0;
-        let sizeStr = sizeBytes > 0 ? `${sizeBytes} B` : '';
-        if (sizeBytes > 1024 * 1024) sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
-        else if (sizeBytes > 1024) sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
+    let category = 'Documents';
+    if (ext === 'pdf' || cleanNameLower.endsWith('.pdf') || mime === 'application/pdf') {
+      category = 'PDF';
+    } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) || mime.startsWith('image/')) {
+      category = 'Images';
+    } else if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) || mime.includes('spreadsheet') || mime.includes('excel')) {
+      category = 'Excel';
+    } else if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp'].includes(ext) || mime.startsWith('video/')) {
+      category = 'Videos';
+    } else if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) || mime.includes('zip') || mime.includes('compressed')) {
+      category = 'ZIP';
+    } else if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'json', 'xml', 'html', 'css', 'js', 'ts', 'cs', 'sql'].includes(ext) || mime.includes('word') || mime.includes('document') || mime.includes('presentation') || mime.includes('text/')) {
+      category = 'Documents';
+    }
 
-        const date = new Date(actualItem.lastModifiedDateTime || actualItem.createdDateTime || Date.now());
-        const dateStr = isNaN(date.getTime()) ? 'Recent' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const sizeBytes = actualItem.size || 0;
+    let sizeStr = sizeBytes > 0 ? `${sizeBytes} B` : '';
+    if (sizeBytes > 1024 * 1024) sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+    else if (sizeBytes > 1024) sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
 
-        return {
-          id: actualItem.id || `file-${Math.random().toString(36).substring(2, 9)}`,
-          name: name,
-          category: category,
-          size: sizeStr || (category === 'Images' ? 'Image' : 'File'),
-          account: cleanName,
-          accountEmail: cleanEmail,
-          accountBadge: cleanName,
-          connectedAccountId: cleanEmail,
-          sender: actualItem.lastModifiedBy?.user?.displayName || cleanName,
-          date: dateStr,
-          webUrl: actualItem.webUrl || '#',
-          downloadUrl: actualItem['@microsoft.graph.downloadUrl'] || actualItem.webUrl || '#',
-          thumbnailUrl: category === 'Images' ? (actualItem['@microsoft.graph.downloadUrl'] || actualItem.webUrl) : null
-        };
+    const date = new Date(actualItem.lastModifiedDateTime || actualItem.createdDateTime || Date.now());
+    const dateStr = isNaN(date.getTime()) ? 'Recent' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    const key = `${cleanNameLower}_${sizeBytes}_${actualItem.lastModifiedDateTime || ''}`;
+    if (!fileMap.has(key)) {
+      fileMap.set(key, {
+        id: actualItem.id || `file-${Math.random().toString(36).substring(2, 9)}`,
+        name: name,
+        category: category,
+        size: sizeStr || (category === 'Images' ? 'Image' : 'File'),
+        account: cleanName,
+        accountEmail: cleanEmail,
+        accountBadge: cleanName,
+        connectedAccountId: cleanEmail,
+        sender: actualItem.lastModifiedBy?.user?.displayName || actualItem.createdBy?.user?.displayName || cleanName,
+        date: dateStr,
+        webUrl: actualItem.webUrl || '#',
+        downloadUrl: actualItem['@microsoft.graph.downloadUrl'] || actualItem.downloadUrl || actualItem.webUrl || '#',
+        thumbnailUrl: category === 'Images' ? (actualItem['@microsoft.graph.downloadUrl'] || actualItem.webUrl) : null
       });
     }
+  };
+
+  try {
+    const endpoints = [
+      'https://graph.microsoft.com/v1.0/me/drive/recent?$top=100',
+      'https://graph.microsoft.com/v1.0/me/drive/root:/Microsoft Teams Chat Files:/children?$top=100',
+      'https://graph.microsoft.com/v1.0/me/drive/root/children?$top=100',
+      'https://graph.microsoft.com/v1.0/me/drive/sharedWithMe?$top=100',
+      'https://graph.microsoft.com/v1.0/me/drive/root/search(q=\'\')?$top=100'
+    ];
+
+    await Promise.all(endpoints.map(async (url) => {
+      try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          (data.value || []).forEach(item => parseAndAdd(item.remoteItem || item));
+        }
+      } catch (e) {}
+    }));
+
+    // Scan chats for shared files and attachments
+    try {
+      const chatsRes = await fetch('https://graph.microsoft.com/v1.0/me/chats?$top=20', { headers: { Authorization: `Bearer ${token}` } });
+      if (chatsRes.ok) {
+        const chatsData = await chatsRes.json();
+        const chatList = chatsData.value || [];
+        await Promise.all(chatList.map(async (chat) => {
+          try {
+            const msgsRes = await fetch(`https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(chat.id)}/messages?$top=25`, { headers: { Authorization: `Bearer ${token}` } });
+            if (msgsRes.ok) {
+              const msgsData = await msgsRes.json();
+              (msgsData.value || []).forEach((msg) => {
+                const sender = msg.from?.user?.displayName || cleanName;
+                (msg.attachments || []).forEach((att) => {
+                  if (att.name && att.name !== 'Unknown File') {
+                    parseAndAdd({
+                      id: att.id,
+                      name: att.name,
+                      contentType: att.contentType,
+                      size: 0,
+                      lastModifiedDateTime: msg.createdDateTime,
+                      createdBy: { user: { displayName: sender } },
+                      webUrl: att.contentUrl || '#',
+                      downloadUrl: att.contentUrl || '#'
+                    });
+                  }
+                });
+              });
+            }
+          } catch (e) {}
+        }));
+      }
+    } catch (e) {}
   } catch (e) {}
-  return [];
+
+  return Array.from(fileMap.values());
 };
 
 /**
@@ -153,17 +207,16 @@ const parseApiError = (responseData) => {
 };
 
 /**
- * Fetch Microsoft Graph Files from Backend API with Fast Direct Fallback
+ * Fetch Microsoft Graph Files from Backend API with Fast Direct Fallback & Merge
  */
 export const fetchFilesFromBackend = async (accountOrId = 'all') => {
   const accountId = typeof accountOrId === 'object' && accountOrId !== null
     ? (accountOrId._id || accountOrId.accountId || accountOrId.id)
     : (accountOrId || 'all');
 
-  // Fast direct graph check first
+  let directFiles = [];
   try {
     const allAccounts = msalInstance.getAllAccounts() || [];
-    let directFiles = [];
     for (const a of allAccounts) {
       const email = (a.username || '').toLowerCase().trim();
       const token = localStorage.getItem(`teamshub_token_${email}`);
@@ -171,16 +224,6 @@ export const fetchFilesFromBackend = async (accountOrId = 'all') => {
         const dFiles = await fetchFilesDirectFromGraph(token, email, a.name);
         directFiles.push(...dFiles);
       }
-    }
-    if (directFiles.length > 0) {
-      // Async trigger background backend sync without blocking UI
-      (async () => {
-        try {
-          const headers = await getAuthHeaders(accountId === 'all' ? null : accountId);
-          await fetch(`${API_BASE_URL}/files?connectedAccountId=${encodeURIComponent(accountId)}`, { headers });
-        } catch (e) {}
-      })();
-      return directFiles;
     }
   } catch (e) {}
 
@@ -191,18 +234,33 @@ export const fetchFilesFromBackend = async (accountOrId = 'all') => {
       { headers }
     );
 
-    const result = await response.json();
+    if (response.ok) {
+      const result = await response.json();
+      const backendFiles = Array.isArray(result.data) ? result.data : [];
 
-    if (!response.ok) {
-      const error = parseApiError(result);
-      throw new Error(`[${error.code}] ${error.message}`);
+      const mergedMap = new Map();
+      [...backendFiles, ...directFiles].forEach((f) => {
+        const cleanName = (f.name || '').toLowerCase().trim();
+        const key = `${f.connectedAccountId || f.accountEmail}_${cleanName}_${f.size || ''}`;
+        if (!mergedMap.has(key)) {
+          mergedMap.set(key, f);
+        }
+      });
+
+      const finalMerged = Array.from(mergedMap.values());
+      if (finalMerged.length > 0) {
+        return finalMerged;
+      }
     }
-
-    return result.data;
   } catch (error) {
     console.warn('[TeamsHub File API]', error.message);
-    throw error;
   }
+
+  if (directFiles.length > 0) {
+    return directFiles;
+  }
+
+  return [];
 };
 
 /**
