@@ -569,12 +569,25 @@ button:focus, button:focus-visible, button:active {
 .outgoing-bubble .message-html-content *,
 .outgoing-bubble .message-html-content p,
 .outgoing-bubble .message-html-content span,
-.outgoing-bubble .message-html-content div {
-  color: #ffffff !important;
+.outgoing-bubble .message-html-content div,
+.outgoing-bubble .message-html-content strong,
+.outgoing-bubble .message-html-content b {
+  color: var(--bubble-outgoing-text) !important;
+}
+
+.incoming-bubble,
+.incoming-bubble .message-html-content,
+.incoming-bubble .message-html-content *,
+.incoming-bubble .message-html-content p,
+.incoming-bubble .message-html-content span,
+.incoming-bubble .message-html-content div,
+.incoming-bubble .message-html-content strong,
+.incoming-bubble .message-html-content b {
+  color: var(--bubble-incoming-text) !important;
 }
 
 .outgoing-bubble .message-html-content a {
-  color: #ffffff !important;
+  color: var(--bubble-outgoing-text) !important;
   text-decoration: underline !important;
   font-weight: 700 !important;
   word-break: break-all;
