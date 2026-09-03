@@ -253,7 +253,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
       {/* Header Banner & Zero-Storage Compliance Badge */}
       <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <h2 style={{ fontSize: '1.85rem', fontWeight: '800', marginBottom: '6px', letterSpacing: '-0.02em', color: '#ffffff' }}>
+          <h2 style={{ fontSize: '1.85rem', fontWeight: '800', marginBottom: '6px', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
             {isConnected ? `Good morning, ${sanitizeDisplayName(user?.name || activeAccount?.displayName || 'User')} 👋` : 'Welcome to TeamsHub 👋'}
           </h2>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -411,7 +411,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
         {/* Recent Conversations with FEATURE 2: Quick Reply */}
         <div className="card-3d-interactive" style={{ padding: '28px', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#ffffff' }}>Recent Conversations</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text-primary)' }}>Recent Conversations</h3>
             <button
               onClick={() => setActiveTab('chats')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -440,8 +440,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                       display: 'flex',
                       flexDirection: 'column',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                      border: isQuickReplying ? '1px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.08)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: isQuickReplying ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
                       boxShadow: 'var(--shadow-sm)',
                       transition: 'all var(--transition-fast)',
                       overflow: 'hidden'
@@ -509,9 +509,9 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                         style={{
                           padding: '6px 10px',
                           borderRadius: 'var(--radius-sm)',
-                          backgroundColor: isQuickReplying ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.06)',
+                          backgroundColor: isQuickReplying ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                           color: isQuickReplying ? '#fff' : 'var(--text-secondary)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          border: '1px solid var(--border-color)',
                           fontSize: '0.75rem',
                           fontWeight: '600',
                           cursor: 'pointer',
@@ -535,8 +535,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                     {isQuickReplying && (
                       <div style={{
                         padding: '10px 16px 14px 16px',
-                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                        borderTop: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-tertiary)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '8px'
@@ -553,8 +553,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                               flex: 1,
                               padding: '8px 12px',
                               borderRadius: 'var(--radius-sm)',
-                              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              backgroundColor: 'var(--bg-input)',
+                              border: '1px solid var(--border-color)',
                               color: 'var(--text-primary)',
                               fontSize: '0.85rem',
                               outline: 'none'
@@ -606,7 +606,7 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
         {/* Recent Shared Files with FEATURE 1: Direct Memory-to-Memory Preview */}
         <div className="card-3d-interactive" style={{ padding: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#ffffff' }}>Recent Shared Files</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text-primary)' }}>Recent Shared Files</h3>
             <button
               onClick={() => setActiveTab('files')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -634,8 +634,8 @@ export default function DashboardPage({ setActiveTab, onSelectChat, onSelectFile
                       gap: '14px',
                       padding: '12px 16px',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
                       boxShadow: 'var(--shadow-sm)',
                       cursor: 'pointer',
                       transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)'

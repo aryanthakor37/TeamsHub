@@ -406,11 +406,9 @@ export default function ChatsPage({
         className={`chats-sidebar-list ${activeChatId ? 'mobile-hidden' : ''}`}
         style={{
           width: isSidebarCollapsed ? '68px' : '310px',
-          transition: 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-          backgroundColor: 'rgba(12, 16, 28, 0.48)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          transition: 'width 0.2s ease',
+          borderRight: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-secondary)',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,

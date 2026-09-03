@@ -1560,10 +1560,8 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       {/* Category Sidebar */}
       <div style={{
         width: '240px',
-        backgroundColor: 'rgba(12, 16, 28, 0.48)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+        backgroundColor: 'var(--bg-secondary)',
+        borderRight: '1px solid var(--border-color)',
         padding: '20px 16px',
         display: 'flex',
         flexDirection: 'column',

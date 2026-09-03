@@ -665,12 +665,10 @@ export default function ChatConversationPane({
     }}>
       {/* Pane Header with Distinct Account Tint */}
       <div style={{
-        height: '64px',
+        height: '56px',
         padding: '0 18px',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        backgroundColor: 'rgba(12, 16, 28, 0.45)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid var(--border-color)',
+        backgroundColor: 'var(--bg-secondary)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -1762,13 +1760,11 @@ export default function ChatConversationPane({
             alignItems: 'center', 
             gap: '8px', 
             position: 'relative',
-            backgroundColor: 'rgba(255, 255, 255, 0.055)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-color)',
             borderRadius: '24px',
             padding: '5px 8px 5px 12px',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            boxShadow: '0 4px 18px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+            boxShadow: 'var(--shadow-sm)'
           }}
         >
           {showComposerEmojiPicker && (
@@ -1812,7 +1808,7 @@ export default function ChatConversationPane({
           <input
             ref={chatInputRef}
             type="text"
-            placeholder="Message message..."
+            placeholder="Type a message..."
             value={draftMessage}
             onChange={(e) => setDraftMessage(e.target.value)}
             style={{
@@ -1820,8 +1816,8 @@ export default function ChatConversationPane({
               padding: '6px 8px',
               border: 'none',
               backgroundColor: 'transparent',
-              color: '#ffffff',
-              fontSize: '0.84rem',
+              color: 'var(--text-primary)',
+              fontSize: '0.88rem',
               outline: 'none'
             }}
           />
@@ -1835,7 +1831,7 @@ export default function ChatConversationPane({
                 padding: '5px 14px',
                 borderRadius: '16px',
                 border: 'none',
-                background: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? paneTheme.sendBtnBg : 'rgba(255, 255, 255, 0.08)',
+                background: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? 'var(--accent-primary)' : 'var(--bg-hover)',
                 color: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? '#ffffff' : 'var(--text-muted)',
                 fontSize: '0.78rem',
                 fontWeight: '700',
@@ -1844,7 +1840,7 @@ export default function ChatConversationPane({
                 alignItems: 'center',
                 gap: '5px',
                 transition: 'all 0.2s ease',
-                boxShadow: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? paneTheme.bubbleShadow : 'none'
+                boxShadow: (draftMessage.trim() || selectedImage || selectedAttachments.length > 0) ? '0 2px 8px rgba(91, 95, 199, 0.35)' : 'none'
               }}
             >
               <span>Send</span>
