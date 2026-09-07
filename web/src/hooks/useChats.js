@@ -19,10 +19,17 @@ const getStoredReadChats = () => {
   }
 };
 
-const saveStoredReadChat = (chatId) => {
+const saveStoredReadChat = (chatId, lastMessageTimestamp = null) => {
   try {
     const map = getStoredReadChats();
-    map[chatId] = Date.now();
+    // Store the later of: (a) the chat's actual last message time, or (b) now.
+    // Add a 30-second buffer to absorb server clock skew and slow poll cycles
+    // so a message that was already visible when the user opened the chat is
+    // never re-shown as unread by the next background poll.
+    const baseTime = lastMessageTimestamp
+      ? Math.max(new Date(lastMessageTimestamp).getTime(), Date.now())
+      : Date.now();
+    map[chatId] = baseTime + 30_000;
     localStorage.setItem('teamshub_read_chats', JSON.stringify(map));
   } catch (e) {}
 };
@@ -256,8 +263,9 @@ export const useChats = () => {
       const markedReadTime = readMap[id];
       if (markedReadTime) {
         const msgTime = new Date(chat.lastMessageTimestamp || 0).getTime();
-        // If a new INCOMING message arrived strictly after the user marked it read:
-        if (msgTime > (markedReadTime + 1000)) {
+        // Only show as unread if a NEW incoming message arrived AFTER the buffered
+        // read timestamp. The buffer absorbs clock skew & slow polling cycles.
+        if (msgTime > markedReadTime) {
           return { ...chat, isLastMessageOutgoing: false, unreadCount: 1 };
         }
         return { ...chat, isLastMessageOutgoing: false, unreadCount: 0 };
@@ -375,15 +383,18 @@ export const useChats = () => {
   // Immediately mark a chat as read (zeroes unreadCount and persists)
   const markChatAsRead = useCallback((chatId, accountId = null) => {
     if (!chatId) return;
-    saveStoredReadChat(chatId);
 
-    setChats((prev) =>
-      prev.map((c) =>
+    // Pass the chat's lastMessageTimestamp so the stored read-time is anchored
+    // to the actual message time, not just the wall clock at click time.
+    setChats((prev) => {
+      const chat = prev.find(c => c._id === chatId || c.id === chatId || c.microsoftChatId === chatId);
+      saveStoredReadChat(chatId, chat?.lastMessageTimestamp || null);
+      return prev.map((c) =>
         (c._id === chatId || c.id === chatId || c.microsoftChatId === chatId)
           ? { ...c, unreadCount: 0 }
           : c
-      )
-    );
+      );
+    });
 
     window.dispatchEvent(new CustomEvent('teamshub:chat-marked-read', { detail: { chatId } }));
     markChatAsReadOnBackend(chatId, accountId);
