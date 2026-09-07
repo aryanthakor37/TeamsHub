@@ -1283,7 +1283,7 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
       setPreviewArrayBuffer(null);
       setPreviewTextContent(null);
 
-      const targetUrl = previewFile.previewUrl || previewFile.thumbnailUrl || previewFile.downloadUrl;
+      let targetUrl = previewFile.previewUrl || previewFile.thumbnailUrl || previewFile.downloadUrl;
       if (!targetUrl || targetUrl === '#') {
         if (active) {
           setPreviewLoading(false);
@@ -1292,11 +1292,29 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
         return;
       }
 
+      // If targetUrl is a relative backend API route, we can stream it directly for extreme speed!
+      let isApiRoute = targetUrl.startsWith('/api') || targetUrl.startsWith('api/');
+      let streamableUrl = targetUrl;
+      
+      if (isApiRoute) {
+        const backendBase = (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim())
+          ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
+          : (typeof window !== 'undefined' ? window.location.origin : '');
+        streamableUrl = `${backendBase}${targetUrl.startsWith('/') ? '' : '/'}${targetUrl}`;
+        
+        let token = localStorage.getItem('teamshub_last_access_token');
+        if (previewAccId) {
+            token = localStorage.getItem(`teamshub_token_${previewAccId.toLowerCase().trim()}`) || token;
+        }
+        if (token) {
+            streamableUrl += streamableUrl.includes('?') ? `&token=${encodeURIComponent(token)}` : `?token=${encodeURIComponent(token)}`;
+        }
+      }
+
       const fileNameLower = (previewFile.name || '').toLowerCase();
       const isExcel = previewFile.category === 'Excel' || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.csv');
       const isWord = fileNameLower.endsWith('.docx') || fileNameLower.endsWith('.doc');
       const isTextOrCode = fileNameLower.match(/\.(cshtml|html|htm|txt|json|xml|css|js|jsx|ts|tsx|md|cs|sql|log|env|yml|yaml|py|java|cpp|c|sh|bat|ps1|config|ini|svg|rtf)$/i) || (!isExcel && !isWord && previewFile.category === 'Documents');
-      const previewAccId = previewFile.connectedAccountId || previewFile.accountEmail;
 
       try {
         if (isExcel || isWord) {
@@ -1327,11 +1345,25 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
           }
         } else {
           // Images, PDF, Videos
-          // For large media and documents, downloading the entire blob blocks rendering and causes infinite loading.
-          // Directly passing the pre-authenticated targetUrl allows the browser to instantly stream and render the file.
-          if (active) {
-            setPreviewBlobUrl(targetUrl);
-            setPreviewLoading(false);
+          if (isApiRoute) {
+            // Fast direct native stream bypasses slow Blob downloads
+            if (active) {
+              setPreviewBlobUrl(streamableUrl);
+              setPreviewLoading(false);
+            }
+          } else {
+            // External Graph URLs enforce 'Content-Disposition: attachment'.
+            // To view them inline, we MUST fetch them as a Blob first.
+            const objUrl = await fetchFileBlob(targetUrl, previewAccId);
+            if (active) {
+              if (objUrl) {
+                createdUrl = objUrl;
+                setPreviewBlobUrl(objUrl);
+              } else {
+                setPreviewBlobUrl(targetUrl);
+              }
+              setPreviewLoading(false);
+            }
           }
         }
       } catch (err) {
