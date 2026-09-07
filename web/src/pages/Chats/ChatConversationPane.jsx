@@ -1522,11 +1522,28 @@ export default function ChatConversationPane({
                                     const isImg = (att.contentType && (att.contentType.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(att.contentType.toLowerCase()))) ||
                                                   (att.name && /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(att.name)) ||
                                                   att.thumbnailUrl ||
+                                                  att.dataUrl ||
                                                   (att.contentUrl && /\.(png|jpe?g|gif|webp|bmp|svg)/i.test(att.contentUrl.split('?')[0])) ||
                                                   (att.contentUrl && att.contentUrl.includes('hostedContents')) ||
                                                   (att.contentUrl && att.contentUrl.includes('image'));
 
                                     if (isImg) {
+                                      // If we have a local dataUrl (optimistic sent image), show it directly
+                                      if (att.dataUrl) {
+                                        return (
+                                          <div
+                                            key={att.id || att.name}
+                                            style={{ maxWidth: '280px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', marginTop: '6px', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}
+                                            title={att.name}
+                                          >
+                                            <img
+                                              src={att.dataUrl}
+                                              alt={att.name}
+                                              style={{ maxWidth: '280px', maxHeight: '200px', width: '100%', height: 'auto', objectFit: 'cover', display: 'block', borderRadius: '9px' }}
+                                            />
+                                          </div>
+                                        );
+                                      }
                                       return (
                                         <ChatImageAttachment
                                           key={att.id || att.name}
@@ -1542,6 +1559,15 @@ export default function ChatConversationPane({
                                         attachment={att}
                                         chatOwner={chatOwner}
                                         onClick={(a) => {
+                                          if (a.dataUrl) {
+                                            // Open local file in new tab for preview
+                                            const win = window.open();
+                                            if (win) {
+                                              win.document.write(`<iframe src="${a.dataUrl}" style="width:100%;height:100%;border:none;" />`);
+                                              win.document.title = a.name || 'File Preview';
+                                            }
+                                            return;
+                                          }
                                           if (onPreviewDoc) {
                                             onPreviewDoc({
                                               name: a.name,
@@ -1555,6 +1581,18 @@ export default function ChatConversationPane({
                                       />
                                     );
                                   })}
+                                </div>
+                              )}
+
+                              {/* Locally-sent optimistic IMAGE (msg.image.dataUrl) — show inline before Graph confirms */}
+                              {msg.image && msg.image.dataUrl && (
+                                <div style={{ marginTop: '6px', maxWidth: '280px', borderRadius: '10px', overflow: 'hidden', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}>
+                                  <img
+                                    src={msg.image.dataUrl}
+                                    alt={msg.image.name || 'Image'}
+                                    style={{ maxWidth: '280px', maxHeight: '220px', width: '100%', height: 'auto', objectFit: 'cover', display: 'block', borderRadius: '9px' }}
+                                    title={msg.image.name}
+                                  />
                                 </div>
                               )}
                             </>
@@ -1669,13 +1707,13 @@ export default function ChatConversationPane({
         backgroundColor: 'transparent',
         flexShrink: 0
       }}>
-        {/* Hidden inputs */}
+        {/* Hidden inputs — paperclip accepts ALL file types including images */}
         <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileSelect}
           multiple
-          accept=".pdf,.docx,.xlsx,.pptx,.txt,.zip,.csv"
+          accept="image/*,.pdf,.docx,.xlsx,.pptx,.txt,.zip,.csv"
           style={{ display: 'none' }}
         />
         <input
@@ -1683,6 +1721,7 @@ export default function ChatConversationPane({
           ref={imageInputRef}
           accept="image/*"
           onChange={handleFileSelect}
+          multiple
           style={{ display: 'none' }}
         />
 
