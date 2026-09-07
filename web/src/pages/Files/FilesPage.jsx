@@ -1292,6 +1292,12 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
         return;
       }
 
+      const fileNameLower = (previewFile.name || '').toLowerCase();
+      const isExcel = previewFile.category === 'Excel' || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.csv');
+      const isWord = fileNameLower.endsWith('.docx') || fileNameLower.endsWith('.doc');
+      const isTextOrCode = fileNameLower.match(/\.(cshtml|html|htm|txt|json|xml|css|js|jsx|ts|tsx|md|cs|sql|log|env|yml|yaml|py|java|cpp|c|sh|bat|ps1|config|ini|svg|rtf)$/i) || (!isExcel && !isWord && previewFile.category === 'Documents');
+      const previewAccId = previewFile.connectedAccountId || previewFile.accountEmail;
+
       // If targetUrl is a relative backend API route, we can stream it directly for extreme speed!
       let isApiRoute = targetUrl.startsWith('/api') || targetUrl.startsWith('api/');
       let streamableUrl = targetUrl;
@@ -1310,11 +1316,6 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
             streamableUrl += streamableUrl.includes('?') ? `&token=${encodeURIComponent(token)}` : `?token=${encodeURIComponent(token)}`;
         }
       }
-
-      const fileNameLower = (previewFile.name || '').toLowerCase();
-      const isExcel = previewFile.category === 'Excel' || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.csv');
-      const isWord = fileNameLower.endsWith('.docx') || fileNameLower.endsWith('.doc');
-      const isTextOrCode = fileNameLower.match(/\.(cshtml|html|htm|txt|json|xml|css|js|jsx|ts|tsx|md|cs|sql|log|env|yml|yaml|py|java|cpp|c|sh|bat|ps1|config|ini|svg|rtf)$/i) || (!isExcel && !isWord && previewFile.category === 'Documents');
 
       try {
         if (isExcel || isWord) {
@@ -1484,22 +1485,25 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     });
   }, [files, selectedFilterAccount, connectedAccounts]);
 
-  const filteredFiles = React.useMemo(() => {
-    return uniqueAccountScopedFiles.filter((file) => {
-      const actualCategory = getFileCategory(file);
-      const matchesCategory = selectedCategory === 'All' || actualCategory.toLowerCase() === selectedCategory.toLowerCase();
-      if (!matchesCategory) return false;
-
-      const q = searchQuery.toLowerCase().trim();
-      if (!q) return true;
-
+  const searchFilteredFiles = React.useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return uniqueAccountScopedFiles;
+    
+    return uniqueAccountScopedFiles.filter(file => {
       return (
         (file.name || '').toLowerCase().includes(q) ||
         (file.sender || '').toLowerCase().includes(q) ||
         (file.account || '').toLowerCase().includes(q)
       );
     });
-  }, [uniqueAccountScopedFiles, selectedCategory, searchQuery]);
+  }, [uniqueAccountScopedFiles, searchQuery]);
+
+  const filteredFiles = React.useMemo(() => {
+    return searchFilteredFiles.filter((file) => {
+      const actualCategory = getFileCategory(file);
+      return selectedCategory === 'All' || actualCategory.toLowerCase() === selectedCategory.toLowerCase();
+    });
+  }, [searchFilteredFiles, selectedCategory]);
 
   const getCategoryMeta = (category) => {
     switch (category) {
@@ -1586,8 +1590,8 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
           const Icon = cat.icon;
           const isActive = selectedCategory === cat.name;
           const count = cat.name === 'All'
-            ? uniqueAccountScopedFiles.length
-            : uniqueAccountScopedFiles.filter(f => getFileCategory(f).toLowerCase() === cat.name.toLowerCase()).length;
+            ? searchFilteredFiles.length
+            : searchFilteredFiles.filter(f => getFileCategory(f).toLowerCase() === cat.name.toLowerCase()).length;
 
           return (
             <button
