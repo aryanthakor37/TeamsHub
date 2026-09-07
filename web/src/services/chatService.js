@@ -595,6 +595,54 @@ export const sendMessageToBackend = async (chatId, payload, accountId) => {
     }
 
     if (token && graphChatId && graphChatId.startsWith('19:')) {
+      // ── Build Graph API payload with image + file attachment support ──────
+      const hostedContents = [];
+      let bodyContent = contentText || '';
+
+      // Handle inline IMAGE using Graph hostedContents (base64 → Teams inline image)
+      if (image && image.dataUrl) {
+        const base64Data = image.dataUrl.includes(',') ? image.dataUrl.split(',')[1] : image.dataUrl;
+        const contentId = `img-${Date.now()}@teamshub`;
+        hostedContents.push({
+          '@microsoft.graph.temporaryId': contentId,
+          contentBytes: base64Data,
+          contentType: image.contentType || 'image/png'
+        });
+        const imgHtml = `<img src="../hostedContents/${contentId}/$value" width="400" style="max-width:100%;border-radius:8px;" />`;
+        bodyContent = bodyContent ? `${bodyContent}<br/>${imgHtml}` : imgHtml;
+      }
+
+      // Handle non-image FILE attachments (PDF, DOCX, XLSX, etc.)
+      // Graph API v1.0 doesn't accept raw file bytes for non-images,
+      // so we display them as named file cards embedded in the HTML body.
+      for (const att of attachments) {
+        if (!att.dataUrl) continue;
+        const isImg = (att.contentType || '').startsWith('image/');
+        if (isImg) {
+          const base64Data = att.dataUrl.includes(',') ? att.dataUrl.split(',')[1] : att.dataUrl;
+          const contentId = `att-${Date.now()}-${Math.random().toString(36).slice(2)}@teamshub`;
+          hostedContents.push({
+            '@microsoft.graph.temporaryId': contentId,
+            contentBytes: base64Data,
+            contentType: att.contentType
+          });
+          const imgHtml = `<img src="../hostedContents/${contentId}/$value" width="400" style="max-width:100%;border-radius:8px;" />`;
+          bodyContent = bodyContent ? `${bodyContent}<br/>${imgHtml}` : imgHtml;
+        } else {
+          // Non-image: embed as a descriptive file card in message body
+          const sizeKB = att.size ? Math.round(att.size / 1024) : 0;
+          const sizeText = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} MB` : `${sizeKB} KB`;
+          const ext = (att.name || '').split('.').pop().toUpperCase() || 'FILE';
+          const fileCard = `<p>📎 <strong>${att.name}</strong> (${ext} · ${sizeText})</p>`;
+          bodyContent = bodyContent ? `${bodyContent}${fileCard}` : fileCard;
+        }
+      }
+
+      const graphPayload = {
+        body: { contentType: 'html', content: bodyContent || ' ' }
+      };
+      if (hostedContents.length > 0) graphPayload.hostedContents = hostedContents;
+
       const graphRes = await fetch(
         `https://graph.microsoft.com/v1.0/chats/${encodeURIComponent(graphChatId)}/messages`,
         {
@@ -603,12 +651,7 @@ export const sendMessageToBackend = async (chatId, payload, accountId) => {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            body: {
-              contentType: 'html',
-              content: contentText
-            }
-          })
+          body: JSON.stringify(graphPayload)
         }
       );
 
@@ -620,7 +663,7 @@ export const sendMessageToBackend = async (chatId, payload, accountId) => {
           chatId: chatId,
           senderName: graphData.from?.user?.displayName || 'You',
           senderEmail: graphData.from?.user?.email || graphData.from?.user?.userPrincipalName || '',
-          content: contentText,
+          content: bodyContent,
           contentType: 'html',
           isOutgoing: true,
           attachments: attachments,
