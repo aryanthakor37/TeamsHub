@@ -1327,14 +1327,10 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
           }
         } else {
           // Images, PDF, Videos
-          const objUrl = await fetchFileBlob(targetUrl, previewAccId);
+          // For large media and documents, downloading the entire blob blocks rendering and causes infinite loading.
+          // Directly passing the pre-authenticated targetUrl allows the browser to instantly stream and render the file.
           if (active) {
-            if (objUrl) {
-              createdUrl = objUrl;
-              setPreviewBlobUrl(objUrl);
-            } else {
-              setPreviewBlobUrl(targetUrl);
-            }
+            setPreviewBlobUrl(targetUrl);
             setPreviewLoading(false);
           }
         }
@@ -1364,59 +1360,21 @@ export default function FilesPage({ initialFile, onClearInitialFile }) {
     const mime = (file.file?.mimeType || file.contentType || file.mimeType || '').toLowerCase().trim();
     const declaredCat = (file.category || '').toLowerCase().trim();
 
-    // 1. PDF (Strict extension, mime check, or declared category)
-    if (ext === 'pdf' || cleanName.endsWith('.pdf') || mime === 'application/pdf' || declaredCat === 'pdf') {
-      return 'PDF';
-    }
+    // 1. Strict extension match FIRST (fixes wrong category rendering)
+    if (['pdf'].includes(ext) || mime === 'application/pdf') return 'PDF';
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) || mime.startsWith('image/')) return 'Images';
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) || mime.startsWith('video/')) return 'Videos';
+    if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) || mime.includes('spreadsheet') || mime.includes('excel')) return 'Excel';
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) || mime.includes('zip') || mime.includes('compressed') || mime.includes('archive')) return 'ZIP';
+    if (['doc', 'docx', 'txt', 'pptx', 'ppt', 'rtf', 'odt', 'pages', 'md', 'json', 'xml', 'html', 'css', 'js', 'ts', 'cs', 'sql'].includes(ext) || mime.includes('word') || mime.includes('text/')) return 'Documents';
 
-    // 2. Images (Strict image extensions, mime, or declared category)
-    if (
-      ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'avif'].includes(ext) ||
-      mime.startsWith('image/') ||
-      cleanName.startsWith('photo from') ||
-      cleanName.startsWith('image.') ||
-      cleanName === 'image.jpg' ||
-      declaredCat === 'images' ||
-      declaredCat === 'image' ||
-      declaredCat === 'photo'
-    ) {
-      return 'Images';
-    }
-
-    // 3. Excel / Spreadsheets
-    if (
-      ['xls', 'xlsx', 'csv', 'tsv', 'ods', 'xlsm', 'xltx'].includes(ext) ||
-      mime.includes('spreadsheet') ||
-      mime.includes('excel') ||
-      declaredCat === 'excel' ||
-      declaredCat === 'spreadsheet'
-    ) {
-      return 'Excel';
-    }
-
-    // 4. Videos
-    if (
-      ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp', 'ogv'].includes(ext) ||
-      mime.startsWith('video/') ||
-      declaredCat === 'videos' ||
-      declaredCat === 'video'
-    ) {
-      return 'Videos';
-    }
-
-    // 5. ZIP / Compressed Archives
-    if (
-      ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'].includes(ext) ||
-      mime.includes('zip') ||
-      mime.includes('compressed') ||
-      mime.includes('archive') ||
-      declaredCat === 'zip' ||
-      declaredCat === 'archive'
-    ) {
-      return 'ZIP';
-    }
-
-    // 6. Documents (Word, Text, Presentation, Code, Docs)
+    // 2. Fallback to declaredCat only if extension is unknown
+    if (declaredCat === 'pdf') return 'PDF';
+    if (declaredCat === 'images' || declaredCat === 'image' || declaredCat === 'photo') return 'Images';
+    if (declaredCat === 'videos' || declaredCat === 'video') return 'Videos';
+    if (declaredCat === 'excel' || declaredCat === 'spreadsheet') return 'Excel';
+    if (declaredCat === 'zip' || declaredCat === 'archive') return 'ZIP';
+    
     return 'Documents';
   };
 
